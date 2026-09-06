@@ -15,7 +15,6 @@ partial class Form1
 
     private void InitializeComponent()
     {
-        DataGridViewColumn SQLCol = new DataGridViewColumn();
         this.components = new System.ComponentModel.Container();
 
         this.dgvDatabases = new System.Windows.Forms.DataGridView();
@@ -23,8 +22,17 @@ partial class Form1
         this.lblStatus = new System.Windows.Forms.Label();
         this.btnCopy = new System.Windows.Forms.Button();
         this.lblTitle = new System.Windows.Forms.Label();
+        this.btnSettings = new System.Windows.Forms.Button();
+        this.btnProfiles = new System.Windows.Forms.Button();
+        this.btnTest = new System.Windows.Forms.Button();
+        this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
+        this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+        this.miShow = new System.Windows.Forms.ToolStripMenuItem();
+        this.miRefresh = new System.Windows.Forms.ToolStripMenuItem();
+        this.miExit = new System.Windows.Forms.ToolStripMenuItem();
 
         ((System.ComponentModel.ISupportInitialize)(this.dgvDatabases)).BeginInit();
+        this.trayMenu.SuspendLayout();
         this.SuspendLayout();
 
         // dgvDatabases
@@ -35,12 +43,12 @@ partial class Form1
             | System.Windows.Forms.AnchorStyles.Right)));
         this.dgvDatabases.AutoGenerateColumns = false;
         this.dgvDatabases.BackgroundColor = System.Drawing.Color.White;
-        this.dgvDatabases.Location = new System.Drawing.Point(12, 50);
+        this.dgvDatabases.Location = new System.Drawing.Point(12, 90);
         this.dgvDatabases.Name = "dgvDatabases";
         this.dgvDatabases.ReadOnly = true;
         this.dgvDatabases.RowHeadersVisible = false;
         this.dgvDatabases.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-        this.dgvDatabases.Size = new System.Drawing.Size(776, 360);
+        this.dgvDatabases.Size = new System.Drawing.Size(770, 300);
         this.dgvDatabases.TabIndex = 0;
         this.dgvDatabases.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvDatabases_CellDoubleClick);
 
@@ -50,37 +58,45 @@ partial class Form1
         this.colType.Name = "colType";
         this.colType.DataPropertyName = "TypeDisplayName";
         this.colType.ReadOnly = true;
-        this.colType.Width = 120;
+        this.colType.Width = 100;
+
+        this.colVersion = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colVersion.HeaderText = "نسخه";
+        this.colVersion.Name = "colVersion";
+        this.colVersion.DataPropertyName = "Version";
+        this.colVersion.ReadOnly = true;
+        this.colVersion.Width = 100;
 
         this.colPort = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colPort.HeaderText = "پورت";
         this.colPort.Name = "colPort";
         this.colPort.DataPropertyName = "Port";
         this.colPort.ReadOnly = true;
-        this.colPort.Width = 70;
+        this.colPort.Width = 60;
 
         this.colService = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colService.HeaderText = "سرویس";
         this.colService.Name = "colService";
         this.colService.DataPropertyName = "ServiceName";
         this.colService.ReadOnly = true;
-        this.colService.Width = 170;
+        this.colService.Width = 150;
 
         this.colProcess = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colProcess.HeaderText = "پروسس / PID";
         this.colProcess.Name = "colProcess";
         this.colProcess.DataPropertyName = "ProcessDisplay";
         this.colProcess.ReadOnly = true;
-        this.colProcess.Width = 150;
+        this.colProcess.Width = 130;
 
         this.colHow = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colHow.HeaderText = "نحوه تشخیص";
+        this.colHow.HeaderText = "تشخیص";
         this.colHow.Name = "colHow";
         this.colHow.DataPropertyName = "DetectionMethod";
         this.colHow.ReadOnly = true;
-        this.colHow.Width = 100;
+        this.colHow.Width = 80;
 
         this.dgvDatabases.Columns.Add(this.colType);
+        this.dgvDatabases.Columns.Add(this.colVersion);
         this.dgvDatabases.Columns.Add(this.colPort);
         this.dgvDatabases.Columns.Add(this.colService);
         this.dgvDatabases.Columns.Add(this.colProcess);
@@ -89,31 +105,23 @@ partial class Form1
         // lblTitle
         this.lblTitle.AutoSize = true;
         this.lblTitle.BackColor = System.Drawing.Color.Transparent;
-        this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 15F, System.Drawing.FontStyle.Bold);
+        this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 13F, System.Drawing.FontStyle.Bold);
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Size = new System.Drawing.Size(200, 20);
-        this.lblTitle.TabIndex = 1;
-        this.lblTitle.Text = "Database Finder";
+        this.lblTitle.Text = "Database Finder v1.1";
 
-        // lblStatus
-        this.lblStatus.AutoSize = true;
-        this.lblStatus.Location = new System.Drawing.Point(12, 420);
-        this.lblStatus.Name = "lblStatus";
-        this.lblStatus.Size = new System.Drawing.Size(0, 0);
-        this.lblStatus.TabIndex = 2;
+        this.Controls.Add(this.lblTitle);
 
         // btnRefresh
         this.btnRefresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
         this.btnRefresh.BackColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.btnRefresh.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
         this.btnRefresh.ForeColor = System.Drawing.Color.White;
-        this.btnRefresh.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-        this.btnRefresh.Location = new System.Drawing.Point(714, 12);
+        this.btnRefresh.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnRefresh.Location = new System.Drawing.Point(674, 12);
         this.btnRefresh.Name = "btnRefresh";
-        this.btnRefresh.Size = new System.Drawing.Size(75, 30);
-        this.btnRefresh.TabIndex = 3;
+        this.btnRefresh.Size = new System.Drawing.Size(108, 28);
         this.btnRefresh.Text = "تشخیص مجدد";
         this.btnRefresh.UseVisualStyleBackColor = false;
         this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
@@ -123,33 +131,101 @@ partial class Form1
         this.btnCopy.BackColor = System.Drawing.Color.FromArgb(76, 175, 80);
         this.btnCopy.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
         this.btnCopy.ForeColor = System.Drawing.Color.White;
-        this.btnCopy.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-        this.btnCopy.Location = new System.Drawing.Point(600, 12);
+        this.btnCopy.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnCopy.Location = new System.Drawing.Point(574, 12);
         this.btnCopy.Name = "btnCopy";
-        this.btnCopy.Size = new System.Drawing.Size(108, 30);
-        this.btnCopy.TabIndex = 4;
+        this.btnCopy.Size = new System.Drawing.Size(94, 28);
         this.btnCopy.Text = "کپی لیست";
         this.btnCopy.UseVisualStyleBackColor = false;
         this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
 
+        // btnSettings
+        this.btnSettings.BackColor = System.Drawing.Color.FromArgb(255, 152, 0);
+        this.btnSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnSettings.ForeColor = System.Drawing.Color.White;
+        this.btnSettings.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnSettings.Location = new System.Drawing.Point(12, 45);
+        this.btnSettings.Name = "btnSettings";
+        this.btnSettings.Size = new System.Drawing.Size(110, 30);
+        this.btnSettings.Text = "تنظیمات";
+        this.btnSettings.UseVisualStyleBackColor = false;
+        this.btnSettings.Click += new System.EventHandler(this.btnSettings_Click);
+
+        // btnProfiles
+        this.btnProfiles.BackColor = System.Drawing.Color.FromArgb(156, 39, 176);
+        this.btnProfiles.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnProfiles.ForeColor = System.Drawing.Color.White;
+        this.btnProfiles.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnProfiles.Location = new System.Drawing.Point(130, 45);
+        this.btnProfiles.Name = "btnProfiles";
+        this.btnProfiles.Size = new System.Drawing.Size(110, 30);
+        this.btnProfiles.Text = "پروفایل‌ها";
+        this.btnProfiles.UseVisualStyleBackColor = false;
+        this.btnProfiles.Click += new System.EventHandler(this.btnProfiles_Click);
+
+        // btnTest
+        this.btnTest.BackColor = System.Drawing.Color.FromArgb(0, 188, 212);
+        this.btnTest.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnTest.ForeColor = System.Drawing.Color.White;
+        this.btnTest.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnTest.Location = new System.Drawing.Point(248, 45);
+        this.btnTest.Name = "btnTest";
+        this.btnTest.Size = new System.Drawing.Size(110, 30);
+        this.btnTest.Text = "تست اتصال";
+        this.btnTest.UseVisualStyleBackColor = false;
+        this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
+
+        // lblStatus
+        this.lblStatus.AutoSize = true;
+        this.lblStatus.Location = new System.Drawing.Point(12, 398);
+        this.lblStatus.Name = "lblStatus";
+        this.lblStatus.Size = new System.Drawing.Size(0, 0);
+        this.lblStatus.ForeColor = System.Drawing.Color.Gray;
+
+        // notifyIcon
+        this.notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        this.notifyIcon.Text = "Database Finder";
+        this.notifyIcon.ContextMenuStrip = trayMenu;
+        this.notifyIcon.Visible = false;
+        this.notifyIcon.DoubleClick += new System.EventHandler(this.notifyIcon_DoubleClick);
+
+        // trayMenu
+        this.trayMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.miShow, this.miRefresh, this.miExit});
+        this.trayMenu.Name = "trayMenu";
+
+        this.miShow.Text = "نمایش پنجره";
+        this.miShow.Click += new System.EventHandler(this.miShow_Click);
+
+        this.miRefresh.Text = "تشخیص مجدد";
+        this.miRefresh.Click += new System.EventHandler(this.miRefresh_Click);
+
+        this.miExit.Text = "خروج";
+        this.miExit.Click += new System.EventHandler(this.miExit_Click);
+
         // Form1
         this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.ClientSize = new System.Drawing.Size(800, 445);
+        this.ClientSize = new System.Drawing.Size(800, 420);
+        this.Controls.Add(this.btnTest);
+        this.Controls.Add(this.btnProfiles);
+        this.Controls.Add(this.btnSettings);
         this.Controls.Add(this.btnCopy);
         this.Controls.Add(this.btnRefresh);
         this.Controls.Add(this.lblStatus);
-        this.Controls.Add(this.lblTitle);
         this.Controls.Add(this.dgvDatabases);
 
         this.Font = new System.Drawing.Font("Segoe UI", 10F);
         this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
         this.RightToLeftLayout = true;
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-        this.Text = "جستجوی دیتابیس‌های در حال اجرا";
+        this.Text = "Database Finder - جستجوی دیتابیس‌های در حال اجرا";
+        this.Resize += new System.EventHandler(this.Form1_Resize);
+        this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
         this.Load += new System.EventHandler(this.Form1_Load);
 
         ((System.ComponentModel.ISupportInitialize)(this.dgvDatabases)).EndInit();
+        this.trayMenu.ResumeLayout(false);
         this.ResumeLayout(false);
         this.PerformLayout();
     }
@@ -159,7 +235,16 @@ partial class Form1
     private System.Windows.Forms.Label lblStatus;
     private System.Windows.Forms.Button btnCopy;
     private System.Windows.Forms.Label lblTitle;
+    private System.Windows.Forms.Button btnSettings;
+    private System.Windows.Forms.Button btnProfiles;
+    private System.Windows.Forms.Button btnTest;
+    private System.Windows.Forms.NotifyIcon notifyIcon;
+    private System.Windows.Forms.ContextMenuStrip trayMenu;
+    private System.Windows.Forms.ToolStripMenuItem miShow;
+    private System.Windows.Forms.ToolStripMenuItem miRefresh;
+    private System.Windows.Forms.ToolStripMenuItem miExit;
     private System.Windows.Forms.DataGridViewTextBoxColumn colType;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colVersion;
     private System.Windows.Forms.DataGridViewTextBoxColumn colPort;
     private System.Windows.Forms.DataGridViewTextBoxColumn colService;
     private System.Windows.Forms.DataGridViewTextBoxColumn colProcess;

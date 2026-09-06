@@ -31,6 +31,10 @@ namespace DatabaseFinder
         public int ProcessId { get; set; }
         public string? ProcessName { get; set; }
 
+        public string Version { get; set; } = "";
+        public DateTime DetectedAt { get; set; } = DateTime.Now;
+        public string Host { get; set; } = "localhost";
+
         public string TypeDisplayName
         {
             get
@@ -64,6 +68,33 @@ namespace DatabaseFinder
         private static readonly int[] Redis_PORTS = { 6379 };
         private static readonly int[] Elasticsearch_PORTS = { 9200 };
         private static readonly int[] CouchDB_PORTS = { 5984 };
+
+        private AppSettings _settings;
+
+        public DatabaseDetector()
+        {
+            _settings = AppSettings.Load();
+        }
+
+        public DatabaseDetector(AppSettings settings)
+        {
+            _settings = settings;
+        }
+
+        public void ReloadSettings(AppSettings settings)
+        {
+            _settings = settings;
+        }
+
+        private int[] GetPorts(DatabaseType type, int[] defaults)
+        {
+            var key = type.ToString();
+            if (_settings.CustomPorts.TryGetValue(key, out int custom))
+            {
+                return new[] { custom };
+            }
+            return defaults;
+        }
 
         public List<DatabaseInfo> Detect()
         {
@@ -177,15 +208,15 @@ namespace DatabaseFinder
             }
 
             // چک پورت‌ها در اولویت؛ اگر پورت اشغال باشه یعنی سرویس در حال اجراست
-            CheckPort(occupiedPorts, MS_SQL_PORTS, DatabaseType.SQLServer, processes, result);
-            CheckPort(occupiedPorts, MySQL_PORTS, DatabaseType.MySQL, processes, result);
-            CheckPort(occupiedPorts, MariaDB_PORTS, DatabaseType.MariaDB, processes, result);
-            CheckPort(occupiedPorts, PostgreSQL_PORTS, DatabaseType.PostgreSQL, processes, result);
-            CheckPort(occupiedPorts, Oracle_PORTS, DatabaseType.Oracle, processes, result);
-            CheckPort(occupiedPorts, MongoDB_PORTS, DatabaseType.MongoDB, processes, result);
-            CheckPort(occupiedPorts, Redis_PORTS, DatabaseType.Redis, processes, result);
-            CheckPort(occupiedPorts, Elasticsearch_PORTS, DatabaseType.Elasticsearch, processes, result);
-            CheckPort(occupiedPorts, CouchDB_PORTS, DatabaseType.CouchDB, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.SQLServer, MS_SQL_PORTS), DatabaseType.SQLServer, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.MySQL, MySQL_PORTS), DatabaseType.MySQL, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.MariaDB, MariaDB_PORTS), DatabaseType.MariaDB, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.PostgreSQL, PostgreSQL_PORTS), DatabaseType.PostgreSQL, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.Oracle, Oracle_PORTS), DatabaseType.Oracle, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.MongoDB, MongoDB_PORTS), DatabaseType.MongoDB, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.Redis, Redis_PORTS), DatabaseType.Redis, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.Elasticsearch, Elasticsearch_PORTS), DatabaseType.Elasticsearch, processes, result);
+            CheckPort(occupiedPorts, GetPorts(DatabaseType.CouchDB, CouchDB_PORTS), DatabaseType.CouchDB, processes, result);
 
             return result;
         }
@@ -334,19 +365,26 @@ namespace DatabaseFinder
 
         private int? GetPortForType(DatabaseType type)
         {
+            int? def = null;
             switch (type)
             {
-                case DatabaseType.SQLServer: return 1433;
-                case DatabaseType.MySQL: return 3306;
-                case DatabaseType.MariaDB: return 3307;
-                case DatabaseType.PostgreSQL: return 5432;
-                case DatabaseType.Oracle: return 1521;
-                case DatabaseType.MongoDB: return 27017;
-                case DatabaseType.Redis: return 6379;
-                case DatabaseType.Elasticsearch: return 9200;
-                case DatabaseType.CouchDB: return 5984;
-                default: return null;
+                case DatabaseType.SQLServer: def = 1433; break;
+                case DatabaseType.MySQL: def = 3306; break;
+                case DatabaseType.MariaDB: def = 3307; break;
+                case DatabaseType.PostgreSQL: def = 5432; break;
+                case DatabaseType.Oracle: def = 1521; break;
+                case DatabaseType.MongoDB: def = 27017; break;
+                case DatabaseType.Redis: def = 6379; break;
+                case DatabaseType.Elasticsearch: def = 9200; break;
+                case DatabaseType.CouchDB: def = 5984; break;
             }
+            if (def.HasValue)
+            {
+                var key = type.ToString();
+                if (_settings.CustomPorts.TryGetValue(key, out int custom))
+                    return custom;
+            }
+            return def;
         }
 
         private class ServiceInfo
