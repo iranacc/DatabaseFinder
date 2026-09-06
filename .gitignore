@@ -1,0 +1,35 @@
+# .NET build output
+bin/
+obj/
+Release/
+publish/
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+*.exe
+*.dll
+*.pdb
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.lock.json
+
+# Misc
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
