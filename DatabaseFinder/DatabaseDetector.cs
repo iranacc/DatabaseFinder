@@ -35,6 +35,14 @@ namespace DatabaseFinder
         public DateTime DetectedAt { get; set; } = DateTime.Now;
         public string Host { get; set; } = "localhost";
 
+        // وضعیت آنلاین/آفلاین
+        public bool IsOnline { get; set; } = true;
+        public string? LocalPath { get; set; }
+        public long FileSize { get; set; }
+        public DateTime FileModified { get; set; }
+        public bool IsBackup { get; set; }
+        public string FormatName { get; set; } = "";
+
         public string TypeDisplayName
         {
             get

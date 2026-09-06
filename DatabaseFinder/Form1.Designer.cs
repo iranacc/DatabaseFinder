@@ -28,6 +28,7 @@ partial class Form1
         this.btnRemote = new System.Windows.Forms.Button();
         this.btnCopyFiles = new System.Windows.Forms.Button();
         this.btnQuery = new System.Windows.Forms.Button();
+        this.cmbScanMode = new System.Windows.Forms.ComboBox();
         this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
         this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
         this.miShow = new System.Windows.Forms.ToolStripMenuItem();
@@ -65,7 +66,7 @@ partial class Form1
         this.colType = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colType.HeaderText = "نام دیتابیس";
         this.colType.Name = "colType";
-        this.colType.DataPropertyName = "TypeDisplayName";
+        this.colType.DataPropertyName = "DisplayName";
         this.colType.ReadOnly = true;
         this.colType.Width = 100;
 
@@ -104,6 +105,20 @@ partial class Form1
         this.colHow.ReadOnly = true;
         this.colHow.Width = 80;
 
+        this.colLocation = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colLocation.HeaderText = "مسیر / آدرس";
+        this.colLocation.Name = "colLocation";
+        this.colLocation.DataPropertyName = "Location";
+        this.colLocation.ReadOnly = true;
+        this.colLocation.Width = 220;
+
+        this.colSizeInfo = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colSizeInfo.HeaderText = "اندازه / تاریخ";
+        this.colSizeInfo.Name = "colSizeInfo";
+        this.colSizeInfo.DataPropertyName = "SizeInfo";
+        this.colSizeInfo.ReadOnly = true;
+        this.colSizeInfo.Width = 130;
+
         this.dgvDatabases.Columns.Add(this.colCheck);
         this.dgvDatabases.Columns.Add(this.colType);
         this.dgvDatabases.Columns.Add(this.colVersion);
@@ -111,6 +126,21 @@ partial class Form1
         this.dgvDatabases.Columns.Add(this.colService);
         this.dgvDatabases.Columns.Add(this.colProcess);
         this.dgvDatabases.Columns.Add(this.colHow);
+        this.dgvDatabases.Columns.Add(this.colLocation);
+        this.dgvDatabases.Columns.Add(this.colSizeInfo);
+
+        // cmbScanMode
+        this.cmbScanMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+        this.cmbScanMode.Font = new System.Drawing.Font("Segoe UI", 9F);
+        this.cmbScanMode.Location = new System.Drawing.Point(300, 12);
+        this.cmbScanMode.Name = "cmbScanMode";
+        this.cmbScanMode.Size = new System.Drawing.Size(260, 26);
+        this.cmbScanMode.TabIndex = 2;
+        this.cmbScanMode.Items.AddRange(new object[] {
+            "فقط آنلاین (در حال اجرا)",
+            "فقط آفلاین (اسکن هارد)",
+            "آنلاین + آفلاین"});
+        this.cmbScanMode.SelectedIndex = 0;
 
         // lblTitle
         this.lblTitle.AutoSize = true;
@@ -119,8 +149,9 @@ partial class Form1
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Text = "Database Finder v1.3";
+        this.lblTitle.Text = "Database Finder v1.4";
 
+        this.Controls.Add(this.cmbScanMode);
         this.Controls.Add(this.lblTitle);
 
         // btnRefresh
@@ -290,6 +321,7 @@ partial class Form1
     private System.Windows.Forms.Button btnQuery;
     private System.Windows.Forms.Button btnRemote;
     private System.Windows.Forms.Button btnCopyFiles;
+    private System.Windows.Forms.ComboBox cmbScanMode;
     private System.Windows.Forms.NotifyIcon notifyIcon;
     private System.Windows.Forms.ContextMenuStrip trayMenu;
     private System.Windows.Forms.ToolStripMenuItem miShow;
@@ -302,4 +334,6 @@ partial class Form1
     private System.Windows.Forms.DataGridViewTextBoxColumn colService;
     private System.Windows.Forms.DataGridViewTextBoxColumn colProcess;
     private System.Windows.Forms.DataGridViewTextBoxColumn colHow;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colLocation;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colSizeInfo;
 }

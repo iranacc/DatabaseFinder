@@ -86,7 +86,75 @@ namespace DatabaseFinder
 
         private void btnRefresh_Click(object sender, EventArgs e)
         {
-            DetectDatabases();
+            switch (cmbScanMode.SelectedIndex)
+            {
+                case 1:
+                    RunOfflineScan();
+                    break;
+                case 2:
+                    DetectDatabases();
+                    RunOfflineScan();
+                    break;
+                default:
+                    DetectDatabases();
+                    break;
+            }
+        }
+
+        private void RunOfflineScan()
+        {
+            var form = new DiskScanForm();
+            if (form.ShowDialog(this) == DialogResult.OK)
+            {
+                var offline = form.Found.ToList();
+                if (offline.Count > 0)
+                {
+                    MergeOfflineResults(offline);
+                    lblStatus.Text = $"تعداد دیتابیس‌های آفلاین افزوده‌شده: {offline.Count}";
+                }
+                else
+                {
+                    lblStatus.Text = "دیتابیس آفلاینی یافت نشد.";
+                }
+            }
+        }
+
+        private void MergeOfflineResults(List<DatabaseInfo> offline)
+        {
+            var knownPaths = new HashSet<string>(
+                _lastResults.Where(d => !string.IsNullOrEmpty(d.LocalPath)).Select(d => d.LocalPath!),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var di in offline)
+            {
+                if (di.LocalPath != null && knownPaths.Add(di.LocalPath))
+                {
+                    _lastResults.Add(di);
+                }
+            }
+
+            var models = _lastResults.Select(BuildModel).ToList();
+            RebindGrid(models);
+        }
+
+        private void RebindGrid(List<DatabaseDisplayModel> models)
+        {
+            dgvDatabases.DataSource = null;
+            dgvDatabases.DataSource = models;
+
+            for (int i = 0; i < dgvDatabases.Rows.Count && i < _lastResults.Count; i++)
+            {
+                var db = _lastResults[i];
+                var row = dgvDatabases.Rows[i];
+                row.Tag = db;
+                if (!db.IsOnline)
+                {
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 244, 222);
+                    row.Cells["colCheck"].Style.BackColor = Color.FromArgb(255, 244, 222);
+                    row.Cells["colCheck"].Style.SelectionBackColor = Color.FromArgb(255, 224, 178);
+                    if (db.IsBackup) row.DefaultCellStyle.ForeColor = Color.FromArgb(27, 94, 32);
+                }
+            }
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
@@ -161,7 +229,8 @@ namespace DatabaseFinder
             }
 
             var dbs = selected
-                .Select(index => index < _lastResults.Count ? _lastResults[index] : GetDatabaseFromRow(dgvDatabases.Rows[index]))
+                .Select(index => (DatabaseInfo?)(dgvDatabases.Rows[index].Tag as DatabaseInfo)
+                    ?? (index < _lastResults.Count ? _lastResults[index] : GetDatabaseFromRow(dgvDatabases.Rows[index])))
                 .Where(d => d != null)
                 .Cast<DatabaseInfo>()
                 .ToList();
@@ -272,20 +341,55 @@ namespace DatabaseFinder
         private static DatabaseDisplayModel BuildModel(DatabaseInfo db)
         {
             var how = new List<string>();
-            if (db.IsRunningAsService) how.Add("سرویس");
-            if (db.IsRunningAsProcess) how.Add("پروسس");
-            if (db.Port.HasValue) how.Add("پورت");
+            if (db.IsOnline)
+            {
+                if (db.IsRunningAsService) how.Add("سرویس");
+                if (db.IsRunningAsProcess) how.Add("پروسس");
+                if (db.Port.HasValue) how.Add("پورت");
+            }
+
+            var isDisplayName = db.IsOnline ? db.TypeDisplayName : db.Name;
+            var displayName = isDisplayName;
+            if (!db.IsOnline && !string.IsNullOrEmpty(db.FormatName) && !string.Equals(db.FormatName, db.TypeDisplayName, StringComparison.Ordinal))
+            {
+                displayName = $"{db.Name} [{db.FormatName}]";
+            }
 
             return new DatabaseDisplayModel
             {
                 TypeDisplayName = db.TypeDisplayName,
+                DisplayName = displayName,
+                IsOnline = db.IsOnline,
+                IsBackup = db.IsBackup,
                 Port = db.Port?.ToString() ?? "-",
                 ServiceName = db.ServiceName ?? (db.IsRunningAsService ? db.Name : "-"),
                 ProcessDisplay = db.ProcessId > 0 ? $"{db.ProcessName} (PID: {db.ProcessId})" : "-",
-                DetectionMethod = string.Join(" + ", how),
+                DetectionMethod = db.IsOnline
+                    ? string.Join(" + ", how)
+                    : (db.IsBackup ? "آفلاین - بکاپ" : "آفلاین - فایل"),
                 Version = db.Version,
-                HostAddress = db.Host
+                HostAddress = db.Host,
+                Location = db.IsOnline
+                    ? (db.Host + ":" + db.Port)
+                    : (db.LocalPath ?? "-"),
+                SizeInfo = db.IsOnline
+                    ? ""
+                    : $"{FormatFileSize(db.FileSize)} - {db.FileModified:yyyy-MM-dd HH:mm}"
             };
+        }
+
+        private static string FormatFileSize(long bytes)
+        {
+            if (bytes <= 0) return "-";
+            string[] units = { "B", "KB", "MB", "GB", "TB" };
+            double size = bytes;
+            var unit = 0;
+            while (size >= 1024 && unit < units.Length - 1)
+            {
+                size /= 1024;
+                unit++;
+            }
+            return $"{size:0.#} {units[unit]}";
         }
 
         private void DetectDatabases(bool showStatus = true)
@@ -313,7 +417,7 @@ namespace DatabaseFinder
                     }
                 }
 
-                dgvDatabases.DataSource = models;
+                RebindGrid(models);
                 lblStatus.Text = $"تعداد دیتابیس‌های یافت شده: {results.Count}";
             }
             catch (Exception ex)

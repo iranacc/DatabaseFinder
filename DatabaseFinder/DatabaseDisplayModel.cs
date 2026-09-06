@@ -10,5 +10,12 @@ namespace DatabaseFinder
         public string Version { get; set; } = "";
         public string HostAddress { get; set; } = "localhost";
         public bool Selected { get; set; }
+
+        // حالت آفلاین / اسکن هارد
+        public bool IsOnline { get; set; } = true;
+        public bool IsBackup { get; set; }
+        public string DisplayName { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string SizeInfo { get; set; } = "";
     }
 }

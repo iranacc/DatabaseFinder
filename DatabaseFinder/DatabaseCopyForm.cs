@@ -187,9 +187,12 @@ namespace DatabaseFinder
             _items = result;
             _tree.Nodes.Clear();
 
-            foreach (var group in _items.GroupBy(i => $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"))
+            foreach (var group in _items.GroupBy(i =>
+                i.Server.IsOnline
+                    ? $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"
+                    : $"آفلاین - {i.Server.FormatName}"))
             {
-                var serverNode = new TreeNode($"{group.First().Server.TypeDisplayName}  ({group.Key})")
+                var serverNode = new TreeNode(group.Key)
                 {
                     Checked = true
                 };
@@ -198,7 +201,10 @@ namespace DatabaseFinder
                     var sizeText = item.Files.Count > 0
                         ? $" ({item.Files.Count} فایل - {DatabaseFileLocator.FormatSize(item.TotalSize)})"
                         : "";
-                    var node = new TreeNode($"{item.DatabaseName}{sizeText}")
+                    var locationText = !item.Server.IsOnline && item.Server.LocalPath != null
+                        ? "  [" + System.IO.Path.GetDirectoryName(item.Server.LocalPath) + "]"
+                        : "";
+                    var node = new TreeNode($"{item.DatabaseName}{sizeText}{locationText}")
                     {
                         Tag = item,
                         Checked = true

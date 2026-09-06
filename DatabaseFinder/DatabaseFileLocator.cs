@@ -37,6 +37,12 @@ namespace DatabaseFinder
             {
                 log?.Invoke($"[{server.TypeDisplayName}] در حال بررسی فایل‌ها...");
 
+                if (!server.IsOnline)
+                {
+                    items.Add(BuildOfflineItem(server));
+                    continue;
+                }
+
                 if (!IsLocalHost(server))
                 {
                     items.Add(ErrorItem(server, server.Name,
@@ -79,9 +85,37 @@ namespace DatabaseFinder
 
             // حذف موارد تکراری (همان دیتابیس از چند روش تشخیص)
             return items
-                .GroupBy(i => $"{i.Server.Type}-{i.Server.Port}-{i.DatabaseName}")
+                .GroupBy(i => i.Server.IsOnline
+                    ? $"{i.Server.Type}-{i.Server.Port}-{i.DatabaseName}"
+                    : (i.Files.FirstOrDefault()?.SourcePath ?? Guid.NewGuid().ToString()))
                 .Select(g => g.First())
                 .ToList();
+        }
+
+        private static DatabaseCopyItem BuildOfflineItem(DatabaseInfo server)
+        {
+            if (!string.IsNullOrEmpty(server.LocalPath) && File.Exists(server.LocalPath))
+            {
+                var fi = new FileInfo(server.LocalPath);
+                var format = string.IsNullOrEmpty(server.FormatName) ? server.TypeDisplayName : server.FormatName;
+                var item = new DatabaseCopyItem
+                {
+                    Server = server,
+                    DatabaseName = server.Name,
+                    FolderName = SafeFolder($"{format}_{server.Name}")
+                };
+                item.Files.Add(new FileCopyItem
+                {
+                    DisplayName = fi.Name,
+                    SourcePath = fi.FullName,
+                    RelativePath = fi.Name,
+                    Size = fi.Length
+                });
+                return item;
+            }
+
+            return ErrorItem(server, server.Name,
+                "فایل دیتابیس آفلاین در مسیر ثبت‌شده یافت نشد (ممکن است جابه‌جا یا حذف شده باشد).");
         }
 
         private static DatabaseCopyItem ErrorItem(DatabaseInfo server, string dbName, string error)
