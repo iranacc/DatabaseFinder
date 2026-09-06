@@ -25,6 +25,8 @@ partial class Form1
         this.btnSettings = new System.Windows.Forms.Button();
         this.btnProfiles = new System.Windows.Forms.Button();
         this.btnTest = new System.Windows.Forms.Button();
+        this.btnRemote = new System.Windows.Forms.Button();
+        this.btnQuery = new System.Windows.Forms.Button();
         this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
         this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
         this.miShow = new System.Windows.Forms.ToolStripMenuItem();
@@ -175,6 +177,30 @@ partial class Form1
         this.btnTest.UseVisualStyleBackColor = false;
         this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
 
+        // btnQuery
+        this.btnQuery.BackColor = System.Drawing.Color.FromArgb(0, 150, 136);
+        this.btnQuery.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnQuery.ForeColor = System.Drawing.Color.White;
+        this.btnQuery.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnQuery.Location = new System.Drawing.Point(366, 45);
+        this.btnQuery.Name = "btnQuery";
+        this.btnQuery.Size = new System.Drawing.Size(110, 30);
+        this.btnQuery.Text = "اجرای کوئری";
+        this.btnQuery.UseVisualStyleBackColor = false;
+        this.btnQuery.Click += new System.EventHandler(this.btnQuery_Click);
+
+        // btnRemote
+        this.btnRemote.BackColor = System.Drawing.Color.FromArgb(63, 81, 181);
+        this.btnRemote.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnRemote.ForeColor = System.Drawing.Color.White;
+        this.btnRemote.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnRemote.Location = new System.Drawing.Point(484, 45);
+        this.btnRemote.Name = "btnRemote";
+        this.btnRemote.Size = new System.Drawing.Size(130, 30);
+        this.btnRemote.Text = "اسکن راه دور";
+        this.btnRemote.UseVisualStyleBackColor = false;
+        this.btnRemote.Click += new System.EventHandler(this.btnRemote_Click);
+
         // lblStatus
         this.lblStatus.AutoSize = true;
         this.lblStatus.Location = new System.Drawing.Point(12, 398);
@@ -208,6 +234,8 @@ partial class Form1
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         this.ClientSize = new System.Drawing.Size(800, 420);
         this.Controls.Add(this.btnTest);
+        this.Controls.Add(this.btnQuery);
+        this.Controls.Add(this.btnRemote);
         this.Controls.Add(this.btnProfiles);
         this.Controls.Add(this.btnSettings);
         this.Controls.Add(this.btnCopy);
@@ -238,6 +266,8 @@ partial class Form1
     private System.Windows.Forms.Button btnSettings;
     private System.Windows.Forms.Button btnProfiles;
     private System.Windows.Forms.Button btnTest;
+    private System.Windows.Forms.Button btnQuery;
+    private System.Windows.Forms.Button btnRemote;
     private System.Windows.Forms.NotifyIcon notifyIcon;
     private System.Windows.Forms.ContextMenuStrip trayMenu;
     private System.Windows.Forms.ToolStripMenuItem miShow;

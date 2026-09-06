@@ -1,8 +1,10 @@
 # Database Finder
 
-ابزار ویندوزی برای پیدا کردن دیتابیس‌های در حال اجرا روی سیستم.
+Windows utility to detect databases currently running on your system.
 
-قابلیت تشخیص انواع دیتابیس زیر را دارد:
+> **فارسی:** [مطالعه نسخه فارسی README](README.fa.md) / [Persian README]
+
+## Detection
 - SQL Server
 - MySQL
 - MariaDB
@@ -13,27 +15,33 @@
 - Elasticsearch
 - CouchDB
 
-## قابلیت‌ها (نسخه 1.1)
-- شناسایی از ۳ روش: سرویس ویندوز، پروسس، پورت‌های باز
-- جزئیات کامل هر دیتابیس (نسخه، آدرس، وضعیت سرویس/پروسس)
-- تست اتصال مستقیم به دیتابیس
-- تنظیمات قابل شخصی‌سازی (پورت‌های سفارشی، به‌روزرسانی خودکار)
-- پروفایل دیتابیس‌های ذخیره‌شده
-- آیکون در سینی سیستم با منوی سریع
+## Features (v1.2)
+- Detection via 3 methods: Windows services, processes, open ports
+- Full details for each database (version, address, service/process status)
+- Real connection & SQL query execution (MySQL, PostgreSQL, SQL Server, SQLite, Redis)
+- Remote host scanning (detect databases running on other machines over the network)
+- Connection test with version detection
+- Customizable settings (custom ports, auto refresh)
+- Saved database profiles
+- System tray icon with quick menu
 
-## نحوه اجرا
-### نسخه آماده (بدون نیاز به نصب .NET)
-از صفحه [Releases](https://github.com/iranacc/DatabaseFinder/releases) فایل `DatabaseFinder.exe` را دانلود و اجرا کنید.
+## Installation & Running
+### Pre-built executable (no .NET required)
+Download `DatabaseFinder.exe` from the [Releases](https://github.com/iranacc/DatabaseFinder/releases) page.
 
-### بیلد از سورس
+### Build from source
 ```bash
 dotnet build DatabaseFinder/DatabaseFinder.csproj
 ```
 
-## ساختن نسخه اجرایی مستقل
+### Publish standalone executable
 ```bash
 dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o Release
 ```
 
-## ورژن‌بندی
-تگ‌ها برای نسخه‌های مختلف استفاده می‌شوند (مثال: `v1.1.0`).
+## Versioning
+Git tags are used for releases (e.g. `v1.2.0`).
+
+## Requirements
+- Windows 10/11
+- .NET 8 (only for the Light version; the standalone version includes everything)

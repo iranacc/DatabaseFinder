@@ -116,6 +116,31 @@ namespace DatabaseFinder
             ShowDetailForSelected();
         }
 
+        private void btnQuery_Click(object sender, EventArgs e)
+        {
+            if (dgvDatabases.SelectedRows.Count == 0)
+            {
+                lblStatus.Text = "یک دیتابیس را از لیست انتخاب کنید.";
+                return;
+            }
+
+            var db = GetSelectedDatabase();
+            if (db.Type == DatabaseType.Unknown)
+            {
+                lblStatus.Text = "اجرای کوئری برای این دیتابیس پشتیبانی نمی‌شود.";
+                return;
+            }
+
+            var qf = new QueryRunnerForm(db);
+            qf.ShowDialog(this);
+        }
+
+        private void btnRemote_Click(object sender, EventArgs e)
+        {
+            var form = new RemoteScannerForm();
+            form.ShowDialog(this);
+        }
+
         private void btnCopy_Click(object sender, EventArgs e)
         {
             var sb = new StringBuilder();
@@ -142,9 +167,15 @@ namespace DatabaseFinder
         private void ShowDetailForSelected()
         {
             if (dgvDatabases.SelectedRows.Count == 0) return;
+            var db = GetSelectedDatabase();
+            var form = new DatabaseDetailForm(db);
+            form.ShowDialog(this);
+        }
 
+        private DatabaseInfo GetSelectedDatabase()
+        {
             var row = dgvDatabases.SelectedRows[0];
-            var db = new DatabaseInfo
+            return new DatabaseInfo
             {
                 Type = ParseType(row.Cells[0].Value?.ToString() ?? ""),
                 Name = row.Cells[0].Value?.ToString() ?? "",
@@ -154,9 +185,6 @@ namespace DatabaseFinder
                 ProcessId = GetPidFromDisplay(row.Cells[4].Value?.ToString()),
                 Version = row.Cells[1].Value?.ToString() ?? ""
             };
-
-            var form = new DatabaseDetailForm(db);
-            form.ShowDialog(this);
         }
 
         private static DatabaseType ParseType(string displayName)
