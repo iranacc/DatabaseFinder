@@ -15,11 +15,19 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
-## Features (v1.2)
+## Features (v1.3)
 - Detection via 3 methods: Windows services, processes, open ports
 - Full details for each database (version, address, service/process status)
 - Real connection & SQL query execution (MySQL, PostgreSQL, SQL Server, SQLite, Redis)
 - Remote host scanning (detect databases running on other machines over the network)
+- **Copy database data files** — select detected databases with checkboxes, choose a destination folder, and copy each database's physical files into its own separate folder (original filenames preserved, e.g. SQL Server `.mdf`/`.ldf`)
+  - SQL Server: file list from `sys.databases` + `master_files` (system/tempdb excluded)
+  - MySQL/MariaDB: per-database folders from the server data directory
+  - PostgreSQL: per-database directories from `base/` (by OID)
+  - Redis: `dump.rdb` / `appendonly` files from `CONFIG GET dir`
+  - MongoDB: data directory discovery (`\data\db`)
+  - Manual folder selection fallback for databases whose files cannot be auto-discovered
+  - Locked in-use files are reported with a hint to stop the DB service or run as Administrator
 - Connection test with version detection
 - Customizable settings (custom ports, auto refresh)
 - Saved database profiles
@@ -40,7 +48,7 @@ dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self
 ```
 
 ## Versioning
-Git tags are used for releases (e.g. `v1.2.0`).
+Git tags are used for releases (e.g. `v1.3.0`).
 
 ## Requirements
 - Windows 10/11

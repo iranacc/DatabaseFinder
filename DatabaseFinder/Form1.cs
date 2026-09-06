@@ -9,6 +9,7 @@ namespace DatabaseFinder
         private System.Windows.Forms.Timer? _refreshTimer;
         private bool _isClosing = false;
         private bool _exitRequested = false;
+        private List<DatabaseInfo> _lastResults = new();
 
         public Form1()
         {
@@ -141,12 +142,46 @@ namespace DatabaseFinder
             form.ShowDialog(this);
         }
 
+        private void btnCopyFiles_Click(object sender, EventArgs e)
+        {
+            var selected = new List<int>();
+            for (int i = 0; i < dgvDatabases.Rows.Count; i++)
+            {
+                var row = dgvDatabases.Rows[i];
+                if (row.Cells["colCheck"].Value is bool b && b)
+                {
+                    selected.Add(i);
+                }
+            }
+
+            if (selected.Count == 0)
+            {
+                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
+                return;
+            }
+
+            var dbs = selected
+                .Select(index => index < _lastResults.Count ? _lastResults[index] : GetDatabaseFromRow(dgvDatabases.Rows[index]))
+                .Where(d => d != null)
+                .Cast<DatabaseInfo>()
+                .ToList();
+
+            if (dbs.Count == 0)
+            {
+                lblStatus.Text = "دیتابیس قابل کپی یافت نشد.";
+                return;
+            }
+
+            var form = new DatabaseCopyForm(dbs);
+            form.ShowDialog(this);
+        }
+
         private void btnCopy_Click(object sender, EventArgs e)
         {
             var sb = new StringBuilder();
             foreach (DataGridViewRow row in dgvDatabases.Rows)
             {
-                sb.AppendLine($"{row.Cells[0].Value} | پورت: {row.Cells[2].Value} | سرویس: {row.Cells[3].Value} | پروسس: {row.Cells[4].Value}");
+                sb.AppendLine($"{row.Cells["colType"].Value} | پورت: {row.Cells["colPort"].Value} | سرویس: {row.Cells["colService"].Value} | پروسس: {row.Cells["colProcess"].Value}");
             }
 
             if (sb.Length > 0)
@@ -175,15 +210,20 @@ namespace DatabaseFinder
         private DatabaseInfo GetSelectedDatabase()
         {
             var row = dgvDatabases.SelectedRows[0];
+            return GetDatabaseFromRow(row);
+        }
+
+        private static DatabaseInfo GetDatabaseFromRow(DataGridViewRow row)
+        {
             return new DatabaseInfo
             {
-                Type = ParseType(row.Cells[0].Value?.ToString() ?? ""),
-                Name = row.Cells[0].Value?.ToString() ?? "",
-                Port = ParsePort(row.Cells[2].Value?.ToString()),
-                ServiceName = row.Cells[3].Value?.ToString(),
-                ProcessName = GetProcessFromDisplay(row.Cells[4].Value?.ToString()),
-                ProcessId = GetPidFromDisplay(row.Cells[4].Value?.ToString()),
-                Version = row.Cells[1].Value?.ToString() ?? ""
+                Type = ParseType(row.Cells["colType"].Value?.ToString() ?? ""),
+                Name = row.Cells["colType"].Value?.ToString() ?? "",
+                Port = ParsePort(row.Cells["colPort"].Value?.ToString()),
+                ServiceName = row.Cells["colService"].Value?.ToString(),
+                ProcessName = GetProcessFromDisplay(row.Cells["colProcess"].Value?.ToString()),
+                ProcessId = GetPidFromDisplay(row.Cells["colProcess"].Value?.ToString()),
+                Version = row.Cells["colVersion"].Value?.ToString() ?? ""
             };
         }
 
@@ -259,6 +299,7 @@ namespace DatabaseFinder
             try
             {
                 var results = _detector.Detect();
+                _lastResults = results.ToList();
                 var models = results.Select(BuildModel).ToList();
 
                 // تست سریع اتصال برای دریافت نسخه

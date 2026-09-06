@@ -26,6 +26,7 @@ partial class Form1
         this.btnProfiles = new System.Windows.Forms.Button();
         this.btnTest = new System.Windows.Forms.Button();
         this.btnRemote = new System.Windows.Forms.Button();
+        this.btnCopyFiles = new System.Windows.Forms.Button();
         this.btnQuery = new System.Windows.Forms.Button();
         this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
         this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -55,6 +56,12 @@ partial class Form1
         this.dgvDatabases.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvDatabases_CellDoubleClick);
 
         // Columns
+        this.colCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+        this.colCheck.HeaderText = "انتخاب";
+        this.colCheck.Name = "colCheck";
+        this.colCheck.DataPropertyName = "Selected";
+        this.colCheck.Width = 45;
+
         this.colType = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colType.HeaderText = "نام دیتابیس";
         this.colType.Name = "colType";
@@ -97,6 +104,7 @@ partial class Form1
         this.colHow.ReadOnly = true;
         this.colHow.Width = 80;
 
+        this.dgvDatabases.Columns.Add(this.colCheck);
         this.dgvDatabases.Columns.Add(this.colType);
         this.dgvDatabases.Columns.Add(this.colVersion);
         this.dgvDatabases.Columns.Add(this.colPort);
@@ -111,7 +119,7 @@ partial class Form1
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Text = "Database Finder v1.2";
+        this.lblTitle.Text = "Database Finder v1.3";
 
         this.Controls.Add(this.lblTitle);
 
@@ -201,6 +209,18 @@ partial class Form1
         this.btnRemote.UseVisualStyleBackColor = false;
         this.btnRemote.Click += new System.EventHandler(this.btnRemote_Click);
 
+        // btnCopyFiles
+        this.btnCopyFiles.BackColor = System.Drawing.Color.FromArgb(139, 195, 74);
+        this.btnCopyFiles.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnCopyFiles.ForeColor = System.Drawing.Color.White;
+        this.btnCopyFiles.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnCopyFiles.Location = new System.Drawing.Point(622, 45);
+        this.btnCopyFiles.Name = "btnCopyFiles";
+        this.btnCopyFiles.Size = new System.Drawing.Size(160, 30);
+        this.btnCopyFiles.Text = "کپی فایل‌های دیتابیس";
+        this.btnCopyFiles.UseVisualStyleBackColor = false;
+        this.btnCopyFiles.Click += new System.EventHandler(this.btnCopyFiles_Click);
+
         // lblStatus
         this.lblStatus.AutoSize = true;
         this.lblStatus.Location = new System.Drawing.Point(12, 398);
@@ -235,6 +255,7 @@ partial class Form1
         this.ClientSize = new System.Drawing.Size(800, 420);
         this.Controls.Add(this.btnTest);
         this.Controls.Add(this.btnQuery);
+        this.Controls.Add(this.btnCopyFiles);
         this.Controls.Add(this.btnRemote);
         this.Controls.Add(this.btnProfiles);
         this.Controls.Add(this.btnSettings);
@@ -268,12 +289,14 @@ partial class Form1
     private System.Windows.Forms.Button btnTest;
     private System.Windows.Forms.Button btnQuery;
     private System.Windows.Forms.Button btnRemote;
+    private System.Windows.Forms.Button btnCopyFiles;
     private System.Windows.Forms.NotifyIcon notifyIcon;
     private System.Windows.Forms.ContextMenuStrip trayMenu;
     private System.Windows.Forms.ToolStripMenuItem miShow;
     private System.Windows.Forms.ToolStripMenuItem miRefresh;
     private System.Windows.Forms.ToolStripMenuItem miExit;
     private System.Windows.Forms.DataGridViewTextBoxColumn colType;
+    private System.Windows.Forms.DataGridViewCheckBoxColumn colCheck;
     private System.Windows.Forms.DataGridViewTextBoxColumn colVersion;
     private System.Windows.Forms.DataGridViewTextBoxColumn colPort;
     private System.Windows.Forms.DataGridViewTextBoxColumn colService;

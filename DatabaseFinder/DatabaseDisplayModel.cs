@@ -9,5 +9,6 @@ namespace DatabaseFinder
         public string DetectionMethod { get; set; } = "";
         public string Version { get; set; } = "";
         public string HostAddress { get; set; } = "localhost";
+        public bool Selected { get; set; }
     }
 }
