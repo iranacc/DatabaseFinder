@@ -6,6 +6,16 @@ using StackExchange.Redis;
 
 namespace DatabaseFinder
 {
+    public enum LockedFileHandling
+    {
+        /// <summary>کپی فایل قفل‌شده از Shadow Copy (VSS) بدون توقف سرویس.</summary>
+        Vss,
+        /// <summary>توقف خودکار سرویس‌های دیتابیس، کپی، و راه‌اندازی مجدد.</summary>
+        StopServices,
+        /// <summary>فقط گزارش خطا.</summary>
+        ReportOnly
+    }
+
     public class FileCopyItem
     {
         public string DisplayName { get; set; } = "";
@@ -518,83 +528,152 @@ namespace DatabaseFinder
 
         // ---------- اجرای کپی ----------
         public static (int FilesCopied, long BytesCopied, int Failed, string Errors) ExecuteCopy(
-            List<DatabaseCopyItem> items, string destRoot, Action<string>? log = null)
+            List<DatabaseCopyItem> items, string destRoot, LockedFileHandling lockedHandling,
+            Action<string>? log = null)
         {
             var filesCopied = 0;
             long bytesCopied = 0;
             var failed = 0;
             var errorLines = new List<string>();
+            var shadowCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var stoppedServices = new List<string>();
 
-            foreach (var item in items)
+            try
             {
-                var destDir = Path.Combine(destRoot, item.FolderName);
-                var sourceRoot = item.UseManualPath && !string.IsNullOrEmpty(item.ManualPath)
-                    ? item.ManualPath
-                    : null;
-
-                try
+                if (lockedHandling == LockedFileHandling.StopServices)
                 {
-                    if (!string.IsNullOrEmpty(item.Error) && sourceRoot == null)
+                    var serviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var item in items.Where(i => i.Server.IsOnline && IsLocalHost(i.Server)))
                     {
-                        errorLines.Add($"{item.FolderName}: {item.Error}");
-                        failed++;
-                        continue;
+                        foreach (var n in DbServiceHelper.GetDatabaseServices(item.Server.Type, item.Server))
+                            serviceNames.Add(n);
                     }
 
-                    if (sourceRoot != null && Directory.Exists(sourceRoot))
+                    if (serviceNames.Count > 0)
                     {
-                        // کپی کل پوشه دستی
-                        CopyDirectory(sourceRoot, destDir, ref filesCopied, ref bytesCopied, ref failed, errorLines, log);
-                        continue;
-                    }
-
-                    foreach (var file in item.Files)
-                    {
-                        var dest = Path.Combine(destDir, file.RelativePath);
-                        try
+                        log?.Invoke("توقف خودکار سرویس‌های دیتابیس برای کپی فایل‌های قفل‌شده...");
+                        if (!DbServiceHelper.StopServices(serviceNames.ToList(), log, out var stopErr))
                         {
-                            Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destDir);
-                            var src = file.SourcePath;
-                            var info = new FileInfo(src);
-                            if (!info.Exists)
+                            log?.Invoke($"توقف سرویس ناموفق بود: {stopErr}");
+                            errorLines.Add($"توقف سرویس‌های دیتابیس ناموفق: {stopErr}");
+                            foreach (var item in items.Where(i => i.Server.IsOnline && IsLocalHost(i.Server)))
                             {
-                                file.Error = "فایل وجود ندارد.";
-                                errorLines.Add($"{item.FolderName}\\{file.DisplayName}: فایل وجود ندارد.");
+                                if (string.IsNullOrEmpty(item.Error))
+                                    item.Error = "سرویس دیتابیس متوقف نشد؛ کپی انجام نشد.";
                                 failed++;
-                                continue;
                             }
+                            return (0, 0, failed, string.Join(Environment.NewLine, errorLines));
+                        }
+                        stoppedServices.AddRange(serviceNames);
+                    }
+                }
 
-                            File.Copy(src, dest, overwrite: true);
-                            filesCopied++;
-                            bytesCopied += info.Length;
-                            log?.Invoke($"کپی شد: {item.FolderName}\\{file.DisplayName} ({FormatSize(info.Length)})");
-                        }
-                        catch (IOException ex)
-                        {
-                            file.Locked = true;
-                            file.Error = "فایل قفل است؛ سرویس دیتابیس باید متوقف شود.";
-                            errorLines.Add($"{item.FolderName}\\{file.DisplayName}: قفل است - {ex.Message}");
-                            failed++;
-                        }
-                        catch (UnauthorizedAccessException ex)
-                        {
-                            file.Error = "دسترسی رد شد (نیاز به Administrator).";
-                            errorLines.Add($"{item.FolderName}\\{file.DisplayName}: دسترسی رد شد - {ex.Message}");
-                            failed++;
-                        }
-                        catch (Exception ex)
-                        {
-                            file.Error = ex.Message;
-                            errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {ex.Message}");
-                            failed++;
-                        }
-}
-                }
-                catch (Exception ex)
+                foreach (var item in items)
                 {
-                    errorLines.Add($"{item.FolderName}: {ex.Message}");
-                    failed++;
+                    var destDir = Path.Combine(destRoot, item.FolderName);
+                    var sourceRoot = item.UseManualPath && !string.IsNullOrEmpty(item.ManualPath)
+                        ? item.ManualPath
+                        : null;
+
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(item.Error) && sourceRoot == null)
+                        {
+                            errorLines.Add($"{item.FolderName}: {item.Error}");
+                            failed++;
+                            continue;
+                        }
+
+                        if (sourceRoot != null && Directory.Exists(sourceRoot))
+                        {
+                            // کپی کل پوشه دستی
+                            CopyDirectory(sourceRoot, destDir, ref filesCopied, ref bytesCopied, ref failed, errorLines, log);
+                            continue;
+                        }
+
+                        foreach (var file in item.Files)
+                        {
+                            var dest = Path.Combine(destDir, file.RelativePath);
+                            try
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destDir);
+                                var src = file.SourcePath;
+                                var info = new FileInfo(src);
+                                if (!info.Exists)
+                                {
+                                    file.Error = "فایل وجود ندارد.";
+                                    errorLines.Add($"{item.FolderName}\\{file.DisplayName}: فایل وجود ندارد.");
+                                    failed++;
+                                    continue;
+                                }
+
+                                File.Copy(src, dest, overwrite: true);
+                                filesCopied++;
+                                bytesCopied += info.Length;
+                                log?.Invoke($"کپی شد: {item.FolderName}\\{file.DisplayName} ({FormatSize(info.Length)})");
+                            }
+                            catch (IOException ex)
+                            {
+                                file.Locked = true;
+                                if (lockedHandling == LockedFileHandling.Vss)
+                                {
+                                    var vol = Path.GetPathRoot(file.SourcePath);
+                                    if (TryCopyViaShadow(file.SourcePath, dest, vol, shadowCache, out var shadowErr))
+                                    {
+                                        var info2 = new FileInfo(dest);
+                                        file.Locked = false;
+                                        file.Error = null;
+                                        filesCopied++;
+                                        bytesCopied += info2.Length;
+                                        log?.Invoke($"کپی شد (پس از Shadow Copy): {item.FolderName}\\{file.DisplayName} ({FormatSize(info2.Length)})");
+                                    }
+                                    else
+                                    {
+                                        file.Error = "فایل قفل است؛ کپی از Shadow Copy (VSS) ممکن نشد - " + shadowErr;
+                                        errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {file.Error}");
+                                        failed++;
+                                    }
+                                }
+                                else
+                                {
+                                    file.Error = "فایل قفل است؛ سرویس دیتابیس باید متوقف شود.";
+                                    errorLines.Add($"{item.FolderName}\\{file.DisplayName}: قفل است - {ex.Message}");
+                                    failed++;
+                                }
+                            }
+                            catch (UnauthorizedAccessException ex)
+                            {
+                                file.Error = "دسترسی رد شد (نیاز به Administrator).";
+                                errorLines.Add($"{item.FolderName}\\{file.DisplayName}: دسترسی رد شد - {ex.Message}");
+                                failed++;
+                            }
+                            catch (Exception ex)
+                            {
+                                file.Error = ex.Message;
+                                errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {ex.Message}");
+                                failed++;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errorLines.Add($"{item.FolderName}: {ex.Message}");
+                        failed++;
+                    }
+
                 }
+            }
+            finally
+            {
+                if (stoppedServices.Count > 0)
+                {
+                    log?.Invoke("راه‌اندازی مجدد سرویس‌های دیتابیس...");
+                    if (!DbServiceHelper.StartServices(stoppedServices, log, out var startErr))
+                        errorLines.Add("خطا در راه‌اندازی مجدد سرویس: " + startErr);
+                }
+
+                foreach (var shadow in shadowCache.Values)
+                    VolumeShadowCopy.DeleteShadow(shadow);
             }
 
             return (filesCopied, bytesCopied, failed, string.Join(Environment.NewLine, errorLines));
@@ -622,6 +701,46 @@ namespace DatabaseFinder
                     errorLines.Add($"{Path.GetFileName(destRoot)}\\{rel}: {ex.Message}");
                     failed++;
                 }
+            }
+        }
+
+        private static bool TryCopyViaShadow(
+            string src, string dest, string? volumeRoot,
+            Dictionary<string, string> shadowCache, out string? error)
+        {
+            error = null;
+            if (string.IsNullOrEmpty(volumeRoot))
+            {
+                error = "جلد (volume) فایل مشخص نیست.";
+                return false;
+            }
+
+            if (!shadowCache.TryGetValue(volumeRoot, out var shadowId))
+            {
+                shadowId = VolumeShadowCopy.TryCreateShadow(volumeRoot, out var createErr);
+                if (shadowId == null)
+                {
+                    error = createErr ?? "VSS در دسترس نیست.";
+                    return false;
+                }
+                shadowCache[volumeRoot] = shadowId;
+            }
+
+            var shadowSrc = VolumeShadowCopy.MapToShadow(shadowId, src, volumeRoot);
+            try
+            {
+                if (!File.Exists(shadowSrc))
+                {
+                    error = "فایل در Shadow Copy یافت نشد.";
+                    return false;
+                }
+                File.Copy(shadowSrc, dest, overwrite: true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
             }
         }
 

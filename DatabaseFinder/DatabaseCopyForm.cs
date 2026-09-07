@@ -14,6 +14,9 @@ namespace DatabaseFinder
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
+        private readonly RadioButton _rdoVss;
+        private readonly RadioButton _rdoStopStart;
+        private readonly RadioButton _rdoReportOnly;
         private string _manifestPath = "";
 
         public DatabaseCopyForm(List<DatabaseInfo> servers)
@@ -161,6 +164,63 @@ namespace DatabaseFinder
             _btnOpen.Click += BtnOpen_Click;
             Controls.Add(_btnOpen);
 
+            var grpLocked = new GroupBox
+            {
+                Text = "فایل‌های قفل‌شده (سرویس فعال):",
+                Location = new Point(500, 286),
+                Size = new Size(248, 182),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            _rdoVss = new RadioButton
+            {
+                Text = "Shadow Copy بدون توقف سرویس (پیشنهادی)",
+                Location = new Point(10, 26),
+                Size = new Size(228, 34),
+                Checked = true,
+                Font = new Font("Segoe UI", 8.8F)
+            };
+            grpLocked.Controls.Add(_rdoVss);
+
+            var lblVssHint = new Label
+            {
+                Text = "با VSS هم‌زمان با سرویس در حال اجرا؛ نیاز به Administrator.",
+                Location = new Point(28, 58),
+                AutoSize = true,
+                ForeColor = Color.Gray,
+                Font = new Font("Segoe UI", 7.8F)
+            };
+            grpLocked.Controls.Add(lblVssHint);
+
+            _rdoStopStart = new RadioButton
+            {
+                Text = "توقف و شروع مجدد خودکار سرویس SQL",
+                Location = new Point(10, 86),
+                Size = new Size(228, 34),
+                Font = new Font("Segoe UI", 8.8F)
+            };
+            grpLocked.Controls.Add(_rdoStopStart);
+
+            var lblStopHint = new Label
+            {
+                Text = "سرویس دیتابیس موقتاً متوقف و پس از کپی راه‌اندازی می‌شود.",
+                Location = new Point(28, 118),
+                AutoSize = true,
+                ForeColor = Color.Gray,
+                Font = new Font("Segoe UI", 7.8F)
+            };
+            grpLocked.Controls.Add(lblStopHint);
+
+            _rdoReportOnly = new RadioButton
+            {
+                Text = "فقط گزارش خطا",
+                Location = new Point(10, 148),
+                Size = new Size(180, 24),
+                Font = new Font("Segoe UI", 8.8F)
+            };
+            grpLocked.Controls.Add(_rdoReportOnly);
+            Controls.Add(grpLocked);
+
             var lblLog = new Label
             {
                 Text = "گزارش کپی:",
@@ -260,6 +320,16 @@ namespace DatabaseFinder
             _tree.ExpandAll();
             _btnCopy.Enabled = true;
             _lblStatus.Text = $"{_items.Count} دیتابیس شناسایی شد. موارد خطادار با ⚠ مشخص شده‌اند.";
+        }
+
+        private static string HandlingText(LockedFileHandling h)
+        {
+            switch (h)
+            {
+                case LockedFileHandling.Vss: return "Shadow Copy (VSS) — بدون توقف سرویس";
+                case LockedFileHandling.StopServices: return "توقف و شروع مجدد سرویس دیتابیس";
+                default: return "فقط گزارش خطا";
+            }
         }
 
         private static string ShortError(string error)
@@ -380,12 +450,16 @@ namespace DatabaseFinder
             _txtLog.Clear();
             AppendLog($"مقصد: {destRoot}");
             AppendLog($"تعداد دیتابیس‌های انتخابی: {items.Count}");
+            var lockedHandling = _rdoVss.Checked ? LockedFileHandling.Vss
+                : _rdoStopStart.Checked ? LockedFileHandling.StopServices
+                : LockedFileHandling.ReportOnly;
+            AppendLog($"روش فایل‌های قفل‌شده: {HandlingText(lockedHandling)}");
             AppendLog("");
 
             try
             {
                 var result = await Task.Run(() =>
-                    DatabaseFileLocator.ExecuteCopy(items, destRoot, message => AppendLogSafe(message)));
+                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message)));
 
                 AppendLog("");
                 AppendLog("--------------------------");
