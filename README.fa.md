@@ -71,4 +71,4 @@ dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self
 ```
 
 ## ورژن‌بندی
-تگ‌ها برای نسخه‌های مختلف استفاده می‌شوند (مثال: `v1.6.0`).
+تگ‌ها برای نسخه‌های مختلف استفاده می‌شوند (مثال: `v1.7.0`).

@@ -15,7 +15,7 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
-## Features (v1.6)
+## Features (v1.7)
 - Detection via 3 methods: Windows services, processes, open ports
 - **Scan mode selector** — choose between online (running), offline (hard drive), or both
 - **Offline hard-disk scan** — finds database files that are NOT running (stopped services, deleted-from-service databases, and backups):
@@ -71,7 +71,7 @@ dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self
 ```
 
 ## Versioning
-Git tags are used for releases (e.g. `v1.6.0`).
+Git tags are used for releases (e.g. `v1.7.0`).
 
 ## Requirements
 - Windows 10/11
