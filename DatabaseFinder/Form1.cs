@@ -212,6 +212,44 @@ namespace DatabaseFinder
 
         private void btnCopyFiles_Click(object sender, EventArgs e)
         {
+            var dbs = GetCheckedDatabases();
+            if (dbs == null)
+            {
+                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
+                return;
+            }
+
+            if (dbs.Count == 0)
+            {
+                lblStatus.Text = "دیتابیس قابل کپی یافت نشد.";
+                return;
+            }
+
+            var form = new DatabaseCopyForm(dbs);
+            form.ShowDialog(this);
+        }
+
+        private void btnBackup_Click(object sender, EventArgs e)
+        {
+            var dbs = GetCheckedDatabases();
+            if (dbs == null)
+            {
+                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
+                return;
+            }
+
+            if (dbs.Count == 0)
+            {
+                lblStatus.Text = "دیتابیس قابل بکاپ یافت نشد.";
+                return;
+            }
+
+            var form = new DatabaseBackupForm(dbs);
+            form.ShowDialog(this);
+        }
+
+        private List<DatabaseInfo>? GetCheckedDatabases()
+        {
             var selected = new List<int>();
             for (int i = 0; i < dgvDatabases.Rows.Count; i++)
             {
@@ -222,27 +260,14 @@ namespace DatabaseFinder
                 }
             }
 
-            if (selected.Count == 0)
-            {
-                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
-                return;
-            }
+            if (selected.Count == 0) return null;
 
-            var dbs = selected
+            return selected
                 .Select(index => (DatabaseInfo?)(dgvDatabases.Rows[index].Tag as DatabaseInfo)
                     ?? (index < _lastResults.Count ? _lastResults[index] : GetDatabaseFromRow(dgvDatabases.Rows[index])))
                 .Where(d => d != null)
                 .Cast<DatabaseInfo>()
                 .ToList();
-
-            if (dbs.Count == 0)
-            {
-                lblStatus.Text = "دیتابیس قابل کپی یافت نشد.";
-                return;
-            }
-
-            var form = new DatabaseCopyForm(dbs);
-            form.ShowDialog(this);
         }
 
         private void btnCopy_Click(object sender, EventArgs e)

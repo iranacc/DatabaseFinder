@@ -27,6 +27,7 @@ partial class Form1
         this.btnTest = new System.Windows.Forms.Button();
         this.btnRemote = new System.Windows.Forms.Button();
         this.btnCopyFiles = new System.Windows.Forms.Button();
+        this.btnBackup = new System.Windows.Forms.Button();
         this.btnQuery = new System.Windows.Forms.Button();
         this.cmbScanMode = new System.Windows.Forms.ComboBox();
         this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
@@ -52,7 +53,7 @@ partial class Form1
         this.dgvDatabases.ReadOnly = true;
         this.dgvDatabases.RowHeadersVisible = false;
         this.dgvDatabases.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-        this.dgvDatabases.Size = new System.Drawing.Size(770, 300);
+        this.dgvDatabases.Size = new System.Drawing.Size(920, 300);
         this.dgvDatabases.TabIndex = 0;
         this.dgvDatabases.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvDatabases_CellDoubleClick);
 
@@ -149,7 +150,7 @@ partial class Form1
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Text = "Database Finder v1.4";
+        this.lblTitle.Text = "Database Finder v1.5";
 
         this.Controls.Add(this.cmbScanMode);
         this.Controls.Add(this.lblTitle);
@@ -252,6 +253,18 @@ partial class Form1
         this.btnCopyFiles.UseVisualStyleBackColor = false;
         this.btnCopyFiles.Click += new System.EventHandler(this.btnCopyFiles_Click);
 
+        // btnBackup
+        this.btnBackup.BackColor = System.Drawing.Color.FromArgb(233, 30, 99);
+        this.btnBackup.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnBackup.ForeColor = System.Drawing.Color.White;
+        this.btnBackup.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+        this.btnBackup.Location = new System.Drawing.Point(790, 45);
+        this.btnBackup.Name = "btnBackup";
+        this.btnBackup.Size = new System.Drawing.Size(148, 30);
+        this.btnBackup.Text = "بکاپ منطقی (نسخه پشتیبان)";
+        this.btnBackup.UseVisualStyleBackColor = false;
+        this.btnBackup.Click += new System.EventHandler(this.btnBackup_Click);
+
         // lblStatus
         this.lblStatus.AutoSize = true;
         this.lblStatus.Location = new System.Drawing.Point(12, 398);
@@ -283,10 +296,11 @@ partial class Form1
         // Form1
         this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.ClientSize = new System.Drawing.Size(800, 420);
+        this.ClientSize = new System.Drawing.Size(950, 420);
         this.Controls.Add(this.btnTest);
         this.Controls.Add(this.btnQuery);
         this.Controls.Add(this.btnCopyFiles);
+        this.Controls.Add(this.btnBackup);
         this.Controls.Add(this.btnRemote);
         this.Controls.Add(this.btnProfiles);
         this.Controls.Add(this.btnSettings);
@@ -321,6 +335,7 @@ partial class Form1
     private System.Windows.Forms.Button btnQuery;
     private System.Windows.Forms.Button btnRemote;
     private System.Windows.Forms.Button btnCopyFiles;
+    private System.Windows.Forms.Button btnBackup;
     private System.Windows.Forms.ComboBox cmbScanMode;
     private System.Windows.Forms.NotifyIcon notifyIcon;
     private System.Windows.Forms.ContextMenuStrip trayMenu;

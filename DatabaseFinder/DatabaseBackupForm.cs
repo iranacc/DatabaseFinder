@@ -2,37 +2,36 @@ using System.Diagnostics;
 
 namespace DatabaseFinder
 {
-    public class DatabaseCopyForm : Form
+    public class DatabaseBackupForm : Form
     {
         private readonly List<DatabaseInfo> _servers;
-        private List<DatabaseCopyItem> _items = new();
+        private List<DatabaseBackupItem> _items = new();
         private readonly TextBox _txtDest;
         private readonly TreeView _tree;
         private readonly TextBox _txtLog;
-        private readonly Button _btnCopy;
-        private readonly Button _btnManualPath;
+        private readonly Button _btnStart;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
         private string _manifestPath = "";
 
-        public DatabaseCopyForm(List<DatabaseInfo> servers)
+        public DatabaseBackupForm(List<DatabaseInfo> servers)
         {
             _servers = servers;
 
-            Text = "کپی فایل‌های دیتابیس";
+            Text = "بکاپ منطقی دیتابیس (نسخه پشتیبان)";
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(760, 620);
+            ClientSize = new Size(780, 660);
             Font = new Font("Segoe UI", 10F);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
             FormBorderStyle = FormBorderStyle.Sizable;
-            MinimumSize = new Size(680, 520);
+            MinimumSize = new Size(700, 560);
 
             var lblTitle = new Label
             {
-                Text = "کپی فایل‌های فیزیکی دیتابیس",
+                Text = "بکاپ منطقی دیتابیس‌های در حال اجرا",
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -42,18 +41,16 @@ namespace DatabaseFinder
 
             var grpDest = new GroupBox
             {
-                Text = "مسیر مقصد",
+                Text = "مسیر مقصد نسخه پشتیبان",
                 Location = new Point(12, 42),
-                Size = new Size(736, 60)
+                Size = new Size(756, 82)
             };
 
             _txtDest = new TextBox
             {
                 Location = new Point(12, 24),
                 Size = new Size(560, 27),
-                Text = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "DatabaseFilesBackup")
+                Text = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, "DatabaseFinder", "Backup")
             };
             grpDest.Controls.Add(_txtDest);
 
@@ -68,20 +65,30 @@ namespace DatabaseFinder
             };
             btnBrowse.Click += BtnBrowse_Click;
             grpDest.Controls.Add(btnBrowse);
+
+            var lblHint = new Label
+            {
+                Text = "توجه: SQL Server با هویت سرویس خود فایل بکاپ را می‌نویسد؛ مسیری انتخاب کنید که آن سرویس دسترسی نوشتن داشته باشد.",
+                Location = new Point(12, 56),
+                AutoSize = true,
+                ForeColor = Color.Gray,
+                Font = new Font("Segoe UI", 8.5F)
+            };
+            grpDest.Controls.Add(lblHint);
             Controls.Add(grpDest);
 
             var lblItems = new Label
             {
                 Text = "دیتابیس‌های انتخابی (تیک بزنید):",
-                Location = new Point(12, 112),
+                Location = new Point(12, 134),
                 AutoSize = true
             };
             Controls.Add(lblItems);
 
             _tree = new TreeView
             {
-                Location = new Point(12, 136),
-                Size = new Size(480, 330),
+                Location = new Point(12, 158),
+                Size = new Size(500, 310),
                 CheckBoxes = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI", 9.5F)
@@ -97,7 +104,7 @@ namespace DatabaseFinder
             var btnSelectAll = new Button
             {
                 Text = "انتخاب همه",
-                Location = new Point(500, 136),
+                Location = new Point(520, 158),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
@@ -110,7 +117,7 @@ namespace DatabaseFinder
             var btnClearAll = new Button
             {
                 Text = "حذف انتخاب",
-                Location = new Point(628, 136),
+                Location = new Point(648, 158),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(158, 158, 158),
                 ForeColor = Color.White,
@@ -120,51 +127,23 @@ namespace DatabaseFinder
             btnClearAll.Click += (s, e) => SetAllChecked(false);
             Controls.Add(btnClearAll);
 
-            _btnManualPath = new Button
+            var btnExpand = new Button
             {
-                Text = "انتخاب پوشه دستی...",
-                Location = new Point(500, 172),
+                Text = "باز/بسته کردن",
+                Location = new Point(520, 194),
                 Size = new Size(248, 30),
-                BackColor = Color.FromArgb(255, 152, 0),
+                BackColor = Color.FromArgb(0, 150, 136),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            _btnManualPath.Click += BtnManualPath_Click;
-            Controls.Add(_btnManualPath);
-
-            _btnManifest = new Button
-            {
-                Text = "مانیفست SHA-256",
-                Location = new Point(500, 208),
-                Size = new Size(248, 30),
-                BackColor = Color.FromArgb(255, 152, 0),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Enabled = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnManifest.Click += BtnManifest_Click;
-            Controls.Add(_btnManifest);
-
-            _btnOpen = new Button
-            {
-                Text = "باز کردن پوشه",
-                Location = new Point(500, 244),
-                Size = new Size(248, 30),
-                BackColor = Color.FromArgb(76, 175, 80),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Enabled = false,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            _btnOpen.Click += BtnOpen_Click;
-            Controls.Add(_btnOpen);
+            btnExpand.Click += (s, e) => _tree.ExpandAll();
+            Controls.Add(btnExpand);
 
             var lblLog = new Label
             {
-                Text = "گزارش کپی:",
-                Location = new Point(12, 476),
+                Text = "گزارش بکاپ:",
+                Location = new Point(12, 478),
                 AutoSize = true,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
@@ -174,83 +153,95 @@ namespace DatabaseFinder
             {
                 Multiline = true,
                 ReadOnly = true,
-                Location = new Point(12, 500),
-                Size = new Size(736, 76),
+                Location = new Point(12, 502),
+                Size = new Size(756, 100),
                 ScrollBars = ScrollBars.Vertical,
                 Font = new Font("Consolas", 9F),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
             Controls.Add(_txtLog);
 
-            _btnCopy = new Button
+            _btnStart = new Button
             {
-                Text = "شروع کپی",
+                Text = "شروع بکاپ",
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                Location = new Point(12, 576),
-                Size = new Size(140, 34),
+                Location = new Point(12, 614),
+                Size = new Size(150, 36),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
-            _btnCopy.Click += BtnCopy_Click;
-            Controls.Add(_btnCopy);
+            _btnStart.Click += BtnStart_Click;
+            Controls.Add(_btnStart);
+
+            _btnManifest = new Button
+            {
+                Text = "ایجاد مانیفست SHA-256",
+                BackColor = Color.FromArgb(255, 152, 0),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(172, 614),
+                Size = new Size(180, 36),
+                Enabled = false,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            _btnManifest.Click += BtnManifest_Click;
+            Controls.Add(_btnManifest);
+
+            _btnOpen = new Button
+            {
+                Text = "باز کردن پوشه",
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(362, 614),
+                Size = new Size(150, 36),
+                Enabled = false,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            _btnOpen.Click += BtnOpen_Click;
+            Controls.Add(_btnOpen);
 
             _lblStatus = new Label
             {
                 AutoSize = true,
-                Location = new Point(170, 584),
+                Location = new Point(12, 596),
                 ForeColor = Color.Gray,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
             Controls.Add(_lblStatus);
 
-            Load += DatabaseCopyForm_Load;
+            Load += DatabaseBackupForm_Load;
         }
 
-        private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
+        private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
         {
-            _btnCopy.Enabled = false;
-            _lblStatus.Text = "در حال شناسایی فایل‌ها...";
-            AppendLog("در حال اتصال به دیتابیس‌ها و شناسایی فایل‌های فیزیکی...");
+            _btnStart.Enabled = false;
+            _lblStatus.Text = "در حال آماده‌سازی (اتصال به دیتابیس‌ها)...";
+            AppendLog("در حال اتصال به دیتابیس‌های در حال اجرا و آماده‌سازی دستور بکاپ...");
 
             var result = await Task.Run(() =>
-                DatabaseFileLocator.BuildPlan(_servers, message => AppendLogSafe(message)));
+                DatabaseBackuper.BuildBackupPlan(_servers, _txtDest.Text, message => AppendLogSafe(message)));
 
             _items = result;
             _tree.Nodes.Clear();
 
-            foreach (var group in _items.GroupBy(i =>
-                i.Server.IsOnline
-                    ? $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"
-                    : $"آفلاین - {i.Server.FormatName}"))
+            foreach (var group in _items.GroupBy(i => i.Server.TypeDisplayName))
             {
-                var serverNode = new TreeNode(group.Key)
-                {
-                    Checked = true
-                };
+                var serverNode = new TreeNode(group.Key) { Checked = true };
                 foreach (var item in group)
                 {
-                    var sizeText = item.Files.Count > 0
-                        ? $" ({item.Files.Count} فایل - {DatabaseFileLocator.FormatSize(item.TotalSize)})"
-                        : "";
-                    var locationText = !item.Server.IsOnline && item.Server.LocalPath != null
-                        ? "  [" + System.IO.Path.GetDirectoryName(item.Server.LocalPath) + "]"
-                        : "";
-                    var node = new TreeNode($"{item.DatabaseName}{sizeText}{locationText}")
+                    var node = new TreeNode(TextFor(item))
                     {
                         Tag = item,
-                        Checked = true
+                        Checked = !string.IsNullOrEmpty(item.Error) || item.Server.IsOnline
                     };
                     if (!string.IsNullOrEmpty(item.Error))
                     {
                         node.Text += "  ⚠ " + ShortError(item.Error);
                         node.ForeColor = Color.FromArgb(211, 47, 47);
-                    }
-                    else if (item.UseManualPath)
-                    {
-                        node.Text += "  (مسیر دستی)";
-                        node.ForeColor = Color.FromArgb(255, 152, 0);
+                        node.Checked = false;
                     }
                     serverNode.Nodes.Add(node);
                 }
@@ -258,8 +249,14 @@ namespace DatabaseFinder
             }
 
             _tree.ExpandAll();
-            _btnCopy.Enabled = true;
-            _lblStatus.Text = $"{_items.Count} دیتابیس شناسایی شد. موارد خطادار با ⚠ مشخص شده‌اند.";
+            _btnStart.Enabled = true;
+            _lblStatus.Text = $"{_items.Count} دیتابیس آماده شد. موارد خطادار با ⚠ مشخص شده‌اند.";
+        }
+
+        private static string TextFor(DatabaseBackupItem item)
+        {
+            var method = string.IsNullOrEmpty(item.Method) ? "" : $"  ({item.Method})";
+            return $"{item.DatabaseName}{method}";
         }
 
         private static string ShortError(string error)
@@ -300,14 +297,14 @@ namespace DatabaseFinder
             }
         }
 
-        private List<DatabaseCopyItem> GetCheckedItems()
+        private List<DatabaseBackupItem> GetCheckedItems()
         {
-            var selected = new List<DatabaseCopyItem>();
+            var selected = new List<DatabaseBackupItem>();
             foreach (TreeNode node in _tree.Nodes)
             {
                 foreach (TreeNode child in node.Nodes)
                 {
-                    if (child.Checked && child.Tag is DatabaseCopyItem item)
+                    if (child.Checked && child.Tag is DatabaseBackupItem item)
                         selected.Add(item);
                 }
             }
@@ -318,7 +315,7 @@ namespace DatabaseFinder
         {
             using var fbd = new FolderBrowserDialog
             {
-                Description = "پوشه مقصد را انتخاب کنید",
+                Description = "پوشه مقصد نسخه پشتیبان را انتخاب کنید",
                 SelectedPath = _txtDest.Text
             };
             if (fbd.ShowDialog(this) == DialogResult.OK)
@@ -327,37 +324,7 @@ namespace DatabaseFinder
             }
         }
 
-        private void BtnManualPath_Click(object? sender, EventArgs e)
-        {
-            if (_tree.SelectedNode?.Tag is DatabaseCopyItem item)
-            {
-                if (item.Files.Count > 0 && string.IsNullOrEmpty(item.Error))
-                {
-                    _lblStatus.Text = "این دیتابیس فایل‌های شناسایی‌شده دارد؛ نیازی به مسیر دستی نیست.";
-                    return;
-                }
-
-                using var fbd = new FolderBrowserDialog
-                {
-                    Description = $"پوشه حاوی فایل‌های دیتابیس {item.DatabaseName} را انتخاب کنید"
-                };
-                if (fbd.ShowDialog(this) == DialogResult.OK)
-                {
-                    item.ManualPath = fbd.SelectedPath;
-                    item.UseManualPath = true;
-                    item.Error = null;
-                    _tree.SelectedNode.Text = $"{item.DatabaseName}  (پوشه دستی: {fbd.SelectedPath})";
-                    _tree.SelectedNode.ForeColor = Color.FromArgb(255, 152, 0);
-                    _lblStatus.Text = "پوشه دستی تنظیم شد.";
-                }
-            }
-            else
-            {
-                _lblStatus.Text = "ابتدا یک دیتابیس را از درخت انتخاب کنید.";
-            }
-        }
-
-        private async void BtnCopy_Click(object? sender, EventArgs e)
+        private async void BtnStart_Click(object? sender, EventArgs e)
         {
             var items = GetCheckedItems();
             if (items.Count == 0)
@@ -373,8 +340,8 @@ namespace DatabaseFinder
                 return;
             }
 
-            _btnCopy.Enabled = false;
-            _btnCopy.Text = "در حال کپی...";
+            _btnStart.Enabled = false;
+            _btnStart.Text = "در حال بکاپ...";
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _txtLog.Clear();
@@ -384,14 +351,17 @@ namespace DatabaseFinder
 
             try
             {
-                var result = await Task.Run(() =>
-                    DatabaseFileLocator.ExecuteCopy(items, destRoot, message => AppendLogSafe(message)));
+                await Task.Run(() =>
+                    DatabaseBackuper.ExecuteBackup(items, message => AppendLogSafe(message)));
+
+                var ok = items.Count(i => i.Done);
+                var failed = items.Count(i => i.Failed);
 
                 AppendLog("");
                 AppendLog("--------------------------");
-                AppendLog($"فایل‌های کپی‌شده: {result.FilesCopied} | حجم: {DatabaseFileLocator.FormatSize(result.BytesCopied)} | ناموفق: {result.Failed}");
+                AppendLog($"انجام شد: {ok} | ناموفق: {failed} | حجم کل بکاپ: {DatabaseFileLocator.FormatSize(items.Sum(i => i.BytesProduced))}");
 
-                if (result.FilesCopied > 0)
+                if (ok > 0)
                 {
                     AppendLog("در حال ساخت مانیفست SHA-256 ...");
                     _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot));
@@ -400,19 +370,21 @@ namespace DatabaseFinder
                     _btnOpen.Enabled = true;
                 }
 
-                _lblStatus.Text = $"پایان کپی: {result.FilesCopied} فایل کپی شد، {result.Failed} مورد ناموفق.";
-                _lblStatus.ForeColor = result.Failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
+                _lblStatus.Text = failed > 0
+                    ? $"بکاپ تمام شد: {ok} موفق، {failed} ناموفق."
+                    : $"بکاپ کامل انجام شد: {ok} دیتابیس پشتیبان گرفته شد.";
+                _lblStatus.ForeColor = failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
             }
             catch (Exception ex)
             {
                 AppendLog($"خطا: {ex.Message}");
-                _lblStatus.Text = "خطا در کپی.";
+                _lblStatus.Text = "خطا در انجام بکاپ.";
                 _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
             }
             finally
             {
-                _btnCopy.Enabled = true;
-                _btnCopy.Text = "شروع کپی";
+                _btnStart.Enabled = true;
+                _btnStart.Text = "شروع بکاپ";
             }
         }
 

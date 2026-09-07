@@ -1,0 +1,564 @@
+using System.Diagnostics;
+using System.Text;
+using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using Npgsql;
+using StackExchange.Redis;
+
+namespace DatabaseFinder
+{
+    public class DatabaseBackupItem
+    {
+        public DatabaseInfo Server { get; set; } = new();
+        public string DatabaseName { get; set; } = "";
+        public string FolderName { get; set; } = "";
+        public string BackupDir { get; set; } = "";
+        public string DestFile { get; set; } = "";
+        public string Method { get; set; } = "";
+        public string ToolPath { get; set; } = "";
+        public bool Done { get; set; }
+        public bool Failed { get; set; }
+        public string? Error { get; set; }
+        public List<string> OutputFiles { get; set; } = new();
+        public long BytesProduced { get; set; }
+    }
+
+    public static class DatabaseBackuper
+    {
+        // ---------- ساخت برنامه (پلن) ----------
+        public static List<DatabaseBackupItem> BuildBackupPlan(
+            List<DatabaseInfo> servers, string destRoot, Action<string>? log = null)
+        {
+            var items = new List<DatabaseBackupItem>();
+
+            foreach (var server in servers)
+            {
+                log?.Invoke($"[{server.TypeDisplayName}] در حال آماده‌سازی نسخه پشتیبان...");
+
+                if (!server.IsOnline)
+                {
+                    items.Add(ErrorItem(server, server.Name,
+                        "این مورد در حال اجرا نیست؛ برای بکاپ منطقی ابتدا سرویس را اجرا کنید."));
+                    continue;
+                }
+
+                if (!IsLocalHost(server))
+                {
+                    items.Add(ErrorItem(server, server.Name,
+                        "دیتابیس روی ماشین راه دور است؛ بکاپ منطقی فقط برای دیتابیس‌های این سیستم اجرا می‌شود."));
+                    continue;
+                }
+
+                try
+                {
+                    switch (server.Type)
+                    {
+                        case DatabaseType.SQLServer:
+                            items.AddRange(PlanSqlServer(server, destRoot, log));
+                            break;
+                        case DatabaseType.MySQL:
+                        case DatabaseType.MariaDB:
+                            items.AddRange(PlanMySql(server, destRoot, log));
+                            break;
+                        case DatabaseType.PostgreSQL:
+                            items.AddRange(PlanPostgres(server, destRoot, log));
+                            break;
+                        case DatabaseType.Redis:
+                            items.Add(PlanRedis(server, destRoot, log));
+                            break;
+                        case DatabaseType.MongoDB:
+                            items.Add(PlanMongo(server, destRoot, log));
+                            break;
+                        default:
+                            items.Add(ErrorItem(server, server.Name,
+                                "بکاپ منطقی برای این نوع دیتابیس پشتیبانی نمی‌شود."));
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    items.Add(ErrorItem(server, server.Name,
+                        $"خطا در آماده‌سازی بکاپ: {ex.Message}"));
+                }
+            }
+
+            return items;
+        }
+
+        private static DatabaseBackupItem ErrorItem(DatabaseInfo server, string dbName, string error)
+        {
+            var name = string.IsNullOrEmpty(dbName) ? server.Name : dbName;
+            return new DatabaseBackupItem
+            {
+                Server = server,
+                DatabaseName = name,
+                FolderName = DatabaseFileLocator.SafeFolder($"{server.TypeDisplayName}_{name}"),
+                Error = error
+            };
+        }
+
+        private static DatabaseBackupItem NewItem(DatabaseInfo server, string dbName, string destRoot, string method)
+        {
+            var folder = DatabaseFileLocator.SafeFolder($"{server.TypeDisplayName}_{dbName}");
+            return new DatabaseBackupItem
+            {
+                Server = server,
+                DatabaseName = dbName,
+                FolderName = folder,
+                BackupDir = Path.Combine(destRoot, folder),
+                Method = method
+            };
+        }
+
+        // ---------- SQL Server ----------
+        private static List<DatabaseBackupItem> PlanSqlServer(DatabaseInfo server, string destRoot, Action<string>? log)
+        {
+            var cs = BuildSqlServerCs(server);
+            var names = new List<string>();
+            using (var conn = new SqlConnection(cs))
+            {
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandTimeout = 10;
+                cmd.CommandText = "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name;";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read()) names.Add(reader.GetString(0));
+            }
+
+            var items = names.Select(db =>
+            {
+                var it = NewItem(server, db, destRoot, "BACKUP DATABASE");
+                it.DestFile = Path.Combine(it.BackupDir, DatabaseFileLocator.SafeFolder(db) + ".bak");
+                return it;
+            }).ToList();
+
+            log?.Invoke($"[SQL Server] {names.Count} دیتابیس کاربری برای بکاپ آماده شد.");
+            return items;
+        }
+
+        private static string BuildSqlServerCs(DatabaseInfo server)
+        {
+            var profile = ProfileManager.Load()
+                .FirstOrDefault(p => p.Type == server.Type && p.Host == server.Host && p.Port == (server.Port ?? 0));
+
+            var serverName = server.Port.HasValue && server.Port.Value > 0
+                ? $"{server.Host},{server.Port.Value}"
+                : server.Host;
+
+            return profile != null && !string.IsNullOrEmpty(profile.Username)
+                ? $"Data Source={serverName};User ID={profile.Username};Password={profile.Password};TrustServerCertificate=True;Connect Timeout=5;"
+                : $"Data Source={serverName};Integrated Security=True;TrustServerCertificate=True;Connect Timeout=5;";
+        }
+
+        private static void RunSqlBackup(DatabaseBackupItem item, Action<string>? log)
+        {
+            var cs = BuildSqlServerCs(item.Server);
+            using var conn = new SqlConnection(cs);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandTimeout = 0;
+            var dbName = item.DatabaseName.Replace("]", "]]");
+            var dest = item.DestFile.Replace("'", "''");
+            cmd.CommandText = $"BACKUP DATABASE [{dbName}] TO DISK = N'{dest}' WITH INIT, COMPRESSION;";
+            log?.Invoke($"[SQL Server] شروع BACKUP DATABASE {item.DatabaseName} ...");
+            cmd.ExecuteNonQuery();
+        }
+
+        // ---------- MySQL / MariaDB ----------
+        private static List<DatabaseBackupItem> PlanMySql(DatabaseInfo server, string destRoot, Action<string>? log)
+        {
+            var port = server.Port ?? (server.Type == DatabaseType.MariaDB ? 3307 : 3306);
+            var creds = GetMySqlCreds(server, port);
+
+            string basedir = "";
+            using (var conn = new MySqlConnection(creds.Item1))
+            {
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT @@basedir;";
+                basedir = (string?)cmd.ExecuteScalar() ?? "";
+            }
+
+            var mysqldump = FindMySqlDump(basedir);
+            var dbNames = GetMySqlDatabases(creds.Item1);
+
+            var items = dbNames.Select(db =>
+            {
+                var it = NewItem(server, db, destRoot, "mysqldump");
+                it.DestFile = Path.Combine(it.BackupDir, DatabaseFileLocator.SafeFolder(db) + ".sql");
+                if (mysqldump == null) it.Error = "mysqldump.exe یافت نشد (پوشه bin نصب MySQL را بررسی کنید).";
+                it.ToolPath = mysqldump ?? "";
+                return it;
+            }).ToList();
+
+            log?.Invoke($"[{server.TypeDisplayName}] basedir: {basedir} | {dbNames.Count} دیتابیس آماده شد.");
+            return items;
+        }
+
+        private static (string ConnectionString, string User, string Password) GetMySqlCreds(DatabaseInfo server, int port)
+        {
+            var profile = ProfileManager.Load()
+                .FirstOrDefault(p => p.Type == server.Type && p.Host == server.Host && p.Port == port);
+            var user = profile?.Username ?? "root";
+            var pass = profile?.Password ?? "";
+
+            var csb = new MySqlConnectionStringBuilder
+            {
+                Server = server.Host,
+                Port = (uint)port,
+                UserID = user,
+                Password = pass,
+                ConnectionTimeout = 5
+            };
+            return (csb.ConnectionString, user, pass);
+        }
+
+        private static List<string> GetMySqlDatabases(string cs)
+        {
+            var names = new List<string>();
+            using (var conn = new MySqlConnection(cs))
+            {
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT schema_name FROM information_schema.schemata " +
+                                  "WHERE schema_name NOT IN ('information_schema','performance_schema','mysql','sys','ndbinfo') " +
+                                  "ORDER BY schema_name;";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read()) names.Add(reader.GetString(0));
+            }
+            return names;
+        }
+
+        private static string? FindMySqlDump(string basedir)
+        {
+            var candidates = new List<string>();
+            if (!string.IsNullOrEmpty(basedir))
+                candidates.Add(Path.Combine(basedir, "bin", "mysqldump.exe"));
+
+            foreach (var pf in new[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            })
+            {
+                var root = Path.Combine(pf, "MySQL");
+                if (Directory.Exists(root))
+                    candidates.AddRange(Directory.EnumerateDirectories(root, "MySQL Server*")
+                        .Select(v => Path.Combine(v, "bin", "mysqldump.exe")));
+            }
+
+            // از مسیر اجرایی خود mysqld (اگر دسترسی داشته باشد)
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("mysqld"))
+                {
+                    if (p.MainModule?.FileName is string path && File.Exists(path))
+                        candidates.Add(Path.Combine(Path.GetDirectoryName(path)!, "mysqldump.exe"));
+                }
+            }
+            catch { }
+
+            return candidates.FirstOrDefault(File.Exists);
+        }
+
+        private static void RunMySqlDump(DatabaseBackupItem item, Action<string>? log)
+        {
+            if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
+                throw new InvalidOperationException("mysqldump.exe یافت نشد.");
+
+            var port = item.Server.Port ?? (item.Server.Type == DatabaseType.MariaDB ? 3307 : 3306);
+            var (_, user, pass) = GetMySqlCreds(item.Server, port);
+
+            Directory.CreateDirectory(item.BackupDir);
+            var args = $"--host={item.Server.Host} --port={port} --user={user} " +
+                       $"--single-transaction --routines --triggers --default-character-set=utf8mb4 " +
+                       $"--result-file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
+
+            log?.Invoke($"[{item.Server.TypeDisplayName}] اجرای mysqldump برای {item.DatabaseName} ...");
+            RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["MYSQL_PWD"] = pass }, log);
+        }
+
+        // ---------- PostgreSQL ----------
+        private static List<DatabaseBackupItem> PlanPostgres(DatabaseInfo server, string destRoot, Action<string>? log)
+        {
+            var port = server.Port ?? 5432;
+            var csb = BuildPostgresCsb(server, port);
+
+            var dbNames = new List<string>();
+            using (var conn = new NpgsqlConnection(csb.ConnectionString))
+            {
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT datname FROM pg_database " +
+                                  "WHERE datistemplate = false AND datname <> 'postgres' ORDER BY datname;";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read()) dbNames.Add(reader.GetString(0));
+            }
+
+            var pgDump = FindPgDump();
+            var items = dbNames.Select(db =>
+            {
+                var it = NewItem(server, db, destRoot, "pg_dump");
+                it.DestFile = Path.Combine(it.BackupDir, DatabaseFileLocator.SafeFolder(db) + ".dump");
+                if (pgDump == null) it.Error = "pg_dump.exe یافت نشد (پوشه bin نصب PostgreSQL را بررسی کنید).";
+                it.ToolPath = pgDump ?? "";
+                return it;
+            }).ToList();
+
+            log?.Invoke($"[PostgreSQL] {dbNames.Count} دیتابیس آماده شد.");
+            return items;
+        }
+
+        private static NpgsqlConnectionStringBuilder BuildPostgresCsb(DatabaseInfo server, int port)
+        {
+            var profile = ProfileManager.Load()
+                .FirstOrDefault(p => p.Type == server.Type && p.Host == server.Host && p.Port == port);
+
+            return new NpgsqlConnectionStringBuilder
+            {
+                Host = server.Host,
+                Port = port,
+                Username = profile?.Username ?? "postgres",
+                Password = profile?.Password ?? "postgres",
+                Database = "postgres",
+                Timeout = 5
+            };
+        }
+
+        private static string? FindPgDump()
+        {
+            var candidates = new List<string>();
+            foreach (var pf in new[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            })
+            {
+                var root = Path.Combine(pf, "PostgreSQL");
+                if (Directory.Exists(root))
+                    candidates.AddRange(Directory.EnumerateDirectories(root, "*")
+                        .Select(v => Path.Combine(v, "bin", "pg_dump.exe")));
+            }
+
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("postgres"))
+                {
+                    if (p.MainModule?.FileName is string path && File.Exists(path))
+                        candidates.Add(Path.Combine(Path.GetDirectoryName(path)!, "pg_dump.exe"));
+                    if (p.MainModule?.FileName is string path2 && File.Exists(path2))
+                        candidates.Add(Path.Combine(Path.GetDirectoryName(path2)!, "pg_dump.exe"));
+                }
+            }
+            catch { }
+
+            return candidates.FirstOrDefault(File.Exists);
+        }
+
+        private static void RunPostgresDump(DatabaseBackupItem item, Action<string>? log)
+        {
+            if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
+                throw new InvalidOperationException("pg_dump.exe یافت نشد.");
+
+            var port = item.Server.Port ?? 5432;
+            var profile = ProfileManager.Load()
+                .FirstOrDefault(p => p.Type == item.Server.Type && p.Host == item.Server.Host && p.Port == port);
+            var user = profile?.Username ?? "postgres";
+            var pass = profile?.Password ?? "postgres";
+
+            Directory.CreateDirectory(item.BackupDir);
+            var args = $"--host={item.Server.Host} --port={port} --username={user} " +
+                       $"--format=custom --file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
+
+            log?.Invoke($"[PostgreSQL] اجرای pg_dump برای {item.DatabaseName} ...");
+            RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["PGPASSWORD"] = pass }, log);
+        }
+
+        // ---------- Redis ----------
+        private static DatabaseBackupItem PlanRedis(DatabaseInfo server, string destRoot, Action<string>? log)
+        {
+            var it = NewItem(server, server.Name, destRoot, "SAVE + dump.rdb");
+            it.DestFile = Path.Combine(it.BackupDir,
+                $"dump_{DateTime.Now:yyyyMMdd_HHmmss}.rdb");
+            return it;
+        }
+
+        private static void RunRedisSave(DatabaseBackupItem item, Action<string>? log)
+        {
+            var port = item.Server.Port ?? 6379;
+            var profile = ProfileManager.Load()
+                .FirstOrDefault(p => p.Type == item.Server.Type && p.Host == item.Server.Host && p.Port == port);
+
+            var options = new ConfigurationOptions
+            {
+                EndPoints = { $"{item.Server.Host}:{port}" },
+                AbortOnConnectFail = false,
+                ConnectTimeout = 5000,
+                SyncTimeout = 60000
+            };
+            if (!string.IsNullOrEmpty(profile?.Password))
+                options.Password = profile.Password;
+
+            using var redis = ConnectionMultiplexer.Connect(options);
+            var db = redis.GetDatabase();
+            log?.Invoke($"[Redis] اجرای دستور SAVE برای گرفتن snapshot ...");
+            db.Execute("SAVE");
+
+            string? dir = null;
+            try
+            {
+                var raw = db.Execute("CONFIG", "GET", "dir");
+                if (!raw.IsNull && raw.Length >= 2) dir = raw[1].ToString();
+            }
+            catch { }
+
+            string? fileName = "dump.rdb";
+            try
+            {
+                var raw = db.Execute("CONFIG", "GET", "dbfilename");
+                if (!raw.IsNull && raw.Length >= 2) fileName = raw[1].ToString();
+            }
+            catch { }
+
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+                throw new InvalidOperationException("پوشه داده Redis یافت نشد (CONFIG GET dir).");
+
+            var src = Path.Combine(dir, fileName ?? "dump.rdb");
+            if (!File.Exists(src))
+                throw new InvalidOperationException($"فایل snapshot یافت نشد: {src}");
+
+            Directory.CreateDirectory(item.BackupDir);
+            File.Copy(src, item.DestFile, overwrite: true);
+        }
+
+        // ---------- MongoDB ----------
+        private static DatabaseBackupItem PlanMongo(DatabaseInfo server, string destRoot, Action<string>? log)
+        {
+            var it = NewItem(server, server.Name, destRoot, "mongodump");
+            it.ToolPath = FindMongoDump() ?? "";
+            if (string.IsNullOrEmpty(it.ToolPath))
+                it.Error = "mongodump.exe یافت نشد؛ نسخه MongoDB Database Tools نصب نیست.";
+            return it;
+        }
+
+        private static string? FindMongoDump()
+        {
+            var candidates = new List<string>();
+            var progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var mongoRoot = Path.Combine(progFiles, "MongoDB", "Server");
+            if (Directory.Exists(mongoRoot))
+                candidates.AddRange(Directory.EnumerateDirectories(mongoRoot, "*")
+                    .Select(v => Path.Combine(v, "bin", "mongodump.exe")));
+
+            var tools = Path.Combine(progFiles, "MongoDB", "Tools");
+            if (Directory.Exists(tools))
+                candidates.AddRange(Directory.EnumerateDirectories(tools, "*", SearchOption.TopDirectoryOnly)
+                    .Select(v => Path.Combine(v, "bin", "mongodump.exe")));
+
+            return candidates.FirstOrDefault(File.Exists);
+        }
+
+        private static void RunMongoDump(DatabaseBackupItem item, Action<string>? log)
+        {
+            if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
+                throw new InvalidOperationException("mongodump.exe یافت نشد.");
+
+            Directory.CreateDirectory(item.BackupDir);
+            var port = item.Server.Port ?? 27017;
+            var args = $"--host={item.Server.Host} --port={port} --out=\"{item.BackupDir}\"";
+
+            log?.Invoke($"[MongoDB] اجرای mongodump به {item.BackupDir} ...");
+            RunProcess(item.ToolPath, args, null, log);
+        }
+
+        // ---------- اجرای بکاپ ها ----------
+        public static void ExecuteBackup(List<DatabaseBackupItem> items, Action<string>? log = null)
+        {
+            foreach (var item in items)
+            {
+                item.OutputFiles.Clear();
+                item.Done = false;
+                item.Failed = false;
+
+                if (!string.IsNullOrEmpty(item.Error))
+                {
+                    item.Failed = true;
+                    log?.Invoke($"[نشده] {item.FolderName}: {item.Error}");
+                    continue;
+                }
+
+                try
+                {
+                    Directory.CreateDirectory(item.BackupDir);
+
+                    switch (item.Server.Type)
+                    {
+                        case DatabaseType.SQLServer:
+                            RunSqlBackup(item, log);
+                            break;
+                        case DatabaseType.MySQL:
+                        case DatabaseType.MariaDB:
+                            RunMySqlDump(item, log);
+                            break;
+                        case DatabaseType.PostgreSQL:
+                            RunPostgresDump(item, log);
+                            break;
+                        case DatabaseType.Redis:
+                            RunRedisSave(item, log);
+                            break;
+                        case DatabaseType.MongoDB:
+                            RunMongoDump(item, log);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"نوع {item.Server.TypeDisplayName} پشتیبانی نمی‌شود.");
+                    }
+
+                    item.OutputFiles = Directory.Exists(item.BackupDir)
+                        ? Directory.EnumerateFiles(item.BackupDir, "*", SearchOption.AllDirectories).ToList()
+                        : new List<string>();
+                    item.BytesProduced = item.OutputFiles.Sum(f => new FileInfo(f).Length);
+                    item.Done = true;
+                    log?.Invoke($"[انجام شد] {item.FolderName} ({DatabaseFileLocator.FormatSize(item.BytesProduced)})");
+                }
+                catch (Exception ex)
+                {
+                    item.Failed = true;
+                    item.Error = ex.Message;
+                    log?.Invoke($"[خطا] {item.FolderName}: {ex.Message}");
+                }
+            }
+        }
+
+        // ---------- ابزار ----------
+        private static bool IsLocalHost(DatabaseInfo server)
+        {
+            var h = (server.Host ?? "").Trim();
+            if (string.IsNullOrEmpty(h)) return true;
+            if (h.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
+            return h == "127.0.0.1" || h == "::1" || h == "[::1]" || h == "0.0.0.0";
+        }
+
+        private static string RunProcess(string exe, string args, Dictionary<string, string>? env, Action<string>? log)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exe,
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            };
+            if (env != null)
+                foreach (var kv in env)
+                    psi.Environment[kv.Key] = kv.Value;
+
+            using var p = Process.Start(psi);
+            if (p == null) throw new InvalidOperationException($"اجرای {exe} ممکن نشد.");
+            var err = p.StandardError.ReadToEnd();
+            p.WaitForExit();
+            if (p.ExitCode != 0)
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(err) ? "خروجی ناموفق (کد غیر صفر)." : err.Trim());
+            return err;
+        }
+    }
+}
