@@ -9,6 +9,11 @@ namespace DatabaseFinder
         public string[] Extensions { get; set; } = Array.Empty<string>();
         public bool IsBackup { get; set; }
         public string Description { get; set; } = "";
+
+        /// <summary>
+        /// بررسی محتوای فایل پس از تطبیق پسوند؛ اگر null باشد فقط پسوند ملاک است.
+        /// </summary>
+        public Func<string, bool>? ContentValidator { get; set; }
     }
 
     public static class DiskFormatRegistry
@@ -20,6 +25,7 @@ namespace DatabaseFinder
                 Name = "SQL Server",
                 Type = DatabaseType.SQLServer,
                 Extensions = new[] { ".mdf", ".ldf", ".ndf" },
+                ContentValidator = FileSignatures.IsSqlServerFile,
                 Description = "فایل‌های دیتابیس SQL Server (mdf/ldf/ndf)"
             },
             new DiskFormat
@@ -28,6 +34,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.SQLServer,
                 Extensions = new[] { ".bak" },
                 IsBackup = true,
+                ContentValidator = FileSignatures.IsSqlServerFile,
                 Description = "بکاپ‌های SQL Server (.bak)"
             },
             new DiskFormat
@@ -35,6 +42,7 @@ namespace DatabaseFinder
                 Name = "MySQL InnoDB",
                 Type = DatabaseType.MySQL,
                 Extensions = new[] { ".ibd", ".ibt" },
+                ContentValidator = FileSignatures.IsInnoDbFile,
                 Description = "فایل‌های جدول InnoDB (.ibd)"
             },
             new DiskFormat
@@ -49,6 +57,7 @@ namespace DatabaseFinder
                 Name = "SQLite",
                 Type = DatabaseType.SQLite,
                 Extensions = new[] { ".db", ".sqlite", ".sqlite3", ".sqlitedb" },
+                ContentValidator = FileSignatures.IsSqliteFile,
                 Description = "دیتابیس‌های SQLite (نرم‌افزارهای سبک و حسابداری)"
             },
             new DiskFormat
@@ -56,6 +65,7 @@ namespace DatabaseFinder
                 Name = "Access",
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".accdb", ".mdb" },
+                ContentValidator = FileSignatures.IsAccessFile,
                 Description = "دیتابیس‌های Microsoft Access"
             },
             new DiskFormat
@@ -63,6 +73,7 @@ namespace DatabaseFinder
                 Name = "FoxPro / dBase",
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".dbf", ".dbt" },
+                ContentValidator = FileSignatures.IsDBaseFile,
                 Description = "فایل‌های FoxPro/dBase - رایج در نرم‌افزارهای حسابداری ایرانی"
             },
             new DiskFormat
@@ -70,6 +81,7 @@ namespace DatabaseFinder
                 Name = "Firebird",
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".fdb", ".gdb" },
+                ContentValidator = FileSignatures.IsFirebirdFile,
                 Description = "دیتابیس‌های Firebird (نرم‌افزارهای ایرانی)"
             },
             new DiskFormat
@@ -77,6 +89,7 @@ namespace DatabaseFinder
                 Name = "MongoDB (WiredTiger)",
                 Type = DatabaseType.MongoDB,
                 Extensions = new[] { ".wt" },
+                ContentValidator = FileSignatures.IsWtfFile,
                 Description = "فایل‌های داده MongoDB WiredTiger"
             },
             new DiskFormat
@@ -84,17 +97,33 @@ namespace DatabaseFinder
                 Name = "Redis",
                 Type = DatabaseType.Redis,
                 Extensions = new[] { ".rdb", ".aof" },
+                ContentValidator = FileSignatures.IsRedisFile,
                 Description = "فایل‌های داده و appendonly Redis"
             },
             new DiskFormat
             {
-                Name = "بکاپ/آرشیو عمومی",
+Name = "بکاپ/آرشیو عمومی",
                 Type = DatabaseType.Unknown,
-                Extensions = new[] { ".zip", ".7z", ".rar", ".tar", ".tar.gz", ".gz", ".bkf" },
+                Extensions = new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bkf" },
                 IsBackup = true,
+                ContentValidator = p => ValidateArchive(p),
                 Description = "آرشیو/بکاپ‌های احتمالی حاوی داده مالی"
             }
         };
+
+        private static bool ValidateArchive(string path)
+        {
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            switch (ext)
+            {
+                case ".zip": return FileSignatures.IsZip(path);
+                case ".7z": return FileSignatures.Is7z(path);
+                case ".rar": return FileSignatures.IsRar(path);
+                case ".tar": return FileSignatures.IsTar(path);
+                case ".gz": return FileSignatures.IsGzip(path);
+                default: return true;
+            }
+        }
     }
 
     public class DiskScanner
@@ -179,6 +208,7 @@ namespace DatabaseFinder
                             var fi = new FileInfo(file);
                             if (fi.Length == 0) continue;
                             if (fi.Length < minSizeBytes) continue;
+                            if (format.ContentValidator != null && !format.ContentValidator(file)) continue;
 
                             var candidate = GuessDatabaseName(file, fi.Name);
                             found.Add(new DatabaseInfo

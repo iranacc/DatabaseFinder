@@ -70,7 +70,7 @@ namespace DatabaseFinder
             _lstRoots = new CheckedListBox
             {
                 Location = new Point(6, 48),
-                Size = new Size(318, 140),
+                Size = new Size(318, 118),
                 CheckOnClick = true,
                 Font = new Font("Segoe UI", 9F)
             };
@@ -78,15 +78,37 @@ namespace DatabaseFinder
             var btnAddRoot = new Button
             {
                 Text = "افزودن پوشه دلخواه...",
-                Location = new Point(6, 196),
-                Size = new Size(318, 28),
+                Location = new Point(6, 172),
+                Size = new Size(318, 26),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnAddRoot.Click += BtnAddRoot_Click;
 
-            grpRoots.Controls.AddRange(new Control[] { _rbQuick, _rbFull, _lstRoots, btnAddRoot });
+            var btnAllRoots = new Button
+            {
+                Text = "انتخاب همه",
+                Location = new Point(6, 202),
+                Size = new Size(154, 24),
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnAllRoots.Click += (s, e) => SetRootsChecked(true);
+
+            var btnNoneRoots = new Button
+            {
+                Text = "هیچ",
+                Location = new Point(168, 202),
+                Size = new Size(156, 24),
+                BackColor = Color.FromArgb(158, 158, 158),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnNoneRoots.Click += (s, e) => SetRootsChecked(false);
+
+            grpRoots.Controls.AddRange(new Control[] { _rbQuick, _rbFull, _lstRoots, btnAddRoot, btnAllRoots, btnNoneRoots });
             Controls.Add(grpRoots);
 
             // ---- ناحیه فرمت‌ها ----
@@ -301,6 +323,12 @@ namespace DatabaseFinder
         {
             for (int i = 0; i < _lstFormats.Items.Count; i++)
                 _lstFormats.SetItemChecked(i, check);
+        }
+
+        private void SetRootsChecked(bool check)
+        {
+            for (int i = 0; i < _lstRoots.Items.Count; i++)
+                _lstRoots.SetItemChecked(i, check);
         }
 
         private void BtnAddRoot_Click(object? sender, EventArgs e)
