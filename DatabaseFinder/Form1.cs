@@ -16,6 +16,7 @@ namespace DatabaseFinder
             _settings = AppSettings.Load();
             _detector = new DatabaseDetector(_settings);
             InitializeComponent();
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -98,6 +99,14 @@ namespace DatabaseFinder
                 default:
                     DetectDatabases();
                     break;
+            }
+        }
+
+        private void cmbScanMode_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (cmbScanMode.SelectedIndex == 1)
+            {
+                RunOfflineScan();
             }
         }
 

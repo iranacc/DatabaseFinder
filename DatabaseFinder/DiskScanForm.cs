@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 
 namespace DatabaseFinder
 {
@@ -18,6 +19,7 @@ namespace DatabaseFinder
         private readonly ProgressBar _bar;
         private readonly Label _lblStatus;
         private readonly DataGridView _grid;
+        private ContextMenuStrip? _ctxResults;
 
         private CancellationTokenSource? _cts;
 
@@ -169,10 +171,10 @@ namespace DatabaseFinder
                 Size = new Size(100, 27),
                 Minimum = 0,
                 Maximum = 1048576,
-                Value = 512,
-                Increment = 128
+                Value = 3,
+                Increment = 1
             };
-            var lblMinUnit = new Label { Text = "کیلوبایت (0 = هر اندازه)", Location = new Point(12, 56), AutoSize = true, ForeColor = Color.Gray };
+            var lblMinUnit = new Label { Text = "مگابایت (0 = هر اندازه)", Location = new Point(12, 56), AutoSize = true, ForeColor = Color.Gray };
 
             var lblNote = new Label
             {
@@ -291,6 +293,24 @@ namespace DatabaseFinder
 
             _grid.CellMouseClick += Grid_CellMouseClick;
             Controls.Add(_grid);
+
+            _ctxResults = new ContextMenuStrip();
+            _ctxResults.Items.Add("باز کردن پوشه فایل", null, (s, e) => RunPathAction(OpenFolder));
+            _ctxResults.Items.Add("باز کردن فایل", null, (s, e) => RunPathAction(OpenFile));
+            _ctxResults.Items.Add("کپی مسیر کامل", null, (s, e) => RunPathAction(CopyPath));
+            _ctxResults.Items.Add("کپی فایل به پوشه...", null, (s, e) => RunPathAction(CopyFileToFolder));
+            _ctxResults.Opening += (s, e) =>
+            {
+                var pt = _grid.PointToClient(Cursor.Position);
+                var h = _grid.HitTest(pt.X, pt.Y);
+                if (h.RowIndex < 0 || h.RowIndex >= _grid.Rows.Count)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                _ctxResults.Tag = _grid.Rows[h.RowIndex].Cells[1].Value as string;
+            };
+            _grid.ContextMenuStrip = _ctxResults;
 
             // ---- دکمه‌های پایین ----
             _btnCopy = new Button
@@ -417,7 +437,7 @@ namespace DatabaseFinder
                 return;
             }
 
-            var minSize = (long)_numMinSize.Value * 1024;
+            var minSize = (long)_numMinSize.Value * 1024 * 1024;
 
             _cts = new CancellationTokenSource();
             _btnScan.Enabled = false;
@@ -522,6 +542,44 @@ namespace DatabaseFinder
             if (e.ColumnIndex == 0) return; // کلیک مستقیم روی خود تیک، خودش توگل می‌کند
             var cell = _grid.Rows[e.RowIndex].Cells[0];
             cell.Value = !(cell.Value as bool? ?? false);
+        }
+
+        private void RunPathAction(Action<string> action)
+        {
+            var path = _ctxResults?.Tag as string;
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                action(path);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("خطا: " + ex.Message, "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenFolder(string path)
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", "/select,\"" + path + "\"") { UseShellExecute = true });
+        }
+
+        private void OpenFile(string path)
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+
+        private void CopyPath(string path)
+        {
+            Clipboard.SetText(path);
+        }
+
+        private void CopyFileToFolder(string path)
+        {
+            using var dlg = new FolderBrowserDialog { Description = "پوشه مقصد برای کپی فایل را انتخاب کنید" };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            var dest = Path.Combine(dlg.SelectedPath, Path.GetFileName(path));
+            File.Copy(path, dest, overwrite: true);
+            MessageBox.Show("فایل با موفقیت کپی شد:\n" + dest, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private List<DatabaseInfo> GetSelectedResults()

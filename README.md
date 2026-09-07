@@ -25,6 +25,10 @@ Windows utility to detect databases currently running on your system.
   - **Content (magic-byte) validation** — files are validated by their content in addition to the extension, so files like `Acrobat.dll.bak` or `Photoshop.exe.bak` are no longer reported as SQL backups
   - Results list with format, **file format/extension**, guessed DB name, size, last-modified, and backup flag
   - **Select/deselect results** — clicking anywhere on a row toggles its checkbox; Select-all / none buttons above the results grid are provided
+  - **Right-click context menu on results** — open file's folder, open file, copy full path, copy file to a chosen folder
+- Minimum file size setting in MB (default 3 MB)
+- Selecting "Offline only" automatically opens the hard-disk scan page
+- Multi-size application icon in the taskbar and title bar
   - Offline results can be copied directly or merged into the main grid for the copy feature
 - Full details for each database (version, address, service/process status)
 - Real connection & SQL query execution (MySQL, PostgreSQL, SQL Server, SQLite, Redis)

@@ -141,6 +141,7 @@ partial class Form1
             "فقط آفلاین (اسکن هارد)",
             "آنلاین + آفلاین"});
         this.cmbScanMode.SelectedIndex = 0;
+        this.cmbScanMode.SelectedIndexChanged += new System.EventHandler(this.cmbScanMode_SelectedIndexChanged);
 
         // lblTitle
         this.lblTitle.AutoSize = true;
