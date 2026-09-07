@@ -23,7 +23,8 @@ Windows utility to detect databases currently running on your system.
   - Quick scan (common folders) or full scan (all fixed drives), minimum file-size filter, per-root selection, custom folder, cancel with progress
   - **Select-all / uncheck-all buttons** for both the locations list and the formats list
   - **Content (magic-byte) validation** — files are validated by their content in addition to the extension, so files like `Acrobat.dll.bak` or `Photoshop.exe.bak` are no longer reported as SQL backups
-  - Results list with format, guessed DB name, size, last-modified, and backup flag
+  - Results list with format, **file format/extension**, guessed DB name, size, last-modified, and backup flag
+  - **Select/deselect results** — clicking anywhere on a row toggles its checkbox; Select-all / none buttons above the results grid are provided
   - Offline results can be copied directly or merged into the main grid for the copy feature
 - Full details for each database (version, address, service/process status)
 - Real connection & SQL query execution (MySQL, PostgreSQL, SQL Server, SQLite, Redis)

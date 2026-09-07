@@ -239,6 +239,32 @@ namespace DatabaseFinder
             };
             Controls.Add(lblResults);
 
+            var btnAllResults = new Button
+            {
+                Text = "انتخاب همه",
+                Location = new Point(660, 350),
+                Size = new Size(104, 26),
+                BackColor = Color.FromArgb(76, 175, 80),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnAllResults.Click += (s, e) => SetResultsChecked(true);
+            Controls.Add(btnAllResults);
+
+            var btnNoneResults = new Button
+            {
+                Text = "هیچ",
+                Location = new Point(772, 350),
+                Size = new Size(104, 26),
+                BackColor = Color.FromArgb(158, 158, 158),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnNoneResults.Click += (s, e) => SetResultsChecked(false);
+            Controls.Add(btnNoneResults);
+
             _grid = new DataGridView
             {
                 Location = new Point(12, 380),
@@ -255,13 +281,15 @@ namespace DatabaseFinder
             };
 
             _grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "انتخاب", Name = "sel", Width = 45 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "مسیر", Name = "path", Width = 310, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نوع / فارمت", Name = "format", Width = 140, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نام دیتابیس", Name = "name", Width = 120, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "مسیر", Name = "path", Width = 260, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نوع / فارمت", Name = "format", Width = 110, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "فرمت فایل", Name = "ext", Width = 90, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نام دیتابیس", Name = "name", Width = 110, ReadOnly = true });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "اندازه", Name = "size", Width = 80, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "تغییر یافته", Name = "date", Width = 110, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "تغییر یافته", Name = "date", Width = 100, ReadOnly = true });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "بکاپ", Name = "backup", Width = 60, ReadOnly = true });
 
+            _grid.CellMouseClick += Grid_CellMouseClick;
             Controls.Add(_grid);
 
             // ---- دکمه‌های پایین ----
@@ -469,14 +497,31 @@ namespace DatabaseFinder
                 row.Cells[0].Value = true;
                 row.Cells[1].Value = r.LocalPath;
                 row.Cells[2].Value = r.FormatName;
-                row.Cells[3].Value = r.Name;
-                row.Cells[4].Value = DatabaseFileLocator.FormatSize(r.FileSize);
-                row.Cells[5].Value = r.FileModified.ToString("yyyy-MM-dd HH:mm");
-                row.Cells[6].Value = r.IsBackup ? "بله" : "";
+                row.Cells[3].Value = Path.GetExtension(r.LocalPath).TrimStart('.').ToLowerInvariant();
+                row.Cells[4].Value = r.Name;
+                row.Cells[5].Value = DatabaseFileLocator.FormatSize(r.FileSize);
+                row.Cells[6].Value = r.FileModified.ToString("yyyy-MM-dd HH:mm");
+                row.Cells[7].Value = r.IsBackup ? "بله" : "";
                 row.Tag = r;
                 if (r.IsBackup) row.DefaultCellStyle.BackColor = Color.FromArgb(232, 245, 233);
                 _grid.Rows.Add(row);
             }
+        }
+
+        private void SetResultsChecked(bool check)
+        {
+            foreach (DataGridViewRow row in _grid.Rows)
+            {
+                row.Cells[0].Value = check;
+            }
+        }
+
+        private void Grid_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            if (e.ColumnIndex == 0) return; // کلیک مستقیم روی خود تیک، خودش توگل می‌کند
+            var cell = _grid.Rows[e.RowIndex].Cells[0];
+            cell.Value = !(cell.Value as bool? ?? false);
         }
 
         private List<DatabaseInfo> GetSelectedResults()
