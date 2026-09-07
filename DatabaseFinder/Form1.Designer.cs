@@ -149,7 +149,7 @@ partial class Form1
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Text = "Database Finder v1.5";
+        this.lblTitle.Text = "Database Finder v1.6";
 
         this.Controls.Add(this.cmbScanMode);
         this.Controls.Add(this.lblTitle);

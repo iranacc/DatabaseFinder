@@ -15,7 +15,7 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
-## Features (v1.5)
+## Features (v1.6)
 - Detection via 3 methods: Windows services, processes, open ports
 - **Scan mode selector** — choose between online (running), offline (hard drive), or both
 - **Offline hard-disk scan** — finds database files that are NOT running (stopped services, deleted-from-service databases, and backups):
@@ -33,7 +33,10 @@ Windows utility to detect databases currently running on your system.
   - Redis: `dump.rdb` / `appendonly` files from `CONFIG GET dir`
   - MongoDB: data directory discovery (`\data\db`)
   - Manual folder selection fallback
-  - Locked in-use files are reported with a hint to stop the DB service or run as Administrator
+  - **Handling for locked in-use files** — selectable in the copy dialog:
+    - **VSS Shadow Copy without stopping the service (recommended):** locked files are copied from a volume snapshot while the DB service stays running (requires Administrator)
+    - **Auto stop/start of the DB service:** the relevant services (sqlservr/mysqld/postgres) are stopped for the copy and guaranteed to restart afterwards
+    - **Report-only:** locked files are reported as errors (previous behavior)
 - **Logical backup of running databases** — creates native backups into a separate per-database folder:
   - SQL Server: `BACKUP DATABASE ... TO DISK` (with compression)
   - MySQL/MariaDB: `mysqldump` with automatic binary discovery
@@ -61,7 +64,7 @@ dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self
 ```
 
 ## Versioning
-Git tags are used for releases (e.g. `v1.5.0`).
+Git tags are used for releases (e.g. `v1.6.0`).
 
 ## Requirements
 - Windows 10/11
