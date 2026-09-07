@@ -50,7 +50,6 @@ partial class Form1
         this.dgvDatabases.BackgroundColor = System.Drawing.Color.White;
         this.dgvDatabases.Location = new System.Drawing.Point(12, 90);
         this.dgvDatabases.Name = "dgvDatabases";
-        this.dgvDatabases.ReadOnly = true;
         this.dgvDatabases.RowHeadersVisible = false;
         this.dgvDatabases.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
         this.dgvDatabases.Size = new System.Drawing.Size(920, 300);
