@@ -15,6 +15,10 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.3
+
+- Fixed "File discovery failed: DLL was not found" for SQL Server: the v1.8.1/v1.8.2 single-file publish left native libraries (`Microsoft.Data.SqlClient.SNI.dll` and others) as separate files next to the exe, so downloading just the exe broke SQL connections. All native libraries are now bundled inside the exe again (matching v1.8) and the fix is enforced in the project file.
+
 ## What's new in v1.8.2
 
 - Fixed the v1.8.1 regression where detection silently stalled: a banner read could block forever on servers that don't send an unsolicited greeting (SQL Server), leaving detection permanently "busy" so every later scan did nothing. The version probe now has a hard 5-second cap and re-detection always restarts.
