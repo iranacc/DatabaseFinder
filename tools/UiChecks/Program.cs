@@ -30,7 +30,9 @@ internal static class Program
             typeof(DiskScanForm).GetMethod("SetResultsChecked",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk,new object[]{true});Check((bool)diskGrid.Rows[0].Cells[0].Value!,language+" disk select all");
             Render(disk,Path.Combine(output,"disk-"+language+".png"));
             using var picker=new FormatPickerForm(DiskFormatRegistry.All);picker.Show();Application.DoEvents();
-            Check(picker.SelectedFormats.Count==11,language+" all 11 format groups available");
+            Check(picker.SelectedFormats.Count==14,language+" all 14 format groups available");
+            Check(picker.SelectedFormats.Any(f=>f.Name==L.Text("S212")&&f.NamePatterns.Length==4&&f.FolderNames.Length==0),language+" name-pattern format carried through picker");
+            Check(picker.SelectedFormats.Any(f=>f.Name==L.Text("S213")&&f.FolderNames.Length==1&&f.NamePatterns.Length==0),language+" folder-marker format carried through picker");
             var tree=Descendants(picker).OfType<TreeView>().Single();
             tree.Nodes[0].Nodes[1].Checked=false;
             Check(picker.SelectedFormats[0].Extensions.SequenceEqual(new[]{".mdf",".ndf"}),language+" individual extension deselect");
@@ -68,6 +70,16 @@ internal static class Program
         selected.Extensions=new[]{".db"};
         Check(scan.Scan(new[]{fixture},new[]{selected},0,null,CancellationToken.None).Count==0,"Deselected extension excluded from scan");
         Check(JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings{Language="en"}))!.Language=="en","Language settings round trip");
+        // Regression: SQL Server accepts TCP but never sends a banner. The async version probe must
+        // time out instead of hanging forever (which would permanently busy-lock re-detection).
+        var silentListener=new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback,0);silentListener.Start();
+        var silentPort=((System.Net.IPEndPoint)silentListener.LocalEndpoint!).Port;
+        var silentAccept=Task.Run(()=>silentListener.AcceptTcpClient());
+        var silentProbe=Task.Run(()=>DatabaseTester.TestConnectionAsync(new DatabaseInfo{Type=DatabaseType.SQLServer,Port=silentPort}));
+        Check(silentProbe.Wait(TimeSpan.FromSeconds(8)),"async probe returns for silent server (SQL Server)");
+        Check(silentProbe.Result.Success,"async probe keeps success on silent banner");
+        silentListener.Stop();
+        (silentAccept.IsCompleted&&silentAccept.Result!=null?silentAccept.Result:null)?.Dispose();
         L.Language="fa";
         var saved="";
         var sessionType=typeof(Form1).Assembly.GetType("DatabaseFinder.AppSession")!;

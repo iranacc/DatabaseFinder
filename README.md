@@ -15,6 +15,12 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.2
+
+- Fixed the v1.8.1 regression where detection silently stalled: a banner read could block forever on servers that don't send an unsolicited greeting (SQL Server), leaving detection permanently "busy" so every later scan did nothing. The version probe now has a hard 5-second cap and re-detection always restarts.
+- Offline scan now recognizes backups of Iranian accounting packages: Mahak (name patterns `Backup-mahak…`, `Auto-mahak…`, `BeforeUpdate…`, `FullBackup-…`, `ver…`), Parsian (`PARSIAN.BACK` folder) and Holoo (`Holoo.Bak` folder). These folders were also added to the quick-scan roots.
+- Disk matching priority is now folder path → file-name pattern → extension.
+
 ## What's new in v1.8.1
 
 - Port detection performance: the port→PID map is now built with a single netstat run instead of one per port.

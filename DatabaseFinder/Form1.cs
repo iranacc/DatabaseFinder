@@ -453,29 +453,38 @@ namespace DatabaseFinder
                 RebindGrid(models);
                 lblStatus.Text = L.Format("S228", results.Count);
 
-                // تست اتصال در پس‌زمینه برای دریافت نسخه؛ رابط را مسدود نمی‌کند
+                // تست اتصال در پس‌زمینه برای دریافت نسخه؛ رابط را مسدود نمی‌کند.
+                // مهلت سراسری: حتی اگر سرویسی پاسخ بنر ندهد، تشخیص هرگز به‌طور نامحدود معلق نمی‌ماند.
                 var withPorts = results.Where(d => d.Port.HasValue).ToList();
                 if (withPorts.Count == 0) return;
 
-                var versions = await Task.WhenAll(withPorts.Select(DatabaseTester.TestConnectionAsync));
-
-                if (IsDisposed || !IsHandleCreated) return;
-                for (int i = 0; i < withPorts.Count; i++)
+                try
                 {
-                    var testResult = versions[i];
-                    if (!testResult.Success || testResult.Version.Length == 0) continue;
+                    var versions = await Task.WhenAll(withPorts.Select(DatabaseTester.TestConnectionAsync))
+                        .WaitAsync(TimeSpan.FromSeconds(8));
 
-                    var db = withPorts[i];
-                    db.Version = testResult.Version;
-
-                    // مدل و ردیف متناظر از روی شاخص، نه تطبیق نام+پورت (که ممکن بود ردیف اشتباه را بگیرد)
-                    var idx = results.IndexOf(db);
-                    if (idx >= 0 && idx < models.Count)
+                    if (IsDisposed || !IsHandleCreated) return;
+                    for (int i = 0; i < withPorts.Count; i++)
                     {
-                        models[idx].Version = testResult.Version;
-                        if (idx < dgvDatabases.Rows.Count)
-                            dgvDatabases.Rows[idx].Cells["colVersion"].Value = testResult.Version;
+                        var testResult = versions[i];
+                        if (!testResult.Success || testResult.Version.Length == 0) continue;
+
+                        var db = withPorts[i];
+                        db.Version = testResult.Version;
+
+                        // مدل و ردیف متناظر از روی شاخص، نه تطبیق نام+پورت (که ممکن بود ردیف اشتباه را بگیرد)
+                        var idx = results.IndexOf(db);
+                        if (idx >= 0 && idx < models.Count)
+                        {
+                            models[idx].Version = testResult.Version;
+                            if (idx < dgvDatabases.Rows.Count)
+                                dgvDatabases.Rows[idx].Cells["colVersion"].Value = testResult.Version;
+                        }
                     }
+                }
+                catch (TimeoutException)
+                {
+                    // دادهٔ نسخه بهترین تلاش است؛ عدم دریافت آن نباید جریان تشخیص را مسدود کند.
                 }
             }
             catch (Exception ex)

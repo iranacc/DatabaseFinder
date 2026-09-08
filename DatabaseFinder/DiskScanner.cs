@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace DatabaseFinder
 {
@@ -14,6 +15,12 @@ namespace DatabaseFinder
         /// بررسی محتوای فایل پس از تطبیق پسوند؛ اگر null باشد فقط پسوند ملاک است.
         /// </summary>
         public Func<string, bool>? ContentValidator { get; set; }
+
+        /// <summary>الگوهای نام فایل (regex) که به صورت نادقیق با نام فایل مقایسه می‌شوند.</summary>
+        public string[] NamePatterns { get; set; } = Array.Empty<string>();
+
+        /// <summary>نام پوشه‌هایی که فایل‌های داخل آن‌ها به این نرم‌افزار نسبت داده می‌شوند.</summary>
+        public string[] FolderNames { get; set; } = Array.Empty<string>();
     }
 
     public static class DiskFormatRegistry
@@ -102,6 +109,36 @@ namespace DatabaseFinder
             },
             new DiskFormat
             {
+                Name = L.Text("S212"),
+                Type = DatabaseType.SQLServer,
+                Extensions = new[] { ".bak", ".zip" },
+                IsBackup = true,
+                NamePatterns = new[] { "mahak", @"(^|[^a-z0-9])ver\d+", "BeforeUpdate", "FullBackup" },
+                ContentValidator = ValidateDbBackupOrArchive,
+                Description = L.Text("S313")
+            },
+            new DiskFormat
+            {
+                Name = L.Text("S213"),
+                Type = DatabaseType.SQLServer,
+                Extensions = new[] { ".bak" },
+                IsBackup = true,
+                FolderNames = new[] { "parsian.back" },
+                ContentValidator = FileSignatures.IsSqlServerFile,
+                Description = L.Text("S314")
+            },
+            new DiskFormat
+            {
+                Name = L.Text("S214"),
+                Type = DatabaseType.SQLServer,
+                Extensions = new[] { ".zip", ".bak" },
+                IsBackup = true,
+                FolderNames = new[] { "holoo.bak" },
+                ContentValidator = ValidateDbBackupOrArchive,
+                Description = L.Text("S315")
+            },
+            new DiskFormat
+            {
 Name = L.Text("S210"),
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bkf" },
@@ -123,6 +160,13 @@ Name = L.Text("S210"),
                 case ".gz": return FileSignatures.IsGzip(path);
                 default: return true;
             }
+        }
+
+        private static bool ValidateDbBackupOrArchive(string path)
+        {
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".bak") return FileSignatures.IsSqlServerFile(path);
+            return ValidateArchive(path);
         }
     }
 
@@ -153,11 +197,23 @@ Name = L.Text("S210"),
         {
             var found = new List<DatabaseInfo>();
             var extMap = new Dictionary<string, DiskFormat>(StringComparer.OrdinalIgnoreCase);
+            var nameRules = new List<(Regex Regex, DiskFormat Format)>();
+            var dirMap = new Dictionary<string, DiskFormat>(StringComparer.OrdinalIgnoreCase);
             foreach (var f in formats)
             {
                 foreach (var e in f.Extensions)
                 {
                     extMap[e] = f;
+                }
+
+                if (f.NamePatterns.Length > 0)
+                {
+                    nameRules.Add((new Regex(string.Join("|", f.NamePatterns), RegexOptions.IgnoreCase | RegexOptions.Compiled), f));
+                }
+
+                foreach (var fn in f.FolderNames)
+                {
+                    if (!string.IsNullOrWhiteSpace(fn)) dirMap[fn] = f;
                 }
             }
 
@@ -166,7 +222,7 @@ Name = L.Text("S210"),
             {
                 if (cancel.IsCancellationRequested) break;
                 if (!Directory.Exists(root)) continue;
-                WalkDir(root, extMap, minSizeBytes, found, p, progress, cancel);
+                WalkDir(root, extMap, nameRules, dirMap, null, minSizeBytes, found, p, progress, cancel);
             }
             p.IsFinished = true;
             progress?.Invoke(p);
@@ -176,6 +232,9 @@ Name = L.Text("S210"),
         private void WalkDir(
             string dir,
             Dictionary<string, DiskFormat> extMap,
+            List<(Regex Regex, DiskFormat Format)> nameRules,
+            Dictionary<string, DiskFormat> dirMap,
+            DiskFormat? folderFormat,
             long minSizeBytes,
             List<DatabaseInfo> found,
             ScanProgress p,
@@ -201,7 +260,8 @@ Name = L.Text("S210"),
                     }
 
                     p.FilesScanned++;
-                    if (extMap.TryGetValue(ext, out var format))
+                    var format = MatchFormat(file, Path.GetFileName(file), ext, extMap, nameRules, folderFormat);
+                    if (format != null)
                     {
                         try
                         {
@@ -255,7 +315,8 @@ Name = L.Text("S210"),
                     p.CurrentDirectory = sub;
                     if (p.DirectoriesScanned % 50 == 0) progress?.Invoke(p);
                     if (ShouldSkip(sub)) continue;
-                    WalkDir(sub, extMap, minSizeBytes, found, p, progress, cancel);
+                    dirMap.TryGetValue(Path.GetFileName(sub), out var marked);
+                    WalkDir(sub, extMap, nameRules, dirMap, marked ?? folderFormat, minSizeBytes, found, p, progress, cancel);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -264,6 +325,40 @@ Name = L.Text("S210"),
             catch
             {
             }
+        }
+
+        private static DiskFormat? MatchFormat(
+            string file,
+            string fileName,
+            string ext,
+            Dictionary<string, DiskFormat> extMap,
+            List<(Regex Regex, DiskFormat Format)> nameRules,
+            DiskFormat? folderFormat)
+        {
+            if (folderFormat != null && MatchesExtension(folderFormat, ext))
+            {
+                return folderFormat;
+            }
+
+            foreach (var (rx, nf) in nameRules)
+            {
+                if (!MatchesExtension(nf, ext)) continue;
+                if (!rx.IsMatch(fileName)) continue;
+                return nf;
+            }
+
+            extMap.TryGetValue(ext, out var ef);
+            return ef;
+        }
+
+        private static bool MatchesExtension(DiskFormat format, string ext)
+        {
+            if (format.Extensions.Length == 0) return true;
+            foreach (var e in format.Extensions)
+            {
+                if (string.Equals(e, ext, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         private static bool ShouldSkip(string dir)
@@ -325,7 +420,7 @@ Name = L.Text("S210"),
                     }
 
                     // پوشه‌های ریشه با نام‌های مرتبط با حسابداری/دیتابیس/بکاپ
-                    foreach (var sub in new[] { "data", "database", "databases", "backup", "backups", "accounting", "financial", "حسابداری", "مالی", "بکاپ", "پشتیبان" })
+                    foreach (var sub in new[] { "data", "database", "databases", "backup", "backups", "accounting", "financial", "حسابداری", "مالی", "بکاپ", "پشتیبان", "parsian.back", "holoo.bak" })
                     {
                         AddIfExists(roots, Path.Combine(baseDir, sub));
                     }

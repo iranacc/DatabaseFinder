@@ -16,7 +16,7 @@ public static class L
     public static string Pick(string fa, string en) => IsFa ? fa : en;
     public static string DisplayFormat(string value)
     {
-        foreach (var key in new[] { "S200", "S210" })
+        foreach (var key in new[] { "S200", "S210", "S212", "S213", "S214" })
             if (value == Persian[key] || value == English[key]) return Text(key);
         return value;
     }

@@ -1,0 +1,2 @@
+f01f56d07df1096c8ef30dd5a1df7510d51567f3086fa2dba752707c5e4afc63 *DatabaseFinder-Light.exe
+c293d8665dbe73c291f93adc4d8bc25262b0b6749f3e14d00a2d5d6573c03296 *DatabaseFinder.exe

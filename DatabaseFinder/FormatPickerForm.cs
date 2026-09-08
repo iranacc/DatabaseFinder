@@ -10,7 +10,7 @@ public class FormatPickerForm : AppForm
     private readonly Label _count = new() { Dock = DockStyle.Fill, AutoSize = true, Padding = new Padding(6) };
     private bool _updating;
     protected override bool ModernLayout => true;
-    public List<DiskFormat> SelectedFormats => _formats.Select((f, i) => new DiskFormat { Name = f.Name, Type = f.Type, IsBackup = f.IsBackup, Description = f.Description, ContentValidator = f.ContentValidator, Extensions = f.Extensions.Where(e => _checked.Contains(Key(i, e))).ToArray() }).Where(f => f.Extensions.Length > 0).ToList();
+    public List<DiskFormat> SelectedFormats => _formats.Select((f, i) => new DiskFormat { Name = f.Name, Type = f.Type, IsBackup = f.IsBackup, Description = f.Description, ContentValidator = f.ContentValidator, NamePatterns = f.NamePatterns, FolderNames = f.FolderNames, Extensions = f.Extensions.Where(e => _checked.Contains(Key(i, e))).ToArray() }).Where(f => f.Extensions.Length > 0).ToList();
     private static string Key(int index, string extension) => index + ":" + extension;
     public FormatPickerForm(List<DiskFormat> selection)
     {

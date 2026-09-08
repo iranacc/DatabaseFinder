@@ -14,8 +14,9 @@ namespace DatabaseFinder
     public static class DatabaseTester
     {
         /// <summary>
-        /// نسخهٔ غیرمسدودکنندهٔ تست اتصال برای استفاده از ترد UI. با قطع شدن (timeout) روی اتصال
-        /// و خواندن ptr، رابط را حتی روی شبکهٔ کند یخ نمی‌زند.
+        /// نسخهٔ غیرمسدودکنندهٔ تست اتصال برای استفاده از ترد UI. کل عملیات (اتصال + خواندن بنر)
+        /// با یک مهلت سراسری محدود می‌شود؛ دیتابیس‌هایی که خودشان بنر نمی‌فرستند (مثل SQL Server)
+        /// نباید تست را برای همیشه معلق نگه دارند.
         /// </summary>
         public static async Task<ConnectionResult> TestConnectionAsync(DatabaseInfo db)
         {
@@ -23,9 +24,9 @@ namespace DatabaseFinder
             if (port == 0) return new ConnectionResult { Success = false, Message = L.Text("S149") };
 
             using var tcp = new TcpClient();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await tcp.ConnectAsync("127.0.0.1", port, cts.Token);
             }
             catch (OperationCanceledException)
@@ -44,14 +45,16 @@ namespace DatabaseFinder
 
             try
             {
-                tcp.SendTimeout = 3000;
-                tcp.ReceiveTimeout = 3000;
                 var stream = tcp.GetStream();
                 result.Version = db.Type switch
                 {
-                    DatabaseType.Redis => await GetBannerAsync(stream, "*1\r\n$4\r\nINFO\r\n", "redis_version:"),
-                    _ => await GetBannerAsync(stream, null, null)
+                    DatabaseType.Redis => await GetBannerAsync(stream, "*1\r\n$4\r\nINFO\r\n", "redis_version:", cts.Token),
+                    _ => await GetBannerAsync(stream, null, null, cts.Token)
                 };
+            }
+            catch (OperationCanceledException)
+            {
+                // بدون بنر (مثل SQL Server)؛ اتصال صحیح است اما نسخه دریافت نشد.
             }
             catch { }
 
@@ -139,19 +142,19 @@ namespace DatabaseFinder
             return "";
         }
 
-        private static async Task<string> GetBannerAsync(NetworkStream stream, string? send, string? keyword)
+        private static async Task<string> GetBannerAsync(NetworkStream stream, string? send, string? keyword, CancellationToken ct)
         {
             try
             {
                 if (!string.IsNullOrEmpty(send))
                 {
                     var bytes = Encoding.ASCII.GetBytes(send);
-                    await stream.WriteAsync(bytes, 0, bytes.Length);
-                    await stream.FlushAsync();
+                    await stream.WriteAsync(bytes, 0, bytes.Length, ct);
+                    await stream.FlushAsync(ct);
                 }
 
                 var buffer = new byte[4096];
-                int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                int read = await stream.ReadAsync(buffer, 0, buffer.Length, ct);
                 if (read > 0)
                 {
                     var text = Encoding.UTF8.GetString(buffer, 0, read);
