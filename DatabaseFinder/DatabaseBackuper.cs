@@ -33,19 +33,19 @@ namespace DatabaseFinder
 
             foreach (var server in servers)
             {
-                log?.Invoke($"[{server.TypeDisplayName}] در حال آماده‌سازی نسخه پشتیبان...");
+                log?.Invoke(L.Format("S001", server.TypeDisplayName));
 
                 if (!server.IsOnline)
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        "این مورد در حال اجرا نیست؛ برای بکاپ منطقی ابتدا سرویس را اجرا کنید."));
+                        L.Text("S002")));
                     continue;
                 }
 
                 if (!IsLocalHost(server))
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        "دیتابیس روی ماشین راه دور است؛ بکاپ منطقی فقط برای دیتابیس‌های این سیستم اجرا می‌شود."));
+                        L.Text("S003")));
                     continue;
                 }
 
@@ -71,14 +71,14 @@ namespace DatabaseFinder
                             break;
                         default:
                             items.Add(ErrorItem(server, server.Name,
-                                "بکاپ منطقی برای این نوع دیتابیس پشتیبانی نمی‌شود."));
+                                L.Text("S004")));
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        $"خطا در آماده‌سازی بکاپ: {ex.Message}"));
+                        L.Format("S005", ex.Message)));
                 }
             }
 
@@ -132,7 +132,7 @@ namespace DatabaseFinder
                 return it;
             }).ToList();
 
-            log?.Invoke($"[SQL Server] {names.Count} دیتابیس کاربری برای بکاپ آماده شد.");
+            log?.Invoke(L.Format("S006", names.Count));
             return items;
         }
 
@@ -160,7 +160,7 @@ namespace DatabaseFinder
             var dbName = item.DatabaseName.Replace("]", "]]");
             var dest = item.DestFile.Replace("'", "''");
             cmd.CommandText = $"BACKUP DATABASE [{dbName}] TO DISK = N'{dest}' WITH INIT, COMPRESSION;";
-            log?.Invoke($"[SQL Server] شروع BACKUP DATABASE {item.DatabaseName} ...");
+            log?.Invoke(L.Format("S007", item.DatabaseName));
             cmd.ExecuteNonQuery();
         }
 
@@ -186,12 +186,12 @@ namespace DatabaseFinder
             {
                 var it = NewItem(server, db, destRoot, "mysqldump");
                 it.DestFile = Path.Combine(it.BackupDir, DatabaseFileLocator.SafeFolder(db) + ".sql");
-                if (mysqldump == null) it.Error = "mysqldump.exe یافت نشد (پوشه bin نصب MySQL را بررسی کنید).";
+                if (mysqldump == null) it.Error = L.Text("S008");
                 it.ToolPath = mysqldump ?? "";
                 return it;
             }).ToList();
 
-            log?.Invoke($"[{server.TypeDisplayName}] basedir: {basedir} | {dbNames.Count} دیتابیس آماده شد.");
+            log?.Invoke(L.Format("S009", server.TypeDisplayName, basedir, dbNames.Count));
             return items;
         }
 
@@ -264,7 +264,7 @@ namespace DatabaseFinder
         private static void RunMySqlDump(DatabaseBackupItem item, Action<string>? log)
         {
             if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
-                throw new InvalidOperationException("mysqldump.exe یافت نشد.");
+                throw new InvalidOperationException(L.Text("S010"));
 
             var port = item.Server.Port ?? (item.Server.Type == DatabaseType.MariaDB ? 3307 : 3306);
             var (_, user, pass) = GetMySqlCreds(item.Server, port);
@@ -274,7 +274,7 @@ namespace DatabaseFinder
                        $"--single-transaction --routines --triggers --default-character-set=utf8mb4 " +
                        $"--result-file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
 
-            log?.Invoke($"[{item.Server.TypeDisplayName}] اجرای mysqldump برای {item.DatabaseName} ...");
+            log?.Invoke(L.Format("S011", item.Server.TypeDisplayName, item.DatabaseName));
             RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["MYSQL_PWD"] = pass }, log);
         }
 
@@ -300,12 +300,12 @@ namespace DatabaseFinder
             {
                 var it = NewItem(server, db, destRoot, "pg_dump");
                 it.DestFile = Path.Combine(it.BackupDir, DatabaseFileLocator.SafeFolder(db) + ".dump");
-                if (pgDump == null) it.Error = "pg_dump.exe یافت نشد (پوشه bin نصب PostgreSQL را بررسی کنید).";
+                if (pgDump == null) it.Error = L.Text("S012");
                 it.ToolPath = pgDump ?? "";
                 return it;
             }).ToList();
 
-            log?.Invoke($"[PostgreSQL] {dbNames.Count} دیتابیس آماده شد.");
+            log?.Invoke(L.Format("S013", dbNames.Count));
             return items;
         }
 
@@ -358,7 +358,7 @@ namespace DatabaseFinder
         private static void RunPostgresDump(DatabaseBackupItem item, Action<string>? log)
         {
             if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
-                throw new InvalidOperationException("pg_dump.exe یافت نشد.");
+                throw new InvalidOperationException(L.Text("S014"));
 
             var port = item.Server.Port ?? 5432;
             var profile = ProfileManager.Load()
@@ -370,7 +370,7 @@ namespace DatabaseFinder
             var args = $"--host={item.Server.Host} --port={port} --username={user} " +
                        $"--format=custom --file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
 
-            log?.Invoke($"[PostgreSQL] اجرای pg_dump برای {item.DatabaseName} ...");
+            log?.Invoke(L.Format("S015", item.DatabaseName));
             RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["PGPASSWORD"] = pass }, log);
         }
 
@@ -401,7 +401,7 @@ namespace DatabaseFinder
 
             using var redis = ConnectionMultiplexer.Connect(options);
             var db = redis.GetDatabase();
-            log?.Invoke($"[Redis] اجرای دستور SAVE برای گرفتن snapshot ...");
+            log?.Invoke(L.Text("S016"));
             db.Execute("SAVE");
 
             string? dir = null;
@@ -421,11 +421,11 @@ namespace DatabaseFinder
             catch { }
 
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
-                throw new InvalidOperationException("پوشه داده Redis یافت نشد (CONFIG GET dir).");
+                throw new InvalidOperationException(L.Text("S017"));
 
             var src = Path.Combine(dir, fileName ?? "dump.rdb");
             if (!File.Exists(src))
-                throw new InvalidOperationException($"فایل snapshot یافت نشد: {src}");
+                throw new InvalidOperationException(L.Format("S018", src));
 
             Directory.CreateDirectory(item.BackupDir);
             File.Copy(src, item.DestFile, overwrite: true);
@@ -437,7 +437,7 @@ namespace DatabaseFinder
             var it = NewItem(server, server.Name, destRoot, "mongodump");
             it.ToolPath = FindMongoDump() ?? "";
             if (string.IsNullOrEmpty(it.ToolPath))
-                it.Error = "mongodump.exe یافت نشد؛ نسخه MongoDB Database Tools نصب نیست.";
+                it.Error = L.Text("S019");
             return it;
         }
 
@@ -461,13 +461,13 @@ namespace DatabaseFinder
         private static void RunMongoDump(DatabaseBackupItem item, Action<string>? log)
         {
             if (string.IsNullOrEmpty(item.ToolPath) || !File.Exists(item.ToolPath))
-                throw new InvalidOperationException("mongodump.exe یافت نشد.");
+                throw new InvalidOperationException(L.Text("S020"));
 
             Directory.CreateDirectory(item.BackupDir);
             var port = item.Server.Port ?? 27017;
             var args = $"--host={item.Server.Host} --port={port} --out=\"{item.BackupDir}\"";
 
-            log?.Invoke($"[MongoDB] اجرای mongodump به {item.BackupDir} ...");
+            log?.Invoke(L.Format("S021", item.BackupDir));
             RunProcess(item.ToolPath, args, null, log);
         }
 
@@ -483,7 +483,7 @@ namespace DatabaseFinder
                 if (!string.IsNullOrEmpty(item.Error))
                 {
                     item.Failed = true;
-                    log?.Invoke($"[نشده] {item.FolderName}: {item.Error}");
+                    log?.Invoke(L.Format("S022", item.FolderName, item.Error));
                     continue;
                 }
 
@@ -510,7 +510,7 @@ namespace DatabaseFinder
                             RunMongoDump(item, log);
                             break;
                         default:
-                            throw new InvalidOperationException($"نوع {item.Server.TypeDisplayName} پشتیبانی نمی‌شود.");
+                            throw new InvalidOperationException(L.Format("S023", item.Server.TypeDisplayName));
                     }
 
                     item.OutputFiles = Directory.Exists(item.BackupDir)
@@ -518,13 +518,13 @@ namespace DatabaseFinder
                         : new List<string>();
                     item.BytesProduced = item.OutputFiles.Sum(f => new FileInfo(f).Length);
                     item.Done = true;
-                    log?.Invoke($"[انجام شد] {item.FolderName} ({DatabaseFileLocator.FormatSize(item.BytesProduced)})");
+                    log?.Invoke(L.Format("S024", item.FolderName, DatabaseFileLocator.FormatSize(item.BytesProduced)));
                 }
                 catch (Exception ex)
                 {
                     item.Failed = true;
                     item.Error = ex.Message;
-                    log?.Invoke($"[خطا] {item.FolderName}: {ex.Message}");
+                    log?.Invoke(L.Format("S025", item.FolderName, ex.Message));
                 }
             }
         }
@@ -553,11 +553,11 @@ namespace DatabaseFinder
                     psi.Environment[kv.Key] = kv.Value;
 
             using var p = Process.Start(psi);
-            if (p == null) throw new InvalidOperationException($"اجرای {exe} ممکن نشد.");
+            if (p == null) throw new InvalidOperationException(L.Format("S026", exe));
             var err = p.StandardError.ReadToEnd();
             p.WaitForExit();
             if (p.ExitCode != 0)
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(err) ? "خروجی ناموفق (کد غیر صفر)." : err.Trim());
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(err) ? L.Text("S027") : err.Trim());
             return err;
         }
     }

@@ -2,7 +2,7 @@ using System.Text;
 
 namespace DatabaseFinder
 {
-    public partial class Form1 : Form
+    public partial class Form1 : AppForm
     {
         private readonly DatabaseDetector _detector;
         private AppSettings _settings;
@@ -11,17 +11,21 @@ namespace DatabaseFinder
         private bool _exitRequested = false;
         private List<DatabaseInfo> _lastResults = new();
 
-        public Form1()
+        public Form1(MainViewState? restored = null)
         {
             _settings = AppSettings.Load();
             _detector = new DatabaseDetector(_settings);
             InitializeComponent();
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            _restored = restored;
+            BuildModernShell();
+            FormClosed += (_, _) => { _refreshTimer?.Dispose(); notifyIcon.Dispose(); };
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            DetectDatabases();
+            if (_restored == null) DetectDatabases();
+            else RestoreView(_restored);
 
             if (_settings.AutoRefresh)
             {
@@ -40,7 +44,7 @@ namespace DatabaseFinder
                 notifyIcon.Visible = true;
                 if (_settings.ShowNotifications)
                 {
-                    notifyIcon.ShowBalloonTip(1500, "Database Finder", "برنامه در سینی سیستم فعال است.", ToolTipIcon.Info);
+                    notifyIcon.ShowBalloonTip(1500, "Database Finder", L.Text("S215"), ToolTipIcon.Info);
                 }
             }
         }
@@ -119,11 +123,11 @@ namespace DatabaseFinder
                 if (offline.Count > 0)
                 {
                     MergeOfflineResults(offline);
-                    lblStatus.Text = $"تعداد دیتابیس‌های آفلاین افزوده‌شده: {offline.Count}";
+                    lblStatus.Text = L.Format("S216", offline.Count);
                 }
                 else
                 {
-                    lblStatus.Text = "دیتابیس آفلاینی یافت نشد.";
+                    lblStatus.Text = L.Text("S217");
                 }
             }
         }
@@ -164,6 +168,7 @@ namespace DatabaseFinder
                     if (db.IsBackup) row.DefaultCellStyle.ForeColor = Color.FromArgb(27, 94, 32);
                 }
             }
+            UpdateDetails();
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
@@ -188,7 +193,7 @@ namespace DatabaseFinder
         {
             if (dgvDatabases.SelectedRows.Count == 0)
             {
-                lblStatus.Text = "یک دیتابیس را از لیست انتخاب کنید.";
+                lblStatus.Text = L.Text("S218");
                 return;
             }
             ShowDetailForSelected();
@@ -198,14 +203,14 @@ namespace DatabaseFinder
         {
             if (dgvDatabases.SelectedRows.Count == 0)
             {
-                lblStatus.Text = "یک دیتابیس را از لیست انتخاب کنید.";
+                lblStatus.Text = L.Text("S218");
                 return;
             }
 
             var db = GetSelectedDatabase();
             if (db.Type == DatabaseType.Unknown)
             {
-                lblStatus.Text = "اجرای کوئری برای این دیتابیس پشتیبانی نمی‌شود.";
+                lblStatus.Text = L.Text("S219");
                 return;
             }
 
@@ -224,13 +229,13 @@ namespace DatabaseFinder
             var dbs = GetCheckedDatabases();
             if (dbs == null)
             {
-                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
+                lblStatus.Text = L.Text("S220");
                 return;
             }
 
             if (dbs.Count == 0)
             {
-                lblStatus.Text = "دیتابیس قابل کپی یافت نشد.";
+                lblStatus.Text = L.Text("S221");
                 return;
             }
 
@@ -243,13 +248,13 @@ namespace DatabaseFinder
             var dbs = GetCheckedDatabases();
             if (dbs == null)
             {
-                lblStatus.Text = "ردیف‌هایی که می‌خواهید را تیک بزنید.";
+                lblStatus.Text = L.Text("S220");
                 return;
             }
 
             if (dbs.Count == 0)
             {
-                lblStatus.Text = "دیتابیس قابل بکاپ یافت نشد.";
+                lblStatus.Text = L.Text("S222");
                 return;
             }
 
@@ -284,13 +289,13 @@ namespace DatabaseFinder
             var sb = new StringBuilder();
             foreach (DataGridViewRow row in dgvDatabases.Rows)
             {
-                sb.AppendLine($"{row.Cells["colType"].Value} | پورت: {row.Cells["colPort"].Value} | سرویس: {row.Cells["colService"].Value} | پروسس: {row.Cells["colProcess"].Value}");
+                sb.AppendLine(L.Format("S223", row.Cells["colType"].Value, row.Cells["colPort"].Value, row.Cells["colService"].Value, row.Cells["colProcess"].Value));
             }
 
             if (sb.Length > 0)
             {
                 Clipboard.SetText(sb.ToString());
-                lblStatus.Text = "لیست کپی شد!";
+                lblStatus.Text = L.Text("S224");
             }
         }
 
@@ -318,6 +323,7 @@ namespace DatabaseFinder
 
         private static DatabaseInfo GetDatabaseFromRow(DataGridViewRow row)
         {
+            if (row.Tag is DatabaseInfo original) return original;
             return new DatabaseInfo
             {
                 Type = ParseType(row.Cells["colType"].Value?.ToString() ?? ""),
@@ -377,16 +383,16 @@ namespace DatabaseFinder
             var how = new List<string>();
             if (db.IsOnline)
             {
-                if (db.IsRunningAsService) how.Add("سرویس");
-                if (db.IsRunningAsProcess) how.Add("پروسس");
-                if (db.Port.HasValue) how.Add("پورت");
+                if (db.IsRunningAsService) how.Add(L.Text("S101"));
+                if (db.IsRunningAsProcess) how.Add(L.Text("S102"));
+                if (db.Port.HasValue) how.Add(L.Text("S103"));
             }
 
             var isDisplayName = db.IsOnline ? db.TypeDisplayName : db.Name;
             var displayName = isDisplayName;
             if (!db.IsOnline && !string.IsNullOrEmpty(db.FormatName) && !string.Equals(db.FormatName, db.TypeDisplayName, StringComparison.Ordinal))
             {
-                displayName = $"{db.Name} [{db.FormatName}]";
+                displayName = $"{db.Name} [{L.DisplayFormat(db.FormatName)}]";
             }
 
             return new DatabaseDisplayModel
@@ -400,7 +406,7 @@ namespace DatabaseFinder
                 ProcessDisplay = db.ProcessId > 0 ? $"{db.ProcessName} (PID: {db.ProcessId})" : "-",
                 DetectionMethod = db.IsOnline
                     ? string.Join(" + ", how)
-                    : (db.IsBackup ? "آفلاین - بکاپ" : "آفلاین - فایل"),
+                    : (db.IsBackup ? L.Text("S225") : L.Text("S226")),
                 Version = db.Version,
                 HostAddress = db.Host,
                 Location = db.IsOnline
@@ -430,7 +436,7 @@ namespace DatabaseFinder
         {
             if (showStatus)
             {
-                lblStatus.Text = "در حال جستجو...";
+                lblStatus.Text = L.Text("S227");
                 lblStatus.Refresh();
             }
 
@@ -446,19 +452,20 @@ namespace DatabaseFinder
                     var testResult = DatabaseTester.TestConnection(db);
                     if (testResult.Success && testResult.Version.Length > 0)
                     {
+                        db.Version = testResult.Version;
                         var model = models.FirstOrDefault(m => m.TypeDisplayName == db.TypeDisplayName && m.Port == db.Port?.ToString());
                         if (model != null) model.Version = testResult.Version;
                     }
                 }
 
                 RebindGrid(models);
-                lblStatus.Text = $"تعداد دیتابیس‌های یافت شده: {results.Count}";
+                lblStatus.Text = L.Format("S228", results.Count);
             }
             catch (Exception ex)
             {
-                lblStatus.Text = "خطا در تشخیص دیتابیس‌ها";
-                MessageBox.Show($"خطا:\n{ex.Message}\n\nممکنه نیاز به اجرای برنامه با دسترسی Administrator باشه.",
-                    "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = L.Text("S229");
+                MessageBox.Show(L.Format("S230", ex.Message),
+                    L.Text("S195"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

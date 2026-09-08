@@ -4,6 +4,7 @@ namespace DatabaseFinder
 {
     public class AppSettings
     {
+        public string Language { get; set; } = "fa";
         public Dictionary<string, int> CustomPorts { get; set; } = new();
         public bool MinimizeToTray { get; set; } = true;
         public bool AutoRefresh { get; set; } = false;

@@ -35,14 +35,14 @@ namespace DatabaseFinder
                     if (!string.IsNullOrEmpty(deviceObject))
                         return deviceObject;
 
-                    error = "Shadow Copy ساخته شد اما DeviceObject آن یافت نشد.";
+                    error = L.Text("S309");
                     return null;
                 }
 
                 error = ret switch
                 {
-                    5 => "دسترسی ناکافی؛ برنامه را با Administrator اجرا کنید.",
-                    _ => $"ایجاد Shadow Copy ناموفق بود (کد {ret})."
+                    5 => L.Text("S310"),
+                    _ => L.Format("S311", ret)
                 };
                 return null;
             }

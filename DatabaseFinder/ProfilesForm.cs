@@ -1,7 +1,8 @@
 namespace DatabaseFinder
 {
-    public class ProfilesForm : Form
+    public class ProfilesForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly List<DatabaseProfile> _profiles;
         private readonly DataGridView _dgv;
         private readonly Button _btnTest;
@@ -13,7 +14,7 @@ namespace DatabaseFinder
         {
             _profiles = ProfileManager.Load();
 
-            Text = "پروفایل دیتابیس‌ها";
+            Text = L.Text("S248");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(700, 420);
             Font = new Font("Segoe UI", 10F);
@@ -26,7 +27,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "پروفایل دیتابیس‌های ذخیره‌شده",
+                Text = L.Text("S249"),
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -47,11 +48,11 @@ namespace DatabaseFinder
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            _dgv.Columns.Add("colName", "نام");
-            _dgv.Columns.Add("colType", "نوع");
-            _dgv.Columns.Add("colHost", "آدرس");
-            _dgv.Columns.Add("colPort", "پورت");
-            _dgv.Columns.Add("colUser", "کاربر");
+            _dgv.Columns.Add("colName", L.Text("S250"));
+            _dgv.Columns.Add("colType", L.Text("S251"));
+            _dgv.Columns.Add("colHost", L.Text("S252"));
+            _dgv.Columns.Add("colPort", L.Text("S103"));
+            _dgv.Columns.Add("colUser", L.Text("S253"));
 
             foreach (var p in _profiles)
             {
@@ -61,7 +62,7 @@ namespace DatabaseFinder
 
             _btnTest = new Button
             {
-                Text = "تست اتصال",
+                Text = L.Text("S092"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -74,7 +75,7 @@ namespace DatabaseFinder
 
             _btnDelete = new Button
             {
-                Text = "حذف",
+                Text = L.Text("S254"),
                 BackColor = Color.FromArgb(244, 67, 54),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -86,7 +87,7 @@ namespace DatabaseFinder
 
             _btnClose = new Button
             {
-                Text = "بستن",
+                Text = L.Text("S095"),
                 BackColor = Color.FromArgb(158, 158, 158),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -103,20 +104,21 @@ namespace DatabaseFinder
                 ForeColor = Color.Gray
             };
             Controls.Add(_lblStatus);
+            FormLayout.Build(this,lblTitle,null,_dgv,_lblStatus,_btnTest,_btnDelete,_btnClose);
         }
 
         private void BtnTest_Click(object? sender, EventArgs e)
         {
             if (_dgv.SelectedRows.Count == 0)
             {
-                _lblStatus.Text = "یک پروفایل را انتخاب کنید.";
+                _lblStatus.Text = L.Text("S255");
                 return;
             }
 
             var row = _dgv.SelectedRows[0].Index;
             var profile = _profiles[row];
 
-            _lblStatus.Text = $"در حال تست اتصال به {profile.Host}:{profile.Port}...";
+            _lblStatus.Text = L.Format("S256", profile.Host, profile.Port);
             _lblStatus.Refresh();
 
             var db = new DatabaseInfo
@@ -130,13 +132,13 @@ namespace DatabaseFinder
 
             if (result.Success)
             {
-                _lblStatus.Text = $"✅ اتصال به {profile.Name} موفق بود" +
-                    (result.Version.Length > 0 ? $" (نسخه: {result.Version})" : "");
+                _lblStatus.Text = L.Format("S257", profile.Name) +
+                    (result.Version.Length > 0 ? L.Format("S258", result.Version) : "");
                 _lblStatus.ForeColor = Color.FromArgb(76, 175, 80);
             }
             else
             {
-                _lblStatus.Text = $"❌ اتصال به {profile.Name} برقرار نشد: {result.Message}";
+                _lblStatus.Text = L.Format("S259", profile.Name, result.Message);
                 _lblStatus.ForeColor = Color.FromArgb(244, 67, 54);
             }
         }
@@ -145,7 +147,7 @@ namespace DatabaseFinder
         {
             if (_dgv.SelectedRows.Count == 0)
             {
-                _lblStatus.Text = "یک پروفایل را انتخاب کنید.";
+                _lblStatus.Text = L.Text("S255");
                 return;
             }
 
@@ -153,8 +155,8 @@ namespace DatabaseFinder
             var profile = _profiles[rowIdx];
 
             var confirm = MessageBox.Show(
-                $"آیا پروفایل «{profile.Name}» حذف شود؟",
-                "تأیید حذف",
+                L.Format("S260", profile.Name),
+                L.Text("S261"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -163,7 +165,7 @@ namespace DatabaseFinder
                 _profiles.RemoveAt(rowIdx);
                 ProfileManager.Save(_profiles);
                 _dgv.Rows.RemoveAt(rowIdx);
-                _lblStatus.Text = "پروفایل حذف شد.";
+                _lblStatus.Text = L.Text("S262");
             }
         }
     }

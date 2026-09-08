@@ -15,7 +15,15 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
-## Features (v1.7)
+## What's new in v1.8
+
+- Redesigned desktop interface with sidebar navigation, consistent colors, a selection toolbar and a path/details panel.
+- Persian / English language switch in the main window. The language is saved, layout direction changes, and existing results and checked rows are preserved.
+- Searchable format picker covering all 11 groups and 28 extensions. Expand a group to select individual extensions; filtering the list preserves selections.
+- Responsive file search, copy, backup, settings, query, remote scan, profile and detail windows.
+- Application messages and operational logs use embedded translation resources. File paths, database names, SQL queries and structured manifest keys are not translated.
+
+## Features (v1.8)
 - Detection via 3 methods: Windows services, processes, open ports
 - **Scan mode selector** — choose between online (running), offline (hard drive), or both
 - **Offline hard-disk scan** — finds database files that are NOT running (stopped services, deleted-from-service databases, and backups):
@@ -57,8 +65,11 @@ Windows utility to detect databases currently running on your system.
 - System tray icon with quick menu
 
 ## Installation & Running
-### Pre-built executable (no .NET required)
-Download `DatabaseFinder.exe` from the [Releases](https://github.com/iranacc/DatabaseFinder/releases) page.
+### Pre-built executable
+Download either build from the [Releases](https://github.com/iranacc/DatabaseFinder/releases) page:
+
+- **DatabaseFinder-Light.exe:** requires .NET 8 Desktop Runtime for Windows x64.
+- **DatabaseFinder.exe:** standalone Windows x64 build with the .NET runtime included; no separate .NET installation required.
 
 ### Build from source
 ```bash
@@ -71,7 +82,11 @@ dotnet publish DatabaseFinder/DatabaseFinder.csproj -c Release -r win-x64 --self
 ```
 
 ## Versioning
-Git tags are used for releases (e.g. `v1.7.0`).
+Git tags are used for releases (e.g. `v1.8.0`).
+
+## Validation
+
+Run `dotnet run --project tools/UiChecks -c Release -- ui-checks` on Windows with the .NET 8 SDK. The checks cover translation completeness, placeholders, both UI languages, language switching with preserved selections, format filtering, individual extension selection, and disk scanning against synthetic files. They also render forms for visual review. They do not run real database backups or restore operations.
 
 ## Requirements
 - Windows 10/11

@@ -7,8 +7,9 @@ using StackExchange.Redis;
 
 namespace DatabaseFinder
 {
-    public class QueryRunnerForm : Form
+    public class QueryRunnerForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly DatabaseInfo _db;
         private readonly TextBox _txtHost;
         private readonly NumericUpDown _numPort;
@@ -25,7 +26,7 @@ namespace DatabaseFinder
         {
             _db = db;
 
-            Text = $"اجرای کوئری - {db.TypeDisplayName}";
+            Text = L.Format("S263", db.TypeDisplayName);
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(760, 620);
             Font = new Font("Segoe UI", 10F);
@@ -38,7 +39,7 @@ namespace DatabaseFinder
             // تب‌های اتصال
             var lblTitle = new Label
             {
-                Text = $"اجرای کوئری روی {db.TypeDisplayName}@{db.Host}",
+                Text = L.Format("S264", db.TypeDisplayName, db.Host),
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -48,33 +49,33 @@ namespace DatabaseFinder
 
             var grpConn = new GroupBox
             {
-                Text = "اطلاعات اتصال",
+                Text = L.Text("S265"),
                 Location = new Point(12, 40),
                 Size = new Size(736, 90)
             };
 
-            var lblHost = new Label { Text = "آدرس:", Location = new Point(12, 30), AutoSize = true };
+            var lblHost = new Label { Text = L.Text("S266"), Location = new Point(12, 30), AutoSize = true };
             _txtHost = new TextBox { Location = new Point(80, 26), Size = new Size(150, 27), Text = db.Host };
             _txtHost.TextChanged += UpdateTitle;
 
-            var lblPort = new Label { Text = "پورت:", Location = new Point(245, 30), AutoSize = true };
+            var lblPort = new Label { Text = L.Text("S267"), Location = new Point(245, 30), AutoSize = true };
             _numPort = new NumericUpDown
             {
                 Location = new Point(300, 26),
                 Size = new Size(70, 27),
-                Minimum = 1,
+                Minimum = 0,
                 Maximum = 65535,
                 Value = db.Port ?? 0
             };
             if ((db.Port ?? 0) == 0) _numPort.Value = GetDefaultPort(db.Type);
 
-            var lblUser = new Label { Text = "کاربر:", Location = new Point(390, 30), AutoSize = true };
+            var lblUser = new Label { Text = L.Text("S268"), Location = new Point(390, 30), AutoSize = true };
             _txtUser = new TextBox { Location = new Point(450, 26), Size = new Size(120, 27) };
 
-            var lblPass = new Label { Text = "رمز:", Location = new Point(585, 30), AutoSize = true };
+            var lblPass = new Label { Text = L.Text("S269"), Location = new Point(585, 30), AutoSize = true };
             _txtPass = new TextBox { Location = new Point(635, 26), Size = new Size(90, 27), UseSystemPasswordChar = true };
 
-            var lblDb = new Label { Text = "نام دیتابیس:", Location = new Point(12, 60), AutoSize = true };
+            var lblDb = new Label { Text = L.Text("S270"), Location = new Point(12, 60), AutoSize = true };
             _txtDbName = new TextBox { Location = new Point(95, 56), Size = new Size(150, 27) };
 
             grpConn.Controls.AddRange(new Control[] {
@@ -84,7 +85,7 @@ namespace DatabaseFinder
 
             var lblQuery = new Label
             {
-                Text = "کوئری / فرمان:",
+                Text = L.Text("S271"),
                 Location = new Point(12, 145),
                 AutoSize = true
             };
@@ -105,7 +106,7 @@ namespace DatabaseFinder
 
             _btnRun = new Button
             {
-                Text = "اجرا",
+                Text = L.Text("S272"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -118,7 +119,7 @@ namespace DatabaseFinder
 
             _btnSaveProfile = new Button
             {
-                Text = "ذخیره در پروفایل‌ها",
+                Text = L.Text("S094"),
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -159,6 +160,11 @@ namespace DatabaseFinder
                 _txtPass.Text = profile.Password;
                 _txtDbName.Text = profile.DatabaseName;
             }
+            var fields=UiTheme.Flow(FormLayout.Field(L.Text("S266"),_txtHost,200),FormLayout.Field(L.Text("S267"),_numPort,90),FormLayout.Field(L.Text("S268"),_txtUser,150),FormLayout.Field(L.Text("S269"),_txtPass,150),FormLayout.Field(L.Text("S270"),_txtDbName,200));
+            var work=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};work.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));work.RowStyles.Add(new RowStyle(SizeType.Absolute,26));work.RowStyles.Add(new RowStyle(SizeType.Percent,40));work.RowStyles.Add(new RowStyle(SizeType.Percent,60));
+            work.Controls.Add(lblQuery,0,0);_txtQuery.Dock=DockStyle.Fill;_dgvResult.Dock=DockStyle.Fill;work.Controls.Add(_txtQuery,0,1);work.Controls.Add(_dgvResult,0,2);
+            FormLayout.Build(this,lblTitle,fields,work,_lblStatus,_btnRun,_btnSaveProfile);
+            ClientSize=new Size(1060,780);MinimumSize=new Size(920,700);
         }
 
         private static int GetDefaultPort(DatabaseType type)
@@ -200,7 +206,7 @@ namespace DatabaseFinder
 
         private void UpdateTitle(object? sender, EventArgs e)
         {
-            Text = $"اجرای کوئری - {_db.TypeDisplayName}";
+            Text = L.Format("S263", _db.TypeDisplayName);
         }
 
         private void BtnSaveProfile_Click(object? sender, EventArgs e)
@@ -231,7 +237,7 @@ namespace DatabaseFinder
             }
 
             ProfileManager.Save(profiles);
-            _lblStatus.Text = "پروفایل ذخیره شد ✓";
+            _lblStatus.Text = L.Text("S273");
             _lblStatus.ForeColor = Color.FromArgb(76, 175, 80);
         }
 
@@ -240,12 +246,12 @@ namespace DatabaseFinder
             var query = _txtQuery.Text.Trim();
             if (string.IsNullOrEmpty(query))
             {
-                _lblStatus.Text = "کوئری را وارد کنید.";
+                _lblStatus.Text = L.Text("S274");
                 return;
             }
 
             _btnRun.Enabled = false;
-            _btnRun.Text = "در حال اجرا...";
+            _btnRun.Text = L.Text("S275");
             _lblStatus.Text = "";
             _dgvResult.Columns.Clear();
             _dgvResult.Rows.Clear();
@@ -259,18 +265,18 @@ namespace DatabaseFinder
             try
             {
                 var dt = await Task.Run(() => ExecuteQuery(_db.Type, host, port, user, pass, dbName, query));
-                ShowResult(dt, "اجرا موفق ✓");
+                ShowResult(dt, L.Text("S276"));
             }
             catch (Exception ex)
             {
-                _lblStatus.Text = "خطا در اجرای کوئری";
+                _lblStatus.Text = L.Text("S277");
                 _lblStatus.ForeColor = Color.FromArgb(244, 67, 54);
-                MessageBox.Show($"خطا در اجرای کوئری:\n{ex.Message}", "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.Format("S278", ex.Message), L.Text("S195"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 _btnRun.Enabled = true;
-                _btnRun.Text = "اجرا";
+                _btnRun.Text = L.Text("S272");
             }
         }
 
@@ -290,7 +296,7 @@ namespace DatabaseFinder
                 case DatabaseType.Redis:
                     return ExecuteRedis(host, port, pass, query);
                 default:
-                    throw new NotSupportedException($"اجرای کوئری برای {type} پشتیبانی نمی‌شود.");
+                    throw new NotSupportedException(L.Format("S279", type));
             }
         }
 
@@ -348,7 +354,7 @@ namespace DatabaseFinder
         {
             if (string.IsNullOrEmpty(dbName))
             {
-                throw new ArgumentException("برای SQLite مسیر فایل دیتابیس را در «نام دیتابیس» وارد کنید.");
+                throw new ArgumentException(L.Text("S280"));
             }
 
             var path = Path.GetFullPath(dbName);
@@ -388,11 +394,11 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                resultText = $"خطا: {ex.Message}";
+                resultText = L.Format("S055", ex.Message);
             }
 
             var dt = new DataTable();
-            dt.Columns.Add("نتیجه");
+            dt.Columns.Add(L.Text("S281"));
             dt.Rows.Add(resultText);
             return dt;
         }

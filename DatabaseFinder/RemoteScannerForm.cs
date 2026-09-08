@@ -2,8 +2,9 @@ using System.Net.Sockets;
 
 namespace DatabaseFinder
 {
-    public class RemoteScannerForm : Form
+    public class RemoteScannerForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly TextBox _txtHost;
         private readonly TextBox _txtPorts;
         private readonly Button _btnScan;
@@ -16,7 +17,7 @@ namespace DatabaseFinder
 
         public RemoteScannerForm()
         {
-            Text = "اسکن دیتابیس سیستم راه دور";
+            Text = L.Text("S284");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(700, 500);
             Font = new Font("Segoe UI", 10F);
@@ -29,7 +30,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "اسکن دیتابیس‌های سیستم راه دور",
+                Text = L.Text("S285"),
                 Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -39,7 +40,7 @@ namespace DatabaseFinder
 
             var lblHost = new Label
             {
-                Text = "آدرس (IP / Hostname):",
+                Text = L.Text("S286"),
                 Location = new Point(12, 52),
                 AutoSize = true
             };
@@ -54,7 +55,7 @@ namespace DatabaseFinder
 
             var lblPorts = new Label
             {
-                Text = "پورت‌ها (اختیاری):",
+                Text = L.Text("S287"),
                 Location = new Point(12, 88),
                 AutoSize = true
             };
@@ -62,14 +63,14 @@ namespace DatabaseFinder
             {
                 Location = new Point(160, 84),
                 Size = new Size(200, 27),
-                PlaceholderText = "خالی = پورت‌های استاندارد (مثل 3306,5432)"
+                PlaceholderText = L.Text("S288")
             };
             Controls.Add(lblPorts);
             Controls.Add(_txtPorts);
 
             _btnScan = new Button
             {
-                Text = "اسکن",
+                Text = L.Text("S289"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -92,11 +93,11 @@ namespace DatabaseFinder
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            _dgvResults.Columns.Add("colStatus", "وضعیت");
-            _dgvResults.Columns.Add("colType", "نوع");
-            _dgvResults.Columns.Add("colPort", "پورت");
-            _dgvResults.Columns.Add("colVersion", "نسخه");
-            _dgvResults.Columns.Add("colMsg", "توضیحات");
+            _dgvResults.Columns.Add("colStatus", L.Text("S290"));
+            _dgvResults.Columns.Add("colType", L.Text("S251"));
+            _dgvResults.Columns.Add("colPort", L.Text("S103"));
+            _dgvResults.Columns.Add("colVersion", L.Text("S231"));
+            _dgvResults.Columns.Add("colMsg", L.Text("S291"));
             Controls.Add(_dgvResults);
 
             _progress = new ProgressBar
@@ -110,7 +111,7 @@ namespace DatabaseFinder
 
             _btnConnect = new Button
             {
-                Text = "اجرای کوئری...",
+                Text = L.Text("S292"),
                 BackColor = Color.FromArgb(0, 188, 212),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -124,7 +125,7 @@ namespace DatabaseFinder
 
             _btnClose = new Button
             {
-                Text = "بستن",
+                Text = L.Text("S095"),
                 BackColor = Color.FromArgb(158, 158, 158),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -141,6 +142,9 @@ namespace DatabaseFinder
                 ForeColor = Color.Gray
             };
             Controls.Add(_lblStatus);
+            var fields=UiTheme.Flow(FormLayout.Field(L.Text("S286"),_txtHost,230),FormLayout.Field(L.Text("S287"),_txtPorts,330));
+            FormLayout.Build(this,lblTitle,fields,_dgvResults,_lblStatus,_btnScan,_btnConnect,_btnClose);
+            _progress.Dock=DockStyle.Bottom;Controls.Add(_progress);_progress.BringToFront();
         }
 
         private async void BtnScan_Click(object? sender, EventArgs e)
@@ -148,13 +152,13 @@ namespace DatabaseFinder
             var host = _txtHost.Text.Trim();
             if (string.IsNullOrEmpty(host))
             {
-                _lblStatus.Text = "آدرس را وارد کنید.";
+                _lblStatus.Text = L.Text("S293");
                 return;
             }
 
             _btnScan.Enabled = false;
             _progress.Visible = true;
-            _lblStatus.Text = "در حال اسکن...";
+            _lblStatus.Text = L.Text("S294");
 
             var portsStr = _txtPorts.Text.Trim();
             int[]? customPorts = null;
@@ -173,7 +177,7 @@ namespace DatabaseFinder
                 var open = r.IsOpen;
                 if (open) openCount++;
                 _dgvResults.Rows.Add(
-                    open ? "✅ باز" : "❌ بسته",
+                    open ? L.Text("S295") : L.Text("S296"),
                     r.TypeDisplayName,
                     r.Port,
                     r.Version,
@@ -184,14 +188,14 @@ namespace DatabaseFinder
             _progress.Visible = false;
             _btnScan.Enabled = true;
             _btnConnect.Enabled = openCount > 0;
-            _lblStatus.Text = $"اسکن کامل شد. {openCount} دیتابیس در {host} یافت شد.";
+            _lblStatus.Text = L.Format("S297", openCount, host);
         }
 
         private void BtnConnect_Click(object? sender, EventArgs e)
         {
             if (_dgvResults.SelectedRows.Count == 0)
             {
-                _lblStatus.Text = "یک دیتابیس را از نتایج انتخاب کنید.";
+                _lblStatus.Text = L.Text("S298");
                 return;
             }
 

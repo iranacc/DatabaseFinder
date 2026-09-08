@@ -45,7 +45,7 @@ namespace DatabaseFinder
             var items = new List<DatabaseCopyItem>();
             foreach (var server in servers)
             {
-                log?.Invoke($"[{server.TypeDisplayName}] در حال بررسی فایل‌ها...");
+                log?.Invoke(L.Format("S116", server.TypeDisplayName));
 
                 if (!server.IsOnline)
                 {
@@ -56,7 +56,7 @@ namespace DatabaseFinder
                 if (!IsLocalHost(server))
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        "دیتابیس روی ماشین راه دور است؛ فایل‌های فیزیکی روی این سیستم قرار ندارند."));
+                        L.Text("S117")));
                     continue;
                 }
 
@@ -82,14 +82,14 @@ namespace DatabaseFinder
                             break;
                         default:
                             items.Add(ErrorItem(server, server.Name,
-                                "شناسایی خودکار فایل‌ها برای این نوع پشتیبانی نمی‌شود."));
+                                L.Text("S118")));
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        $"خطا در شناسایی فایل‌ها: {ex.Message}"));
+                        L.Format("S119", ex.Message)));
                 }
             }
 
@@ -125,7 +125,7 @@ namespace DatabaseFinder
             }
 
             return ErrorItem(server, server.Name,
-                "فایل دیتابیس آفلاین در مسیر ثبت‌شده یافت نشد (ممکن است جابه‌جا یا حذف شده باشد).");
+                L.Text("S120"));
         }
 
         private static DatabaseCopyItem ErrorItem(DatabaseInfo server, string dbName, string error)
@@ -230,20 +230,20 @@ namespace DatabaseFinder
                             SourcePath = path,
                             RelativePath = fileName
                         };
-                        fileItem.Error = "مسیر فایل روی این ماشین موجود نیست (فایل‌ها روی همان سرور SQL نگهداری می‌شوند).";
+                        fileItem.Error = L.Text("S121");
                         item.Files.Add(fileItem);
                     }
                 }
 
                 if (item.Files.Count == 0 && string.IsNullOrEmpty(item.Error))
                 {
-                    item.Error = "فایلی برای این دیتابیس یافت نشد.";
+                    item.Error = L.Text("S122");
                 }
 
                 result.Add(item);
             }
 
-            log?.Invoke($"[SQL Server] {result.Count} دیتابیس کاربری یافت شد (system/tempdb حذف شد).");
+            log?.Invoke(L.Format("S123", result.Count));
             return result;
         }
 
@@ -308,14 +308,14 @@ namespace DatabaseFinder
                     }
                     else
                     {
-                        item.Error = $"پوشه دیتا یافت نشد: {dbPath}";
+                        item.Error = L.Format("S124", dbPath);
                     }
 
                     result.Add(item);
                 }
             }
 
-            log?.Invoke($"[{server.TypeDisplayName}] دایرکتوری داده: {datadir} | {result.Count} دیتابیس.");
+            log?.Invoke(L.Format("S125", server.TypeDisplayName, datadir, result.Count));
             return result;
         }
 
@@ -382,14 +382,14 @@ namespace DatabaseFinder
                     }
                     else
                     {
-                        item.Error = $"پوشه دیتا یافت نشد: {dbPath}";
+                        item.Error = L.Format("S124", dbPath);
                     }
 
                     result.Add(item);
                 }
             }
 
-            log?.Invoke($"[PostgreSQL] دایرکتوری داده: {dataDir} | {result.Count} دیتابیس.");
+            log?.Invoke(L.Format("S126", dataDir, result.Count));
             return result;
         }
 
@@ -424,7 +424,7 @@ namespace DatabaseFinder
             try
             {
                 var raw = db.Execute("CONFIG", "GET", "dir");
-                if (raw.IsNull) throw new InvalidOperationException("پاسخی دریافت نشد.");
+                if (raw.IsNull) throw new InvalidOperationException(L.Text("S127"));
                 if (raw.Length >= 2)
                 {
                     dir = raw[1].ToString();
@@ -438,7 +438,7 @@ namespace DatabaseFinder
 
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             {
-                item.Error = "پوشه دیتای Redis یافت نشد؛ مسیر را دستی تعیین کنید.";
+                item.Error = L.Text("S128");
             }
             else
             {
@@ -458,7 +458,7 @@ namespace DatabaseFinder
                 }
 
                 if (item.Files.Count == 0)
-                    item.Error = $"فایل داده‌ای در {dir} یافت نشد (dump.rdb/appendonly).";
+                    item.Error = L.Format("S129", dir);
             }
 
             return item;
@@ -520,7 +520,7 @@ namespace DatabaseFinder
             if (result.Count == 0)
             {
                 result.Add(ErrorItem(server, server.Name,
-                    "پوشه داده MongoDB یافت نشد؛ مسیر را دستی تعیین کنید."));
+                    L.Text("S130")));
             }
 
             return result;
@@ -551,15 +551,15 @@ namespace DatabaseFinder
 
                     if (serviceNames.Count > 0)
                     {
-                        log?.Invoke("توقف خودکار سرویس‌های دیتابیس برای کپی فایل‌های قفل‌شده...");
+                        log?.Invoke(L.Text("S131"));
                         if (!DbServiceHelper.StopServices(serviceNames.ToList(), log, out var stopErr))
                         {
-                            log?.Invoke($"توقف سرویس ناموفق بود: {stopErr}");
-                            errorLines.Add($"توقف سرویس‌های دیتابیس ناموفق: {stopErr}");
+                            log?.Invoke(L.Format("S132", stopErr));
+                            errorLines.Add(L.Format("S133", stopErr));
                             foreach (var item in items.Where(i => i.Server.IsOnline && IsLocalHost(i.Server)))
                             {
                                 if (string.IsNullOrEmpty(item.Error))
-                                    item.Error = "سرویس دیتابیس متوقف نشد؛ کپی انجام نشد.";
+                                    item.Error = L.Text("S134");
                                 failed++;
                             }
                             return (0, 0, failed, string.Join(Environment.NewLine, errorLines));
@@ -601,8 +601,8 @@ namespace DatabaseFinder
                                 var info = new FileInfo(src);
                                 if (!info.Exists)
                                 {
-                                    file.Error = "فایل وجود ندارد.";
-                                    errorLines.Add($"{item.FolderName}\\{file.DisplayName}: فایل وجود ندارد.");
+                                    file.Error = L.Text("S135");
+                                    errorLines.Add(L.Format("S136", item.FolderName, file.DisplayName));
                                     failed++;
                                     continue;
                                 }
@@ -610,7 +610,7 @@ namespace DatabaseFinder
                                 File.Copy(src, dest, overwrite: true);
                                 filesCopied++;
                                 bytesCopied += info.Length;
-                                log?.Invoke($"کپی شد: {item.FolderName}\\{file.DisplayName} ({FormatSize(info.Length)})");
+                                log?.Invoke(L.Format("S137", item.FolderName, file.DisplayName, FormatSize(info.Length)));
                             }
                             catch (IOException ex)
                             {
@@ -625,26 +625,26 @@ namespace DatabaseFinder
                                         file.Error = null;
                                         filesCopied++;
                                         bytesCopied += info2.Length;
-                                        log?.Invoke($"کپی شد (پس از Shadow Copy): {item.FolderName}\\{file.DisplayName} ({FormatSize(info2.Length)})");
+                                        log?.Invoke(L.Format("S138", item.FolderName, file.DisplayName, FormatSize(info2.Length)));
                                     }
                                     else
                                     {
-                                        file.Error = "فایل قفل است؛ کپی از Shadow Copy (VSS) ممکن نشد - " + shadowErr;
+                                        file.Error = L.Text("S139") + shadowErr;
                                         errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {file.Error}");
                                         failed++;
                                     }
                                 }
                                 else
                                 {
-                                    file.Error = "فایل قفل است؛ سرویس دیتابیس باید متوقف شود.";
-                                    errorLines.Add($"{item.FolderName}\\{file.DisplayName}: قفل است - {ex.Message}");
+                                    file.Error = L.Text("S140");
+                                    errorLines.Add(L.Format("S141", item.FolderName, file.DisplayName, ex.Message));
                                     failed++;
                                 }
                             }
                             catch (UnauthorizedAccessException ex)
                             {
-                                file.Error = "دسترسی رد شد (نیاز به Administrator).";
-                                errorLines.Add($"{item.FolderName}\\{file.DisplayName}: دسترسی رد شد - {ex.Message}");
+                                file.Error = L.Text("S142");
+                                errorLines.Add(L.Format("S143", item.FolderName, file.DisplayName, ex.Message));
                                 failed++;
                             }
                             catch (Exception ex)
@@ -667,9 +667,9 @@ namespace DatabaseFinder
             {
                 if (stoppedServices.Count > 0)
                 {
-                    log?.Invoke("راه‌اندازی مجدد سرویس‌های دیتابیس...");
+                    log?.Invoke(L.Text("S144"));
                     if (!DbServiceHelper.StartServices(stoppedServices, log, out var startErr))
-                        errorLines.Add("خطا در راه‌اندازی مجدد سرویس: " + startErr);
+                        errorLines.Add(L.Text("S145") + startErr);
                 }
 
                 foreach (var shadow in shadowCache.Values)
@@ -694,7 +694,7 @@ namespace DatabaseFinder
                     File.Copy(file, dest, overwrite: true);
                     filesCopied++;
                     bytesCopied += info.Length;
-                    log?.Invoke($"کپی شد: {Path.GetFileName(destRoot)}\\{rel} ({FormatSize(info.Length)})");
+                    log?.Invoke(L.Format("S137", Path.GetFileName(destRoot), rel, FormatSize(info.Length)));
                 }
                 catch (Exception ex)
                 {
@@ -711,7 +711,7 @@ namespace DatabaseFinder
             error = null;
             if (string.IsNullOrEmpty(volumeRoot))
             {
-                error = "جلد (volume) فایل مشخص نیست.";
+                error = L.Text("S146");
                 return false;
             }
 
@@ -720,7 +720,7 @@ namespace DatabaseFinder
                 shadowId = VolumeShadowCopy.TryCreateShadow(volumeRoot, out var createErr);
                 if (shadowId == null)
                 {
-                    error = createErr ?? "VSS در دسترس نیست.";
+                    error = createErr ?? L.Text("S147");
                     return false;
                 }
                 shadowCache[volumeRoot] = shadowId;
@@ -731,7 +731,7 @@ namespace DatabaseFinder
             {
                 if (!File.Exists(shadowSrc))
                 {
-                    error = "فایل در Shadow Copy یافت نشد.";
+                    error = L.Text("S148");
                     return false;
                 }
                 File.Copy(shadowSrc, dest, overwrite: true);

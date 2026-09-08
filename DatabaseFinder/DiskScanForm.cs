@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace DatabaseFinder
 {
-    public class DiskScanForm : Form
+    public partial class DiskScanForm : AppForm
     {
         public List<DatabaseInfo> Found { get; private set; } = new();
 
@@ -25,7 +25,7 @@ namespace DatabaseFinder
 
         public DiskScanForm()
         {
-            Text = "اسکن هارد دیسک - دیتابیس‌های آفلاین";
+            Text = L.Text("S157");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(900, 700);
             Font = new Font("Segoe UI", 10F);
@@ -37,7 +37,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "اسکن هارد دیسک برای دیتابیس‌های آفلاین و بکاپ‌ها",
+                Text = L.Text("S158"),
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -48,21 +48,21 @@ namespace DatabaseFinder
             // ---- ناحیه ریشه‌ها ----
             var grpRoots = new GroupBox
             {
-                Text = "مکان‌های جستجو",
+                Text = L.Text("S159"),
                 Location = new Point(12, 42),
                 Size = new Size(330, 230)
             };
 
             _rbQuick = new RadioButton
             {
-                Text = "اسکن سریع (مکان‌های رایج)",
+                Text = L.Text("S160"),
                 Checked = true,
                 Location = new Point(12, 22),
                 AutoSize = true
             };
             _rbFull = new RadioButton
             {
-                Text = "اسکن کامل (کل درایوها)",
+                Text = L.Text("S161"),
                 Location = new Point(190, 22),
                 AutoSize = true
             };
@@ -79,7 +79,7 @@ namespace DatabaseFinder
 
             var btnAddRoot = new Button
             {
-                Text = "افزودن پوشه دلخواه...",
+                Text = L.Text("S162"),
                 Location = new Point(6, 172),
                 Size = new Size(318, 26),
                 BackColor = Color.FromArgb(33, 150, 243),
@@ -90,7 +90,7 @@ namespace DatabaseFinder
 
             var btnAllRoots = new Button
             {
-                Text = "انتخاب همه",
+                Text = L.Text("S034"),
                 Location = new Point(6, 202),
                 Size = new Size(154, 24),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -101,7 +101,7 @@ namespace DatabaseFinder
 
             var btnNoneRoots = new Button
             {
-                Text = "هیچ",
+                Text = L.Text("S163"),
                 Location = new Point(168, 202),
                 Size = new Size(156, 24),
                 BackColor = Color.FromArgb(158, 158, 158),
@@ -116,7 +116,7 @@ namespace DatabaseFinder
             // ---- ناحیه فرمت‌ها ----
             var grpFormats = new GroupBox
             {
-                Text = "فرمت‌های مورد جستجو",
+                Text = L.Text("S164"),
                 Location = new Point(352, 42),
                 Size = new Size(250, 230)
             };
@@ -133,7 +133,7 @@ namespace DatabaseFinder
 
             var btnAllFmt = new Button
             {
-                Text = "انتخاب همه",
+                Text = L.Text("S034"),
                 Location = new Point(6, 190),
                 Size = new Size(116, 28),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -144,7 +144,7 @@ namespace DatabaseFinder
 
             var btnNoneFmt = new Button
             {
-                Text = "هیچ",
+                Text = L.Text("S163"),
                 Location = new Point(128, 190),
                 Size = new Size(116, 28),
                 BackColor = Color.FromArgb(158, 158, 158),
@@ -159,12 +159,12 @@ namespace DatabaseFinder
             // ---- تنظیمات ----
             var grpOpt = new GroupBox
             {
-                Text = "تنظیمات",
+                Text = L.Text("S165"),
                 Location = new Point(612, 42),
                 Size = new Size(276, 230)
             };
 
-            var lblMin = new Label { Text = "حداقل اندازه فایل:", Location = new Point(12, 28), AutoSize = true };
+            var lblMin = new Label { Text = L.Text("S166"), Location = new Point(12, 28), AutoSize = true };
             _numMinSize = new NumericUpDown
             {
                 Location = new Point(140, 24),
@@ -174,11 +174,11 @@ namespace DatabaseFinder
                 Value = 3,
                 Increment = 1
             };
-            var lblMinUnit = new Label { Text = "مگابایت (0 = هر اندازه)", Location = new Point(12, 56), AutoSize = true, ForeColor = Color.Gray };
+            var lblMinUnit = new Label { Text = L.Text("S167"), Location = new Point(12, 56), AutoSize = true, ForeColor = Color.Gray };
 
             var lblNote = new Label
             {
-                Text = "«اسکن سریع» فقط مکان‌های رایج را می‌گردد و «اسکن کامل» همه درایوهای ثابت را بررسی می‌کند.",
+                Text = L.Text("S168"),
                 Location = new Point(12, 110),
                 Size = new Size(252, 100),
                 ForeColor = Color.Gray,
@@ -191,7 +191,7 @@ namespace DatabaseFinder
             // ---- دکمه‌ها ----
             _btnScan = new Button
             {
-                Text = "شروع اسکن",
+                Text = L.Text("S169"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -204,7 +204,7 @@ namespace DatabaseFinder
 
             _btnCancelScan = new Button
             {
-                Text = "توقف",
+                Text = L.Text("S170"),
                 BackColor = Color.FromArgb(244, 67, 54),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -235,7 +235,7 @@ namespace DatabaseFinder
             // ---- نتایج ----
             var lblResults = new Label
             {
-                Text = "نتایج یافت‌شده:",
+                Text = L.Text("S171"),
                 Location = new Point(12, 356),
                 AutoSize = true
             };
@@ -243,7 +243,7 @@ namespace DatabaseFinder
 
             var btnAllResults = new Button
             {
-                Text = "انتخاب همه",
+                Text = L.Text("S034"),
                 Location = new Point(660, 350),
                 Size = new Size(104, 26),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -256,7 +256,7 @@ namespace DatabaseFinder
 
             var btnNoneResults = new Button
             {
-                Text = "هیچ",
+                Text = L.Text("S163"),
                 Location = new Point(772, 350),
                 Size = new Size(104, 26),
                 BackColor = Color.FromArgb(158, 158, 158),
@@ -282,23 +282,23 @@ namespace DatabaseFinder
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            _grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "انتخاب", Name = "sel", Width = 45 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "مسیر", Name = "path", Width = 260, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نوع / فارمت", Name = "format", Width = 110, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "فرمت فایل", Name = "ext", Width = 90, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "نام دیتابیس", Name = "name", Width = 110, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "اندازه", Name = "size", Width = 80, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "تغییر یافته", Name = "date", Width = 100, ReadOnly = true });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "بکاپ", Name = "backup", Width = 60, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = L.Text("S172"), Name = "sel", Width = 45 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S173"), Name = "path", Width = 260, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S174"), Name = "format", Width = 110, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S175"), Name = "ext", Width = 90, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S176"), Name = "name", Width = 110, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S177"), Name = "size", Width = 80, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S178"), Name = "date", Width = 100, ReadOnly = true });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S179"), Name = "backup", Width = 60, ReadOnly = true });
 
             _grid.CellMouseClick += Grid_CellMouseClick;
             Controls.Add(_grid);
 
             _ctxResults = new ContextMenuStrip();
-            _ctxResults.Items.Add("باز کردن پوشه فایل", null, (s, e) => RunPathAction(OpenFolder));
-            _ctxResults.Items.Add("باز کردن فایل", null, (s, e) => RunPathAction(OpenFile));
-            _ctxResults.Items.Add("کپی مسیر کامل", null, (s, e) => RunPathAction(CopyPath));
-            _ctxResults.Items.Add("کپی فایل به پوشه...", null, (s, e) => RunPathAction(CopyFileToFolder));
+            _ctxResults.Items.Add(L.Text("S180"), null, (s, e) => RunPathAction(OpenFolder));
+            _ctxResults.Items.Add(L.Text("S181"), null, (s, e) => RunPathAction(OpenFile));
+            _ctxResults.Items.Add(L.Text("S182"), null, (s, e) => RunPathAction(CopyPath));
+            _ctxResults.Items.Add(L.Text("S183"), null, (s, e) => RunPathAction(CopyFileToFolder));
             _ctxResults.Opening += (s, e) =>
             {
                 var pt = _grid.PointToClient(Cursor.Position);
@@ -315,7 +315,7 @@ namespace DatabaseFinder
             // ---- دکمه‌های پایین ----
             _btnCopy = new Button
             {
-                Text = "کپی فایل‌های انتخاب‌شده",
+                Text = L.Text("S184"),
                 BackColor = Color.FromArgb(139, 195, 74),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -329,7 +329,7 @@ namespace DatabaseFinder
 
             _btnMerge = new Button
             {
-                Text = "افزودن انتخابی به جدول اصلی",
+                Text = L.Text("S185"),
                 BackColor = Color.FromArgb(255, 152, 0),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -338,12 +338,21 @@ namespace DatabaseFinder
                 Size = new Size(220, 40),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
-            _btnMerge.Click += (s, e) => DialogResult = DialogResult.OK;
+            _btnMerge.Click += (s, e) =>
+            {
+                _grid.EndEdit();
+                var selected = _grid.Rows.Cast<DataGridViewRow>()
+                    .Where(row => Convert.ToBoolean(row.Cells[0].Value ?? false))
+                    .Select(row => row.Tag).OfType<DatabaseInfo>().ToList();
+                if (selected.Count == 0) { _lblStatus.Text = L.Text("S198"); return; }
+                Found = selected;
+                DialogResult = DialogResult.OK;
+            };
             Controls.Add(_btnMerge);
 
             var btnClose = new Button
             {
-                Text = "بستن",
+                Text = L.Text("S095"),
                 Location = new Point(792, 642),
                 Size = new Size(96, 40),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right
@@ -353,6 +362,7 @@ namespace DatabaseFinder
 
             ReloadRoots();
             SetFormatsChecked(true);
+            BuildSearchLayout(grpRoots, grpFormats, grpOpt, btnAddRoot, btnAllRoots, btnNoneRoots, lblResults, btnAllResults, btnNoneResults, btnClose);
 
             Load += (s, e) => { };
         }
@@ -383,7 +393,7 @@ namespace DatabaseFinder
         {
             using var fbd = new FolderBrowserDialog
             {
-                Description = "پوشه‌ای که باید جستجو شود را انتخاب کنید"
+                Description = L.Text("S186")
             };
             if (fbd.ShowDialog(this) == DialogResult.OK)
             {
@@ -412,13 +422,7 @@ namespace DatabaseFinder
 
         private List<DiskFormat> GetSelectedFormats()
         {
-            var formats = new List<DiskFormat>();
-            var all = DiskFormatRegistry.All;
-            for (int i = 0; i < _lstFormats.Items.Count; i++)
-            {
-                if (_lstFormats.GetItemChecked(i)) formats.Add(all[i]);
-            }
-            return formats;
+            return _selectedFormats;
         }
 
         private async void BtnScan_Click(object? sender, EventArgs e)
@@ -426,14 +430,14 @@ namespace DatabaseFinder
             var roots = GetSelectedRoots();
             if (roots.Count == 0)
             {
-                _lblStatus.Text = "دست‌کم یک مکان جستجو انتخاب کنید.";
+                _lblStatus.Text = L.Text("S187");
                 return;
             }
 
             var formats = GetSelectedFormats();
             if (formats.Count == 0)
             {
-                _lblStatus.Text = "دست‌کم یک فرمت انتخاب کنید.";
+                _lblStatus.Text = L.Text("S188");
                 return;
             }
 
@@ -454,11 +458,11 @@ namespace DatabaseFinder
 
                 if (_cts.IsCancellationRequested)
                 {
-                    _lblStatus.Text = $"اسکن متوقف شد - {result.Count} مورد تاکنون یافت شد.";
+                    _lblStatus.Text = L.Format("S189", result.Count);
                 }
                 else
                 {
-                    _lblStatus.Text = $"اسکن کامل شد - {result.Count} مورد یافت شد.";
+                    _lblStatus.Text = L.Format("S190", result.Count);
                     _lblStatus.ForeColor = result.Count > 0 ? Color.FromArgb(76, 175, 80) : Color.Gray;
                 }
 
@@ -467,7 +471,7 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                _lblStatus.Text = $"خطا: {ex.Message}";
+                _lblStatus.Text = L.Format("S055", ex.Message);
                 _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
             }
             finally
@@ -496,11 +500,11 @@ namespace DatabaseFinder
 
                     if (!string.IsNullOrEmpty(p.CurrentDirectory))
                     {
-                        _lblStatus.Text = $"در حال بررسی: {p.CurrentDirectory}";
+                        _lblStatus.Text = L.Format("S191", p.CurrentDirectory);
                     }
                     else
                     {
-                        _lblStatus.Text = $"فایل‌های بررسی‌شده: {p.FilesScanned} ...";
+                        _lblStatus.Text = L.Format("S192", p.FilesScanned);
                     }
                 }));
             }
@@ -517,11 +521,11 @@ namespace DatabaseFinder
                 row.Cells[0].Value = true;
                 row.Cells[1].Value = r.LocalPath;
                 row.Cells[2].Value = r.FormatName;
-                row.Cells[3].Value = Path.GetExtension(r.LocalPath).TrimStart('.').ToLowerInvariant();
+                row.Cells[3].Value = Path.GetExtension(r.LocalPath ?? "").TrimStart('.').ToLowerInvariant();
                 row.Cells[4].Value = r.Name;
                 row.Cells[5].Value = DatabaseFileLocator.FormatSize(r.FileSize);
                 row.Cells[6].Value = r.FileModified.ToString("yyyy-MM-dd HH:mm");
-                row.Cells[7].Value = r.IsBackup ? "بله" : "";
+                row.Cells[7].Value = r.IsBackup ? L.Text("S193") : "";
                 row.Tag = r;
                 if (r.IsBackup) row.DefaultCellStyle.BackColor = Color.FromArgb(232, 245, 233);
                 _grid.Rows.Add(row);
@@ -554,7 +558,7 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                MessageBox.Show("خطا: " + ex.Message, "خطا", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L.Text("S194") + ex.Message, L.Text("S195"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -575,11 +579,11 @@ namespace DatabaseFinder
 
         private void CopyFileToFolder(string path)
         {
-            using var dlg = new FolderBrowserDialog { Description = "پوشه مقصد برای کپی فایل را انتخاب کنید" };
+            using var dlg = new FolderBrowserDialog { Description = L.Text("S196") };
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
             var dest = Path.Combine(dlg.SelectedPath, Path.GetFileName(path));
             File.Copy(path, dest, overwrite: true);
-            MessageBox.Show("فایل با موفقیت کپی شد:\n" + dest, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(L.Text("S197") + dest, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private List<DatabaseInfo> GetSelectedResults()
@@ -598,7 +602,7 @@ namespace DatabaseFinder
             var selected = GetSelectedResults();
             if (selected.Count == 0)
             {
-                _lblStatus.Text = "ردیف‌هایی که می‌خواهید کپی شوند را تیک بزنید.";
+                _lblStatus.Text = L.Text("S198");
                 return;
             }
 

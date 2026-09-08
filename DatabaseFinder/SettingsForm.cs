@@ -1,7 +1,8 @@
 namespace DatabaseFinder
 {
-    public class SettingsForm : Form
+    public class SettingsForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly AppSettings _settings;
         private readonly NumericUpDown[] _portBoxes = new NumericUpDown[9];
         private readonly CheckBox _chkMinimizeToTray;
@@ -28,7 +29,7 @@ namespace DatabaseFinder
         public SettingsForm(AppSettings settings)
         {
             _settings = settings;
-            Text = "تنظیمات";
+            Text = L.Text("S165");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(420, 520);
             Font = new Font("Segoe UI", 10F);
@@ -41,7 +42,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "تنظیمات برنامه",
+                Text = L.Text("S299"),
                 Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -51,7 +52,7 @@ namespace DatabaseFinder
 
             var grpPorts = new GroupBox
             {
-                Text = "پورت‌های سفارشی",
+                Text = L.Text("S300"),
                 Location = new Point(12, 45),
                 Size = new Size(396, 260)
             };
@@ -83,7 +84,7 @@ namespace DatabaseFinder
 
             var lblGeneral = new Label
             {
-                Text = "عمومی:",
+                Text = L.Text("S301"),
                 Font = new Font("Segoe UI", 11F, FontStyle.Bold),
                 Location = new Point(12, 315),
                 AutoSize = true
@@ -92,7 +93,7 @@ namespace DatabaseFinder
 
             _chkMinimizeToTray = new CheckBox
             {
-                Text = "مینیمم شدن به سینی سیستم",
+                Text = L.Text("S302"),
                 Checked = _settings.MinimizeToTray,
                 Location = new Point(12, 345),
                 AutoSize = true
@@ -101,7 +102,7 @@ namespace DatabaseFinder
 
             _chkNotifications = new CheckBox
             {
-                Text = "نمایش اعلان (استارت‌آپ)",
+                Text = L.Text("S303"),
                 Checked = _settings.ShowNotifications,
                 Location = new Point(12, 372),
                 AutoSize = true
@@ -110,7 +111,7 @@ namespace DatabaseFinder
 
             _chkAutoRefresh = new CheckBox
             {
-                Text = "به‌روزرسانی خودکار",
+                Text = L.Text("S304"),
                 Checked = _settings.AutoRefresh,
                 Location = new Point(12, 399),
                 AutoSize = true
@@ -120,7 +121,7 @@ namespace DatabaseFinder
 
             var lblInt = new Label
             {
-                Text = "فاصله (ثانیه):",
+                Text = L.Text("S305"),
                 Location = new Point(180, 402),
                 AutoSize = true
             };
@@ -138,7 +139,7 @@ namespace DatabaseFinder
 
             _btnSave = new Button
             {
-                Text = "ذخیره",
+                Text = L.Text("S306"),
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -151,7 +152,7 @@ namespace DatabaseFinder
 
             _btnCancel = new Button
             {
-                Text = "انصراف",
+                Text = L.Text("S307"),
                 BackColor = Color.FromArgb(158, 158, 158),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -168,6 +169,18 @@ namespace DatabaseFinder
                 ForeColor = Color.Gray
             };
             Controls.Add(_lblStatus);
+            Controls.Clear();
+            ClientSize=new Size(620,760);MinimumSize=new Size(600,730);FormBorderStyle=FormBorderStyle.Sizable;
+            var layout=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(22),ColumnCount=1,RowCount=5};
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,32));
+            lblTitle.Padding=new Padding(0,0,0,12);layout.Controls.Add(lblTitle,0,0);
+            var ports=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=INDICES.Length,BackColor=Color.White,Padding=new Padding(12),RightToLeft=RightToLeft.No};ports.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,60));ports.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,40));
+            for(var i=0;i<INDICES.Length;i++){ports.RowStyles.Add(new RowStyle(SizeType.Percent,100f/INDICES.Length));ports.Controls.Add(new Label{Text=INDICES[i].Label,AutoSize=true,Anchor=AnchorStyles.Left},0,i);_portBoxes[i].Anchor=AnchorStyles.Left;ports.Controls.Add(_portBoxes[i],1,i);}layout.Controls.Add(ports,0,1);
+            var general=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(6)};
+            foreach(var c in new Control[]{_chkMinimizeToTray,_chkNotifications,_chkAutoRefresh}){c.Margin=new Padding(5);general.Controls.Add(c);}
+            general.Controls.Add(UiTheme.Flow(lblInt,_numInterval));layout.Controls.Add(general,0,2);
+            _btnSave.Tag="primary";layout.Controls.Add(UiTheme.Flow(_btnSave,_btnCancel),0,3);_lblStatus.Dock=DockStyle.Fill;layout.Controls.Add(_lblStatus,0,4);Controls.Add(layout);
         }
 
         private void BtnSave_Click(object? sender, EventArgs e)
@@ -185,7 +198,7 @@ namespace DatabaseFinder
             _settings.AutoRefreshIntervalSec = (int)_numInterval.Value;
 
             _settings.Save();
-            _lblStatus.Text = "تنظیمات ذخیره شد ✓";
+            _lblStatus.Text = L.Text("S308");
             _lblStatus.ForeColor = Color.FromArgb(76, 175, 80);
             _lblStatus.Refresh();
             DialogResult = DialogResult.OK;

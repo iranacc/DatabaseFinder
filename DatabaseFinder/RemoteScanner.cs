@@ -76,14 +76,14 @@ namespace DatabaseFinder
                 if (!task.Wait(timeoutMs))
                 {
                     result.IsOpen = false;
-                    result.Message = "پورت بسته یا فیلتر شده";
+                    result.Message = L.Text("S282");
                     return result;
                 }
 
                 if (client.Connected)
                 {
                     result.IsOpen = true;
-                    result.Message = "پورت باز";
+                    result.Message = L.Text("S283");
 
                     // تشخیص نسخه با بنر
                     try

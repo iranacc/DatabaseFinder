@@ -2,8 +2,9 @@ using System.Diagnostics;
 
 namespace DatabaseFinder
 {
-    public class DatabaseBackupForm : Form
+    public class DatabaseBackupForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly List<DatabaseInfo> _servers;
         private List<DatabaseBackupItem> _items = new();
         private readonly TextBox _txtDest;
@@ -19,7 +20,7 @@ namespace DatabaseFinder
         {
             _servers = servers;
 
-            Text = "بکاپ منطقی دیتابیس (نسخه پشتیبان)";
+            Text = L.Text("S028");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(780, 660);
             Font = new Font("Segoe UI", 10F);
@@ -31,7 +32,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "بکاپ منطقی دیتابیس‌های در حال اجرا",
+                Text = L.Text("S029"),
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -41,7 +42,7 @@ namespace DatabaseFinder
 
             var grpDest = new GroupBox
             {
-                Text = "مسیر مقصد نسخه پشتیبان",
+                Text = L.Text("S030"),
                 Location = new Point(12, 42),
                 Size = new Size(756, 82)
             };
@@ -56,7 +57,7 @@ namespace DatabaseFinder
 
             var btnBrowse = new Button
             {
-                Text = "بگرد...",
+                Text = L.Text("S031"),
                 Location = new Point(580, 23),
                 Size = new Size(100, 28),
                 BackColor = Color.FromArgb(33, 150, 243),
@@ -68,7 +69,7 @@ namespace DatabaseFinder
 
             var lblHint = new Label
             {
-                Text = "توجه: SQL Server با هویت سرویس خود فایل بکاپ را می‌نویسد؛ مسیری انتخاب کنید که آن سرویس دسترسی نوشتن داشته باشد.",
+                Text = L.Text("S032"),
                 Location = new Point(12, 56),
                 AutoSize = true,
                 ForeColor = Color.Gray,
@@ -79,7 +80,7 @@ namespace DatabaseFinder
 
             var lblItems = new Label
             {
-                Text = "دیتابیس‌های انتخابی (تیک بزنید):",
+                Text = L.Text("S033"),
                 Location = new Point(12, 134),
                 AutoSize = true
             };
@@ -103,7 +104,7 @@ namespace DatabaseFinder
 
             var btnSelectAll = new Button
             {
-                Text = "انتخاب همه",
+                Text = L.Text("S034"),
                 Location = new Point(520, 158),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -116,7 +117,7 @@ namespace DatabaseFinder
 
             var btnClearAll = new Button
             {
-                Text = "حذف انتخاب",
+                Text = L.Text("S035"),
                 Location = new Point(648, 158),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(158, 158, 158),
@@ -129,7 +130,7 @@ namespace DatabaseFinder
 
             var btnExpand = new Button
             {
-                Text = "باز/بسته کردن",
+                Text = L.Text("S036"),
                 Location = new Point(520, 194),
                 Size = new Size(248, 30),
                 BackColor = Color.FromArgb(0, 150, 136),
@@ -142,7 +143,7 @@ namespace DatabaseFinder
 
             var lblLog = new Label
             {
-                Text = "گزارش بکاپ:",
+                Text = L.Text("S037"),
                 Location = new Point(12, 478),
                 AutoSize = true,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -163,7 +164,7 @@ namespace DatabaseFinder
 
             _btnStart = new Button
             {
-                Text = "شروع بکاپ",
+                Text = L.Text("S038"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -177,7 +178,7 @@ namespace DatabaseFinder
 
             _btnManifest = new Button
             {
-                Text = "ایجاد مانیفست SHA-256",
+                Text = L.Text("S039"),
                 BackColor = Color.FromArgb(255, 152, 0),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -191,7 +192,7 @@ namespace DatabaseFinder
 
             _btnOpen = new Button
             {
-                Text = "باز کردن پوشه",
+                Text = L.Text("S040"),
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -213,13 +214,14 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             Load += DatabaseBackupForm_Load;
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand},null,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
         {
             _btnStart.Enabled = false;
-            _lblStatus.Text = "در حال آماده‌سازی (اتصال به دیتابیس‌ها)...";
-            AppendLog("در حال اتصال به دیتابیس‌های در حال اجرا و آماده‌سازی دستور بکاپ...");
+            _lblStatus.Text = L.Text("S041");
+            AppendLog(L.Text("S042"));
 
             var result = await Task.Run(() =>
                 DatabaseBackuper.BuildBackupPlan(_servers, _txtDest.Text, message => AppendLogSafe(message)));
@@ -250,7 +252,7 @@ namespace DatabaseFinder
 
             _tree.ExpandAll();
             _btnStart.Enabled = true;
-            _lblStatus.Text = $"{_items.Count} دیتابیس آماده شد. موارد خطادار با ⚠ مشخص شده‌اند.";
+            _lblStatus.Text = L.Format("S043", _items.Count);
         }
 
         private static string TextFor(DatabaseBackupItem item)
@@ -315,7 +317,7 @@ namespace DatabaseFinder
         {
             using var fbd = new FolderBrowserDialog
             {
-                Description = "پوشه مقصد نسخه پشتیبان را انتخاب کنید",
+                Description = L.Text("S044"),
                 SelectedPath = _txtDest.Text
             };
             if (fbd.ShowDialog(this) == DialogResult.OK)
@@ -329,24 +331,24 @@ namespace DatabaseFinder
             var items = GetCheckedItems();
             if (items.Count == 0)
             {
-                _lblStatus.Text = "دست‌کم یک دیتابیس را تیک بزنید.";
+                _lblStatus.Text = L.Text("S045");
                 return;
             }
 
             var destRoot = _txtDest.Text.Trim();
             if (string.IsNullOrEmpty(destRoot))
             {
-                _lblStatus.Text = "مسیر مقصد را انتخاب کنید.";
+                _lblStatus.Text = L.Text("S046");
                 return;
             }
 
             _btnStart.Enabled = false;
-            _btnStart.Text = "در حال بکاپ...";
+            _btnStart.Text = L.Text("S047");
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _txtLog.Clear();
-            AppendLog($"مقصد: {destRoot}");
-            AppendLog($"تعداد دیتابیس‌های انتخابی: {items.Count}");
+            AppendLog(L.Format("S048", destRoot));
+            AppendLog(L.Format("S049", items.Count));
             AppendLog("");
 
             try
@@ -359,48 +361,48 @@ namespace DatabaseFinder
 
                 AppendLog("");
                 AppendLog("--------------------------");
-                AppendLog($"انجام شد: {ok} | ناموفق: {failed} | حجم کل بکاپ: {DatabaseFileLocator.FormatSize(items.Sum(i => i.BytesProduced))}");
+                AppendLog(L.Format("S050", ok, failed, DatabaseFileLocator.FormatSize(items.Sum(i => i.BytesProduced))));
 
                 if (ok > 0)
                 {
-                    AppendLog("در حال ساخت مانیفست SHA-256 ...");
+                    AppendLog(L.Text("S051"));
                     _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot));
-                    AppendLog($"مانیفست: {_manifestPath}");
+                    AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
                 }
 
                 _lblStatus.Text = failed > 0
-                    ? $"بکاپ تمام شد: {ok} موفق، {failed} ناموفق."
-                    : $"بکاپ کامل انجام شد: {ok} دیتابیس پشتیبان گرفته شد.";
+                    ? L.Format("S053", ok, failed)
+                    : L.Format("S054", ok);
                 _lblStatus.ForeColor = failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
             }
             catch (Exception ex)
             {
-                AppendLog($"خطا: {ex.Message}");
-                _lblStatus.Text = "خطا در انجام بکاپ.";
+                AppendLog(L.Format("S055", ex.Message));
+                _lblStatus.Text = L.Text("S056");
                 _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
             }
             finally
             {
                 _btnStart.Enabled = true;
-                _btnStart.Text = "شروع بکاپ";
+                _btnStart.Text = L.Text("S038");
             }
         }
 
         private async void BtnManifest_Click(object? sender, EventArgs e)
         {
             _btnManifest.Enabled = false;
-            AppendLog("در حال ساخت مانیفست SHA-256 ...");
+            AppendLog(L.Text("S051"));
             try
             {
                 _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim()));
-                AppendLog($"مانیفست: {_manifestPath}");
-                _lblStatus.Text = "مانیفست ساخته شد.";
+                AppendLog(L.Format("S052", _manifestPath));
+                _lblStatus.Text = L.Text("S057");
             }
             catch (Exception ex)
             {
-                AppendLog($"خطا: {ex.Message}");
+                AppendLog(L.Format("S055", ex.Message));
             }
             finally
             {
@@ -419,7 +421,7 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                _lblStatus.Text = $"خطا در باز کردن پوشه: {ex.Message}";
+                _lblStatus.Text = L.Format("S058", ex.Message);
             }
         }
     }

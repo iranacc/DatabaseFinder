@@ -2,8 +2,9 @@ using System.Diagnostics;
 
 namespace DatabaseFinder
 {
-    public class DatabaseCopyForm : Form
+    public class DatabaseCopyForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly List<DatabaseInfo> _servers;
         private List<DatabaseCopyItem> _items = new();
         private readonly TextBox _txtDest;
@@ -23,7 +24,7 @@ namespace DatabaseFinder
         {
             _servers = servers;
 
-            Text = "کپی فایل‌های دیتابیس";
+            Text = L.Text("S059");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(760, 620);
             Font = new Font("Segoe UI", 10F);
@@ -35,7 +36,7 @@ namespace DatabaseFinder
 
             var lblTitle = new Label
             {
-                Text = "کپی فایل‌های فیزیکی دیتابیس",
+                Text = L.Text("S060"),
                 Font = new Font("Segoe UI", 13F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
@@ -45,7 +46,7 @@ namespace DatabaseFinder
 
             var grpDest = new GroupBox
             {
-                Text = "مسیر مقصد",
+                Text = L.Text("S061"),
                 Location = new Point(12, 42),
                 Size = new Size(736, 60)
             };
@@ -62,7 +63,7 @@ namespace DatabaseFinder
 
             var btnBrowse = new Button
             {
-                Text = "بگرد...",
+                Text = L.Text("S031"),
                 Location = new Point(580, 23),
                 Size = new Size(100, 28),
                 BackColor = Color.FromArgb(33, 150, 243),
@@ -75,7 +76,7 @@ namespace DatabaseFinder
 
             var lblItems = new Label
             {
-                Text = "دیتابیس‌های انتخابی (تیک بزنید):",
+                Text = L.Text("S033"),
                 Location = new Point(12, 112),
                 AutoSize = true
             };
@@ -99,7 +100,7 @@ namespace DatabaseFinder
 
             var btnSelectAll = new Button
             {
-                Text = "انتخاب همه",
+                Text = L.Text("S034"),
                 Location = new Point(500, 136),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -112,7 +113,7 @@ namespace DatabaseFinder
 
             var btnClearAll = new Button
             {
-                Text = "حذف انتخاب",
+                Text = L.Text("S035"),
                 Location = new Point(628, 136),
                 Size = new Size(120, 30),
                 BackColor = Color.FromArgb(158, 158, 158),
@@ -125,7 +126,7 @@ namespace DatabaseFinder
 
             _btnManualPath = new Button
             {
-                Text = "انتخاب پوشه دستی...",
+                Text = L.Text("S062"),
                 Location = new Point(500, 172),
                 Size = new Size(248, 30),
                 BackColor = Color.FromArgb(255, 152, 0),
@@ -138,7 +139,7 @@ namespace DatabaseFinder
 
             _btnManifest = new Button
             {
-                Text = "مانیفست SHA-256",
+                Text = L.Text("S063"),
                 Location = new Point(500, 208),
                 Size = new Size(248, 30),
                 BackColor = Color.FromArgb(255, 152, 0),
@@ -152,7 +153,7 @@ namespace DatabaseFinder
 
             _btnOpen = new Button
             {
-                Text = "باز کردن پوشه",
+                Text = L.Text("S040"),
                 Location = new Point(500, 244),
                 Size = new Size(248, 30),
                 BackColor = Color.FromArgb(76, 175, 80),
@@ -166,7 +167,7 @@ namespace DatabaseFinder
 
             var grpLocked = new GroupBox
             {
-                Text = "فایل‌های قفل‌شده (سرویس فعال):",
+                Text = L.Text("S064"),
                 Location = new Point(500, 286),
                 Size = new Size(248, 182),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
@@ -174,7 +175,7 @@ namespace DatabaseFinder
 
             _rdoVss = new RadioButton
             {
-                Text = "Shadow Copy بدون توقف سرویس (پیشنهادی)",
+                Text = L.Text("S065"),
                 Location = new Point(10, 26),
                 Size = new Size(228, 34),
                 Checked = true,
@@ -184,7 +185,7 @@ namespace DatabaseFinder
 
             var lblVssHint = new Label
             {
-                Text = "با VSS هم‌زمان با سرویس در حال اجرا؛ نیاز به Administrator.",
+                Text = L.Text("S066"),
                 Location = new Point(28, 58),
                 AutoSize = true,
                 ForeColor = Color.Gray,
@@ -194,7 +195,7 @@ namespace DatabaseFinder
 
             _rdoStopStart = new RadioButton
             {
-                Text = "توقف و شروع مجدد خودکار سرویس SQL",
+                Text = L.Text("S067"),
                 Location = new Point(10, 86),
                 Size = new Size(228, 34),
                 Font = new Font("Segoe UI", 8.8F)
@@ -203,7 +204,7 @@ namespace DatabaseFinder
 
             var lblStopHint = new Label
             {
-                Text = "سرویس دیتابیس موقتاً متوقف و پس از کپی راه‌اندازی می‌شود.",
+                Text = L.Text("S068"),
                 Location = new Point(28, 118),
                 AutoSize = true,
                 ForeColor = Color.Gray,
@@ -213,7 +214,7 @@ namespace DatabaseFinder
 
             _rdoReportOnly = new RadioButton
             {
-                Text = "فقط گزارش خطا",
+                Text = L.Text("S069"),
                 Location = new Point(10, 148),
                 Size = new Size(180, 24),
                 Font = new Font("Segoe UI", 8.8F)
@@ -223,7 +224,7 @@ namespace DatabaseFinder
 
             var lblLog = new Label
             {
-                Text = "گزارش کپی:",
+                Text = L.Text("S070"),
                 Location = new Point(12, 476),
                 AutoSize = true,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -244,7 +245,7 @@ namespace DatabaseFinder
 
             _btnCopy = new Button
             {
-                Text = "شروع کپی",
+                Text = L.Text("S071"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -266,13 +267,14 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             Load += DatabaseCopyForm_Load;
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
         {
             _btnCopy.Enabled = false;
-            _lblStatus.Text = "در حال شناسایی فایل‌ها...";
-            AppendLog("در حال اتصال به دیتابیس‌ها و شناسایی فایل‌های فیزیکی...");
+            _lblStatus.Text = L.Text("S072");
+            AppendLog(L.Text("S073"));
 
             var result = await Task.Run(() =>
                 DatabaseFileLocator.BuildPlan(_servers, message => AppendLogSafe(message)));
@@ -283,7 +285,7 @@ namespace DatabaseFinder
             foreach (var group in _items.GroupBy(i =>
                 i.Server.IsOnline
                     ? $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"
-                    : $"آفلاین - {i.Server.FormatName}"))
+                    : L.Format("S074", i.Server.FormatName)))
             {
                 var serverNode = new TreeNode(group.Key)
                 {
@@ -292,7 +294,7 @@ namespace DatabaseFinder
                 foreach (var item in group)
                 {
                     var sizeText = item.Files.Count > 0
-                        ? $" ({item.Files.Count} فایل - {DatabaseFileLocator.FormatSize(item.TotalSize)})"
+                        ? L.Format("S075", item.Files.Count, DatabaseFileLocator.FormatSize(item.TotalSize))
                         : "";
                     var locationText = !item.Server.IsOnline && item.Server.LocalPath != null
                         ? "  [" + System.IO.Path.GetDirectoryName(item.Server.LocalPath) + "]"
@@ -309,7 +311,7 @@ namespace DatabaseFinder
                     }
                     else if (item.UseManualPath)
                     {
-                        node.Text += "  (مسیر دستی)";
+                        node.Text += L.Text("S076");
                         node.ForeColor = Color.FromArgb(255, 152, 0);
                     }
                     serverNode.Nodes.Add(node);
@@ -319,16 +321,16 @@ namespace DatabaseFinder
 
             _tree.ExpandAll();
             _btnCopy.Enabled = true;
-            _lblStatus.Text = $"{_items.Count} دیتابیس شناسایی شد. موارد خطادار با ⚠ مشخص شده‌اند.";
+            _lblStatus.Text = L.Format("S077", _items.Count);
         }
 
         private static string HandlingText(LockedFileHandling h)
         {
             switch (h)
             {
-                case LockedFileHandling.Vss: return "Shadow Copy (VSS) — بدون توقف سرویس";
-                case LockedFileHandling.StopServices: return "توقف و شروع مجدد سرویس دیتابیس";
-                default: return "فقط گزارش خطا";
+                case LockedFileHandling.Vss: return L.Text("S078");
+                case LockedFileHandling.StopServices: return L.Text("S079");
+                default: return L.Text("S069");
             }
         }
 
@@ -388,7 +390,7 @@ namespace DatabaseFinder
         {
             using var fbd = new FolderBrowserDialog
             {
-                Description = "پوشه مقصد را انتخاب کنید",
+                Description = L.Text("S080"),
                 SelectedPath = _txtDest.Text
             };
             if (fbd.ShowDialog(this) == DialogResult.OK)
@@ -403,27 +405,27 @@ namespace DatabaseFinder
             {
                 if (item.Files.Count > 0 && string.IsNullOrEmpty(item.Error))
                 {
-                    _lblStatus.Text = "این دیتابیس فایل‌های شناسایی‌شده دارد؛ نیازی به مسیر دستی نیست.";
+                    _lblStatus.Text = L.Text("S081");
                     return;
                 }
 
                 using var fbd = new FolderBrowserDialog
                 {
-                    Description = $"پوشه حاوی فایل‌های دیتابیس {item.DatabaseName} را انتخاب کنید"
+                    Description = L.Format("S082", item.DatabaseName)
                 };
                 if (fbd.ShowDialog(this) == DialogResult.OK)
                 {
                     item.ManualPath = fbd.SelectedPath;
                     item.UseManualPath = true;
                     item.Error = null;
-                    _tree.SelectedNode.Text = $"{item.DatabaseName}  (پوشه دستی: {fbd.SelectedPath})";
+                    _tree.SelectedNode.Text = L.Format("S083", item.DatabaseName, fbd.SelectedPath);
                     _tree.SelectedNode.ForeColor = Color.FromArgb(255, 152, 0);
-                    _lblStatus.Text = "پوشه دستی تنظیم شد.";
+                    _lblStatus.Text = L.Text("S084");
                 }
             }
             else
             {
-                _lblStatus.Text = "ابتدا یک دیتابیس را از درخت انتخاب کنید.";
+                _lblStatus.Text = L.Text("S085");
             }
         }
 
@@ -432,28 +434,28 @@ namespace DatabaseFinder
             var items = GetCheckedItems();
             if (items.Count == 0)
             {
-                _lblStatus.Text = "دست‌کم یک دیتابیس را تیک بزنید.";
+                _lblStatus.Text = L.Text("S045");
                 return;
             }
 
             var destRoot = _txtDest.Text.Trim();
             if (string.IsNullOrEmpty(destRoot))
             {
-                _lblStatus.Text = "مسیر مقصد را انتخاب کنید.";
+                _lblStatus.Text = L.Text("S046");
                 return;
             }
 
             _btnCopy.Enabled = false;
-            _btnCopy.Text = "در حال کپی...";
+            _btnCopy.Text = L.Text("S086");
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _txtLog.Clear();
-            AppendLog($"مقصد: {destRoot}");
-            AppendLog($"تعداد دیتابیس‌های انتخابی: {items.Count}");
+            AppendLog(L.Format("S048", destRoot));
+            AppendLog(L.Format("S049", items.Count));
             var lockedHandling = _rdoVss.Checked ? LockedFileHandling.Vss
                 : _rdoStopStart.Checked ? LockedFileHandling.StopServices
                 : LockedFileHandling.ReportOnly;
-            AppendLog($"روش فایل‌های قفل‌شده: {HandlingText(lockedHandling)}");
+            AppendLog(L.Format("S087", HandlingText(lockedHandling)));
             AppendLog("");
 
             try
@@ -463,46 +465,46 @@ namespace DatabaseFinder
 
                 AppendLog("");
                 AppendLog("--------------------------");
-                AppendLog($"فایل‌های کپی‌شده: {result.FilesCopied} | حجم: {DatabaseFileLocator.FormatSize(result.BytesCopied)} | ناموفق: {result.Failed}");
+                AppendLog(L.Format("S088", result.FilesCopied, DatabaseFileLocator.FormatSize(result.BytesCopied), result.Failed));
 
                 if (result.FilesCopied > 0)
                 {
-                    AppendLog("در حال ساخت مانیفست SHA-256 ...");
+                    AppendLog(L.Text("S051"));
                     _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot));
-                    AppendLog($"مانیفست: {_manifestPath}");
+                    AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
                 }
 
-                _lblStatus.Text = $"پایان کپی: {result.FilesCopied} فایل کپی شد، {result.Failed} مورد ناموفق.";
+                _lblStatus.Text = L.Format("S089", result.FilesCopied, result.Failed);
                 _lblStatus.ForeColor = result.Failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
             }
             catch (Exception ex)
             {
-                AppendLog($"خطا: {ex.Message}");
-                _lblStatus.Text = "خطا در کپی.";
+                AppendLog(L.Format("S055", ex.Message));
+                _lblStatus.Text = L.Text("S090");
                 _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
             }
             finally
             {
                 _btnCopy.Enabled = true;
-                _btnCopy.Text = "شروع کپی";
+                _btnCopy.Text = L.Text("S071");
             }
         }
 
         private async void BtnManifest_Click(object? sender, EventArgs e)
         {
             _btnManifest.Enabled = false;
-            AppendLog("در حال ساخت مانیفست SHA-256 ...");
+            AppendLog(L.Text("S051"));
             try
             {
                 _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim()));
-                AppendLog($"مانیفست: {_manifestPath}");
-                _lblStatus.Text = "مانیفست ساخته شد.";
+                AppendLog(L.Format("S052", _manifestPath));
+                _lblStatus.Text = L.Text("S057");
             }
             catch (Exception ex)
             {
-                AppendLog($"خطا: {ex.Message}");
+                AppendLog(L.Format("S055", ex.Message));
             }
             finally
             {
@@ -521,7 +523,7 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                _lblStatus.Text = $"خطا در باز کردن پوشه: {ex.Message}";
+                _lblStatus.Text = L.Format("S058", ex.Message);
             }
         }
     }

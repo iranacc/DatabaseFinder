@@ -18,7 +18,7 @@ namespace DatabaseFinder
 
     public static class DiskFormatRegistry
     {
-        public static List<DiskFormat> All { get; } = new()
+        public static List<DiskFormat> All => new()
         {
             new DiskFormat
             {
@@ -26,16 +26,16 @@ namespace DatabaseFinder
                 Type = DatabaseType.SQLServer,
                 Extensions = new[] { ".mdf", ".ldf", ".ndf" },
                 ContentValidator = FileSignatures.IsSqlServerFile,
-                Description = "فایل‌های دیتابیس SQL Server (mdf/ldf/ndf)"
+                Description = L.Text("S199")
             },
             new DiskFormat
             {
-                Name = "SQL Server (بکاپ)",
+                Name = L.Text("S200"),
                 Type = DatabaseType.SQLServer,
                 Extensions = new[] { ".bak" },
                 IsBackup = true,
                 ContentValidator = FileSignatures.IsSqlServerFile,
-                Description = "بکاپ‌های SQL Server (.bak)"
+                Description = L.Text("S201")
             },
             new DiskFormat
             {
@@ -43,14 +43,14 @@ namespace DatabaseFinder
                 Type = DatabaseType.MySQL,
                 Extensions = new[] { ".ibd", ".ibt" },
                 ContentValidator = FileSignatures.IsInnoDbFile,
-                Description = "فایل‌های جدول InnoDB (.ibd)"
+                Description = L.Text("S202")
             },
             new DiskFormat
             {
                 Name = "MySQL MyISAM",
                 Type = DatabaseType.MySQL,
                 Extensions = new[] { ".myd", ".myi", ".frm" },
-                Description = "فایل‌های MyISAM/جدول‌های قدیمی (.myd/.myi/.frm)"
+                Description = L.Text("S203")
             },
             new DiskFormat
             {
@@ -58,7 +58,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.SQLite,
                 Extensions = new[] { ".db", ".sqlite", ".sqlite3", ".sqlitedb" },
                 ContentValidator = FileSignatures.IsSqliteFile,
-                Description = "دیتابیس‌های SQLite (نرم‌افزارهای سبک و حسابداری)"
+                Description = L.Text("S204")
             },
             new DiskFormat
             {
@@ -66,7 +66,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".accdb", ".mdb" },
                 ContentValidator = FileSignatures.IsAccessFile,
-                Description = "دیتابیس‌های Microsoft Access"
+                Description = L.Text("S205")
             },
             new DiskFormat
             {
@@ -74,7 +74,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".dbf", ".dbt" },
                 ContentValidator = FileSignatures.IsDBaseFile,
-                Description = "فایل‌های FoxPro/dBase - رایج در نرم‌افزارهای حسابداری ایرانی"
+                Description = L.Text("S206")
             },
             new DiskFormat
             {
@@ -82,7 +82,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".fdb", ".gdb" },
                 ContentValidator = FileSignatures.IsFirebirdFile,
-                Description = "دیتابیس‌های Firebird (نرم‌افزارهای ایرانی)"
+                Description = L.Text("S207")
             },
             new DiskFormat
             {
@@ -90,7 +90,7 @@ namespace DatabaseFinder
                 Type = DatabaseType.MongoDB,
                 Extensions = new[] { ".wt" },
                 ContentValidator = FileSignatures.IsWtfFile,
-                Description = "فایل‌های داده MongoDB WiredTiger"
+                Description = L.Text("S208")
             },
             new DiskFormat
             {
@@ -98,16 +98,16 @@ namespace DatabaseFinder
                 Type = DatabaseType.Redis,
                 Extensions = new[] { ".rdb", ".aof" },
                 ContentValidator = FileSignatures.IsRedisFile,
-                Description = "فایل‌های داده و appendonly Redis"
+                Description = L.Text("S209")
             },
             new DiskFormat
             {
-Name = "بکاپ/آرشیو عمومی",
+Name = L.Text("S210"),
                 Type = DatabaseType.Unknown,
                 Extensions = new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bkf" },
                 IsBackup = true,
                 ContentValidator = p => ValidateArchive(p),
-                Description = "آرشیو/بکاپ‌های احتمالی حاوی داده مالی"
+                Description = L.Text("S211")
             }
         };
 

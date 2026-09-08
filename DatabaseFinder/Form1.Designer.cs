@@ -1,4 +1,4 @@
-﻿namespace DatabaseFinder;
+namespace DatabaseFinder;
 
 partial class Form1
 {
@@ -58,62 +58,62 @@ partial class Form1
 
         // Columns
         this.colCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-        this.colCheck.HeaderText = "انتخاب";
+        this.colCheck.HeaderText = L.Text("S172");
         this.colCheck.Name = "colCheck";
         this.colCheck.DataPropertyName = "Selected";
         this.colCheck.Width = 45;
 
         this.colType = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colType.HeaderText = "نام دیتابیس";
+        this.colType.HeaderText = L.Text("S176");
         this.colType.Name = "colType";
         this.colType.DataPropertyName = "DisplayName";
         this.colType.ReadOnly = true;
         this.colType.Width = 100;
 
         this.colVersion = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colVersion.HeaderText = "نسخه";
+        this.colVersion.HeaderText = L.Text("S231");
         this.colVersion.Name = "colVersion";
         this.colVersion.DataPropertyName = "Version";
         this.colVersion.ReadOnly = true;
         this.colVersion.Width = 100;
 
         this.colPort = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colPort.HeaderText = "پورت";
+        this.colPort.HeaderText = L.Text("S103");
         this.colPort.Name = "colPort";
         this.colPort.DataPropertyName = "Port";
         this.colPort.ReadOnly = true;
         this.colPort.Width = 60;
 
         this.colService = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colService.HeaderText = "سرویس";
+        this.colService.HeaderText = L.Text("S101");
         this.colService.Name = "colService";
         this.colService.DataPropertyName = "ServiceName";
         this.colService.ReadOnly = true;
         this.colService.Width = 150;
 
         this.colProcess = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colProcess.HeaderText = "پروسس / PID";
+        this.colProcess.HeaderText = L.Text("S232");
         this.colProcess.Name = "colProcess";
         this.colProcess.DataPropertyName = "ProcessDisplay";
         this.colProcess.ReadOnly = true;
         this.colProcess.Width = 130;
 
         this.colHow = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colHow.HeaderText = "تشخیص";
+        this.colHow.HeaderText = L.Text("S233");
         this.colHow.Name = "colHow";
         this.colHow.DataPropertyName = "DetectionMethod";
         this.colHow.ReadOnly = true;
         this.colHow.Width = 80;
 
         this.colLocation = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colLocation.HeaderText = "مسیر / آدرس";
+        this.colLocation.HeaderText = L.Text("S234");
         this.colLocation.Name = "colLocation";
         this.colLocation.DataPropertyName = "Location";
         this.colLocation.ReadOnly = true;
         this.colLocation.Width = 220;
 
         this.colSizeInfo = new System.Windows.Forms.DataGridViewTextBoxColumn();
-        this.colSizeInfo.HeaderText = "اندازه / تاریخ";
+        this.colSizeInfo.HeaderText = L.Text("S235");
         this.colSizeInfo.Name = "colSizeInfo";
         this.colSizeInfo.DataPropertyName = "SizeInfo";
         this.colSizeInfo.ReadOnly = true;
@@ -137,9 +137,9 @@ partial class Form1
         this.cmbScanMode.Size = new System.Drawing.Size(260, 26);
         this.cmbScanMode.TabIndex = 2;
         this.cmbScanMode.Items.AddRange(new object[] {
-            "فقط آنلاین (در حال اجرا)",
-            "فقط آفلاین (اسکن هارد)",
-            "آنلاین + آفلاین"});
+            L.Text("S236"),
+            L.Text("S237"),
+            L.Text("S238")});
         this.cmbScanMode.SelectedIndex = 0;
         this.cmbScanMode.SelectedIndexChanged += new System.EventHandler(this.cmbScanMode_SelectedIndexChanged);
 
@@ -150,7 +150,7 @@ partial class Form1
         this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
         this.lblTitle.Location = new System.Drawing.Point(10, 9);
         this.lblTitle.Name = "lblTitle";
-        this.lblTitle.Text = "Database Finder v1.7";
+        this.lblTitle.Text = "Database Finder v1.8";
 
         this.Controls.Add(this.cmbScanMode);
         this.Controls.Add(this.lblTitle);
@@ -164,7 +164,7 @@ partial class Form1
         this.btnRefresh.Location = new System.Drawing.Point(674, 12);
         this.btnRefresh.Name = "btnRefresh";
         this.btnRefresh.Size = new System.Drawing.Size(108, 28);
-        this.btnRefresh.Text = "تشخیص مجدد";
+        this.btnRefresh.Text = L.Text("S239");
         this.btnRefresh.UseVisualStyleBackColor = false;
         this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
 
@@ -177,7 +177,7 @@ partial class Form1
         this.btnCopy.Location = new System.Drawing.Point(574, 12);
         this.btnCopy.Name = "btnCopy";
         this.btnCopy.Size = new System.Drawing.Size(94, 28);
-        this.btnCopy.Text = "کپی لیست";
+        this.btnCopy.Text = L.Text("S240");
         this.btnCopy.UseVisualStyleBackColor = false;
         this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
 
@@ -189,7 +189,7 @@ partial class Form1
         this.btnSettings.Location = new System.Drawing.Point(12, 45);
         this.btnSettings.Name = "btnSettings";
         this.btnSettings.Size = new System.Drawing.Size(110, 30);
-        this.btnSettings.Text = "تنظیمات";
+        this.btnSettings.Text = L.Text("S165");
         this.btnSettings.UseVisualStyleBackColor = false;
         this.btnSettings.Click += new System.EventHandler(this.btnSettings_Click);
 
@@ -201,7 +201,7 @@ partial class Form1
         this.btnProfiles.Location = new System.Drawing.Point(130, 45);
         this.btnProfiles.Name = "btnProfiles";
         this.btnProfiles.Size = new System.Drawing.Size(110, 30);
-        this.btnProfiles.Text = "پروفایل‌ها";
+        this.btnProfiles.Text = L.Text("S241");
         this.btnProfiles.UseVisualStyleBackColor = false;
         this.btnProfiles.Click += new System.EventHandler(this.btnProfiles_Click);
 
@@ -213,7 +213,7 @@ partial class Form1
         this.btnTest.Location = new System.Drawing.Point(248, 45);
         this.btnTest.Name = "btnTest";
         this.btnTest.Size = new System.Drawing.Size(110, 30);
-        this.btnTest.Text = "تست اتصال";
+        this.btnTest.Text = L.Text("S092");
         this.btnTest.UseVisualStyleBackColor = false;
         this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
 
@@ -225,7 +225,7 @@ partial class Form1
         this.btnQuery.Location = new System.Drawing.Point(366, 45);
         this.btnQuery.Name = "btnQuery";
         this.btnQuery.Size = new System.Drawing.Size(110, 30);
-        this.btnQuery.Text = "اجرای کوئری";
+        this.btnQuery.Text = L.Text("S242");
         this.btnQuery.UseVisualStyleBackColor = false;
         this.btnQuery.Click += new System.EventHandler(this.btnQuery_Click);
 
@@ -237,7 +237,7 @@ partial class Form1
         this.btnRemote.Location = new System.Drawing.Point(484, 45);
         this.btnRemote.Name = "btnRemote";
         this.btnRemote.Size = new System.Drawing.Size(130, 30);
-        this.btnRemote.Text = "اسکن راه دور";
+        this.btnRemote.Text = L.Text("S243");
         this.btnRemote.UseVisualStyleBackColor = false;
         this.btnRemote.Click += new System.EventHandler(this.btnRemote_Click);
 
@@ -249,7 +249,7 @@ partial class Form1
         this.btnCopyFiles.Location = new System.Drawing.Point(622, 45);
         this.btnCopyFiles.Name = "btnCopyFiles";
         this.btnCopyFiles.Size = new System.Drawing.Size(160, 30);
-        this.btnCopyFiles.Text = "کپی فایل‌های دیتابیس";
+        this.btnCopyFiles.Text = L.Text("S059");
         this.btnCopyFiles.UseVisualStyleBackColor = false;
         this.btnCopyFiles.Click += new System.EventHandler(this.btnCopyFiles_Click);
 
@@ -261,7 +261,7 @@ partial class Form1
         this.btnBackup.Location = new System.Drawing.Point(790, 45);
         this.btnBackup.Name = "btnBackup";
         this.btnBackup.Size = new System.Drawing.Size(148, 30);
-        this.btnBackup.Text = "بکاپ منطقی (نسخه پشتیبان)";
+        this.btnBackup.Text = L.Text("S244");
         this.btnBackup.UseVisualStyleBackColor = false;
         this.btnBackup.Click += new System.EventHandler(this.btnBackup_Click);
 
@@ -284,13 +284,13 @@ partial class Form1
             this.miShow, this.miRefresh, this.miExit});
         this.trayMenu.Name = "trayMenu";
 
-        this.miShow.Text = "نمایش پنجره";
+        this.miShow.Text = L.Text("S245");
         this.miShow.Click += new System.EventHandler(this.miShow_Click);
 
-        this.miRefresh.Text = "تشخیص مجدد";
+        this.miRefresh.Text = L.Text("S239");
         this.miRefresh.Click += new System.EventHandler(this.miRefresh_Click);
 
-        this.miExit.Text = "خروج";
+        this.miExit.Text = L.Text("S246");
         this.miExit.Click += new System.EventHandler(this.miExit_Click);
 
         // Form1
@@ -313,7 +313,7 @@ partial class Form1
         this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
         this.RightToLeftLayout = true;
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-        this.Text = "Database Finder - جستجوی دیتابیس‌های در حال اجرا";
+        this.Text = L.Text("S247");
         this.Resize += new System.EventHandler(this.Form1_Resize);
         this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
         this.Load += new System.EventHandler(this.Form1_Load);

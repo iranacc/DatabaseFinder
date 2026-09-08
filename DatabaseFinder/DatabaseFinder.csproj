@@ -7,14 +7,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.7.0</Version>
-    <FileVersion>1.7.0.0</FileVersion>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <Version>1.8.0</Version>
+    <FileVersion>1.8.0.0</FileVersion>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
     <Product>Database Finder</Product>
     <Description>Database Finder - detects running databases on Windows</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Strings.*.json" WithCulture="false" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <PackageReference Include="MySqlConnector" Version="2.3.7" />

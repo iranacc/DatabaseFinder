@@ -1,7 +1,8 @@
 namespace DatabaseFinder
 {
-    public class DatabaseDetailForm : Form
+    public class DatabaseDetailForm : AppForm
     {
+        protected override bool ModernLayout => true;
         private readonly DatabaseInfo _db;
         private readonly TextBox _txtDetails;
         private readonly Button _btnTest;
@@ -14,7 +15,7 @@ namespace DatabaseFinder
         public DatabaseDetailForm(DatabaseInfo db)
         {
             _db = db;
-            Text = $"جزئیات {db.TypeDisplayName}";
+            Text = L.Format("S091", db.TypeDisplayName);
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(520, 520);
             Font = new Font("Segoe UI", 10F);
@@ -52,7 +53,7 @@ namespace DatabaseFinder
 
             _grpTest = new GroupBox
             {
-                Text = "تست اتصال",
+                Text = L.Text("S092"),
                 Location = new Point(12, 235),
                 Size = new Size(496, 120)
             };
@@ -64,14 +65,14 @@ namespace DatabaseFinder
                 BorderStyle = BorderStyle.FixedSingle,
                 Location = new Point(12, 25),
                 Size = new Size(470, 85),
-                Text = "برای تست اتصال روی دکمه «تست اتصال» کلیک کنید."
+                Text = L.Text("S093")
             };
             _grpTest.Controls.Add(_txtTestResult);
             Controls.Add(_grpTest);
 
             _btnTest = new Button
             {
-                Text = "تست اتصال",
+                Text = L.Text("S092"),
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -84,7 +85,7 @@ namespace DatabaseFinder
 
             _btnSaveProfile = new Button
             {
-                Text = "ذخیره در پروفایل‌ها",
+                Text = L.Text("S094"),
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -105,7 +106,7 @@ namespace DatabaseFinder
 
             _btnCancel = new Button
             {
-                Text = "بستن",
+                Text = L.Text("S095"),
                 BackColor = Color.FromArgb(158, 158, 158),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -114,51 +115,54 @@ namespace DatabaseFinder
             };
             _btnCancel.Click += (s, e) => Close();
             Controls.Add(_btnCancel);
+            var detailsLayout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};detailsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));detailsLayout.RowStyles.Add(new RowStyle(SizeType.Percent,60));detailsLayout.RowStyles.Add(new RowStyle(SizeType.Percent,40));
+            _txtDetails.Dock=DockStyle.Fill;_grpTest.Dock=DockStyle.Fill;_grpTest.Padding=new Padding(12);_txtTestResult.Dock=DockStyle.Fill;detailsLayout.Controls.Add(_txtDetails,0,0);detailsLayout.Controls.Add(_grpTest,0,1);
+            FormLayout.Build(this,lblTitle,null,detailsLayout,_lblStatus,_btnTest,_btnSaveProfile,_btnCancel);
         }
 
         private string BuildDetails()
         {
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"نام دیتابیس:  {_db.Name}");
-            sb.AppendLine($"نوع:          {_db.TypeDisplayName}");
-            sb.AppendLine($"پورت:         {(_db.Port?.ToString() ?? "-")}");
-            sb.AppendLine($"سرویس:        {(_db.ServiceName ?? "-")}");
-            sb.AppendLine($"پروسس:        {(_db.ProcessName ?? "-")} (PID: {(_db.ProcessId > 0 ? _db.ProcessId.ToString() : "-")})");
+            sb.AppendLine(L.Format("S096", _db.Name));
+            sb.AppendLine(L.Format("S097", _db.TypeDisplayName));
+            sb.AppendLine(L.Format("S098", (_db.Port?.ToString() ?? "-")));
+            sb.AppendLine(L.Format("S099", (_db.ServiceName ?? "-")));
+            sb.AppendLine(L.Format("S100", (_db.ProcessName ?? "-"), (_db.ProcessId > 0 ? _db.ProcessId.ToString() : "-")));
             var how = new List<string>();
-            if (_db.IsRunningAsService) how.Add("سرویس");
-            if (_db.IsRunningAsProcess) how.Add("پروسس");
-            if (_db.Port.HasValue) how.Add("پورت");
-            sb.AppendLine($"تشخیص:        {string.Join(" + ", how)}");
-            sb.AppendLine($"آدرس:         localhost:{(_db.Port?.ToString() ?? "-")}");
+            if (_db.IsRunningAsService) how.Add(L.Text("S101"));
+            if (_db.IsRunningAsProcess) how.Add(L.Text("S102"));
+            if (_db.Port.HasValue) how.Add(L.Text("S103"));
+            sb.AppendLine(L.Format("S104", string.Join(" + ", how)));
+            sb.AppendLine(L.Format("S105", (_db.Port?.ToString() ?? "-")));
             return sb.ToString();
         }
 
         private async void BtnTest_Click(object? sender, EventArgs e)
         {
             _btnTest.Enabled = false;
-            _btnTest.Text = "در حال تست...";
-            _txtTestResult.Text = "در حال برقراری اتصال...";
+            _btnTest.Text = L.Text("S106");
+            _txtTestResult.Text = L.Text("S107");
 
             var result = await Task.Run(() => DatabaseTester.TestConnection(_db));
 
             _btnTest.Enabled = true;
-            _btnTest.Text = "تست اتصال";
+            _btnTest.Text = L.Text("S092");
 
             var color = result.Success ? Color.FromArgb(232, 245, 233) : Color.FromArgb(255, 235, 238);
             _txtTestResult.BackColor = color;
 
             if (result.Success)
             {
-                _txtTestResult.Text = $"✅ اتصال برقرار شد!\n" +
-                                      $"وضعیت: {result.Message}\n" +
-                                      (result.Version.Length > 0 ? $"نسخه: {result.Version}\n" : "");
-                _lblStatus.Text = "اتصال موفق";
+                _txtTestResult.Text = L.Text("S108") +
+                                      L.Format("S109", result.Message) +
+                                      (result.Version.Length > 0 ? L.Format("S110", result.Version) : "");
+                _lblStatus.Text = L.Text("S111");
                 _lblStatus.ForeColor = Color.FromArgb(76, 175, 80);
             }
             else
             {
-                _txtTestResult.Text = $"❌ اتصال برقرار نشد\n{result.Message}";
-                _lblStatus.Text = "اتصال ناموفق";
+                _txtTestResult.Text = L.Format("S112", result.Message);
+                _lblStatus.Text = L.Text("S113");
                 _lblStatus.ForeColor = Color.FromArgb(244, 67, 54);
             }
         }
@@ -168,7 +172,7 @@ namespace DatabaseFinder
             var profiles = ProfileManager.Load();
             if (profiles.Any(p => p.Name == _db.Name && p.Type == _db.Type))
             {
-                _lblStatus.Text = "این دیتابیس قبلاً در پروفایل‌ها ذخیره شده است.";
+                _lblStatus.Text = L.Text("S114");
                 _lblStatus.ForeColor = Color.FromArgb(255, 152, 0);
                 return;
             }
@@ -185,7 +189,7 @@ namespace DatabaseFinder
             });
             ProfileManager.Save(profiles);
 
-            _lblStatus.Text = "در پروفایل‌ها ذخیره شد ✓";
+            _lblStatus.Text = L.Text("S115");
             _lblStatus.ForeColor = Color.FromArgb(76, 175, 80);
         }
     }

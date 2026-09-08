@@ -33,3 +33,9 @@ packages/
 *.tmp
 Thumbs.db
 .DS_Store
+
+# Local investigation history and generated validation / release output
+/building-database-finder-for-tax-investigationv2.json
+/ui-checks/
+/artifacts/
+/tools/Localize/

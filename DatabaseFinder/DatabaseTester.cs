@@ -16,7 +16,7 @@ namespace DatabaseFinder
         public static ConnectionResult TestConnection(DatabaseInfo db)
         {
             var port = db.Port ?? 0;
-            if (port == 0) return new ConnectionResult { Success = false, Message = "پورت مشخص نیست" };
+            if (port == 0) return new ConnectionResult { Success = false, Message = L.Text("S149") };
 
             // تست TCP - آیا پورت باز است؟
             using var tcp = new TcpClient();
@@ -26,13 +26,13 @@ namespace DatabaseFinder
             }
             catch (Exception ex)
             {
-                return new ConnectionResult { Success = false, Message = $"اتصال TCP برقرار نشد: {ex.Message}" };
+                return new ConnectionResult { Success = false, Message = L.Format("S150", ex.Message) };
             }
 
             if (!tcp.Connected)
-                return new ConnectionResult { Success = false, Message = "اتصال TCP برقرار نشد" };
+                return new ConnectionResult { Success = false, Message = L.Text("S151") };
 
-            var result = new ConnectionResult { Success = true, Message = "پورت باز است" };
+            var result = new ConnectionResult { Success = true, Message = L.Text("S152") };
 
             // تشخیص به کمک بنر (banner)
             try

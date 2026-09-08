@@ -73,10 +73,10 @@ namespace DatabaseFinder
                     if (sc.Status == ServiceControllerStatus.Running ||
                         sc.Status == ServiceControllerStatus.StartPending)
                     {
-                        log?.Invoke($"توقف سرویس «{name}» ...");
+                        log?.Invoke(L.Format("S153", name));
                         sc.Stop();
                         sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
-                        log?.Invoke($"سرویس «{name}» متوقف شد.");
+                        log?.Invoke(L.Format("S154", name));
                     }
                 }
                 catch (Exception ex)
@@ -99,10 +99,10 @@ namespace DatabaseFinder
                     if (sc.Status == ServiceControllerStatus.Stopped ||
                         sc.Status == ServiceControllerStatus.StopPending)
                     {
-                        log?.Invoke($"راه‌اندازی سرویس «{name}» ...");
+                        log?.Invoke(L.Format("S155", name));
                         sc.Start();
                         sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(90));
-                        log?.Invoke($"سرویس «{name}» در حال اجرا است.");
+                        log?.Invoke(L.Format("S156", name));
                     }
                 }
                 catch (Exception ex)
