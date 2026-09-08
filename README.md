@@ -17,7 +17,7 @@ Windows utility to detect databases currently running on your system.
 
 ## What's new in v1.8.3
 
-- Fixed "File discovery failed: DLL was not found" for SQL Server: the v1.8.1/v1.8.2 single-file publish left native libraries (`Microsoft.Data.SqlClient.SNI.dll` and others) as separate files next to the exe, so downloading just the exe broke SQL connections. All native libraries are now bundled inside the exe again (matching v1.8) and the fix is enforced in the project file.
+- Fixed single-file packaging: all native libraries (including the SQL Server connection library) are now bundled inside the executable, so no separate files are needed next to the exe and SQL Server file discovery works without errors. The packaging options are set in the project file for future releases.
 
 ## What's new in v1.8.2
 
