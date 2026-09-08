@@ -78,7 +78,7 @@ namespace DatabaseFinder
                     using (mo) mo.Delete();
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("VSS.DeleteShadow: " + idOrDeviceObject, ex); }
         }
 
         private static string? GetDeviceObject(string id)
@@ -97,7 +97,7 @@ namespace DatabaseFinder
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("VSS.GetDeviceObject: " + id, ex); }
             return null;
         }
 

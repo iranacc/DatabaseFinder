@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
 
 namespace DatabaseFinder
 {
@@ -169,7 +168,7 @@ namespace DatabaseFinder
                 DatabaseType? type = null;
 
                 if (name.Contains("sqlservr")) type = DatabaseType.SQLServer;
-                else if (name.Contains("mysqld") || name.Contains("mysql")) type = DatabaseType.MySQL;
+                else if (name.Contains("mysqld") || name.Equals("mysql", StringComparison.OrdinalIgnoreCase)) type = DatabaseType.MySQL;
                 else if (name.Contains("mariadbd")) type = DatabaseType.MariaDB;
                 else if (name.Contains("postgres")) type = DatabaseType.PostgreSQL;
                 else if (name.Contains("oracle")) type = DatabaseType.Oracle;
@@ -198,22 +197,7 @@ namespace DatabaseFinder
         private List<DatabaseInfo> DetectByPorts(List<ProcessInfo> processes)
         {
             var result = new List<DatabaseInfo>();
-            var processIds = new HashSet<int>(processes.Select(p => p.Id));
-            var occupiedPorts = new Dictionary<int, int>(); // port -> pid
-
-            try
-            {
-                foreach (var listener in IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners())
-                {
-                    var port = listener.Port;
-                    int pid = GetProcessIdForPort(listener);
-                    occupiedPorts[port] = pid;
-                }
-            }
-            catch
-            {
-                // اگر دسترسی به اطلاعات پورت ممکن نشد، ادامه بده
-            }
+            var occupiedPorts = GetPortOwners(); // port -> pid (یک بار اسکن)
 
             // چک پورت‌ها در اولویت؛ اگر پورت اشغال باشه یعنی سرویس در حال اجراست
             CheckPort(occupiedPorts, GetPorts(DatabaseType.SQLServer, MS_SQL_PORTS), DatabaseType.SQLServer, processes, result);
@@ -249,8 +233,29 @@ namespace DatabaseFinder
             }
         }
 
-        private int GetProcessIdForPort(IPEndPoint endpoint)
+        /// <summary>
+        /// مپ پورت‌های شنیده‌شده به PID مالک آنها را با یک بار اجرای netstat می‌سازد.
+        /// قبلاً برای هر پورت یک بار netstat اجرا می‌شد (O(n²)).
+        /// </summary>
+        private Dictionary<int, int> GetPortOwners()
         {
+            var occupiedPorts = new Dictionary<int, int>();
+
+            // ابتدا پورت‌های در حال شنیدن را (IPv4 و IPv6) مشخص کن تا فقط همین‌ها PID بگیرند.
+            try
+            {
+                foreach (var listener in IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners())
+                {
+                    occupiedPorts[listener.Port] = 0;
+                }
+            }
+            catch
+            {
+                // اگر دسترسی به اطلاعات پورت ممکن نشد، ادامه بده
+            }
+
+            if (occupiedPorts.Count == 0) return occupiedPorts;
+
             try
             {
                 var startInfo = new ProcessStartInfo
@@ -263,26 +268,33 @@ namespace DatabaseFinder
                 };
                 using (var proc = System.Diagnostics.Process.Start(startInfo))
                 {
-                    if (proc == null) return 0;
+                    if (proc == null) return occupiedPorts;
                     var output = proc.StandardOutput.ReadToEnd();
                     foreach (var line in output.Split('\n'))
                     {
-                        if (line.ToLowerInvariant().Contains("listening") &&
-                            line.Contains($":{endpoint.Port}"))
+                        if (!line.ToLowerInvariant().Contains("listening")) continue;
+                        var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length < 5) continue;
+                        if (!int.TryParse(parts[4], out int pid)) continue;
+
+                        // آدرس محلی می‌تواند IPv4 (0.0.0.0:1433) یا IPv6 ([::]:1433) باشد.
+                        var local = parts[1];
+                        var colon = local.LastIndexOf(':');
+                        if (colon < 0 || colon + 1 >= local.Length) continue;
+                        if (int.TryParse(local.Substring(colon + 1), out int port) &&
+                            occupiedPorts.ContainsKey(port))
                         {
-                            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                            if (parts.Length >= 5 && int.TryParse(parts[4], out int pid))
-                            {
-                                return pid;
-                            }
+                            occupiedPorts[port] = pid;
                         }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLog.Write("Detect.Ports", ex);
             }
-            return 0;
+
+            return occupiedPorts;
         }
 
         private List<ServiceInfo> GetRunningServices()
@@ -307,9 +319,10 @@ namespace DatabaseFinder
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // اگر WMI در دسترس نبود، ادامه بده
+                AppLog.Write("Detect.Services", ex);
             }
 
             return result;
@@ -337,7 +350,7 @@ namespace DatabaseFinder
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("Detect.Processes", ex); }
 
             return result;
         }
@@ -355,7 +368,7 @@ namespace DatabaseFinder
         {
             return name.Contains("sqlservr") ||
                    name.Contains("mysqld") ||
-                   name.Contains("mysql") ||
+                   name.Equals("mysql", StringComparison.OrdinalIgnoreCase) ||
                    name.Contains("mariadbd") ||
                    name.Contains("postgres") ||
                    name.Contains("oracle") ||

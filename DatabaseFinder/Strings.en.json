@@ -307,6 +307,7 @@
   "S309": "Shadow Copy created, but its DeviceObject was not found.",
   "S310": "Insufficient permissions. Run the application as Administrator.",
   "S311": "Unable to create Shadow Copy (code {#}).",
+  "S312": "Connection timed out.",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

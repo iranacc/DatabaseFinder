@@ -13,6 +13,51 @@ namespace DatabaseFinder
 
     public static class DatabaseTester
     {
+        /// <summary>
+        /// نسخهٔ غیرمسدودکنندهٔ تست اتصال برای استفاده از ترد UI. با قطع شدن (timeout) روی اتصال
+        /// و خواندن ptr، رابط را حتی روی شبکهٔ کند یخ نمی‌زند.
+        /// </summary>
+        public static async Task<ConnectionResult> TestConnectionAsync(DatabaseInfo db)
+        {
+            var port = db.Port ?? 0;
+            if (port == 0) return new ConnectionResult { Success = false, Message = L.Text("S149") };
+
+            using var tcp = new TcpClient();
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await tcp.ConnectAsync("127.0.0.1", port, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return new ConnectionResult { Success = false, Message = L.Text("S312") };
+            }
+            catch (Exception ex)
+            {
+                return new ConnectionResult { Success = false, Message = L.Format("S150", ex.Message) };
+            }
+
+            if (!tcp.Connected)
+                return new ConnectionResult { Success = false, Message = L.Text("S151") };
+
+            var result = new ConnectionResult { Success = true, Message = L.Text("S152") };
+
+            try
+            {
+                tcp.SendTimeout = 3000;
+                tcp.ReceiveTimeout = 3000;
+                var stream = tcp.GetStream();
+                result.Version = db.Type switch
+                {
+                    DatabaseType.Redis => await GetBannerAsync(stream, "*1\r\n$4\r\nINFO\r\n", "redis_version:"),
+                    _ => await GetBannerAsync(stream, null, null)
+                };
+            }
+            catch { }
+
+            return result;
+        }
+
         public static ConnectionResult TestConnection(DatabaseInfo db)
         {
             var port = db.Port ?? 0;
@@ -76,6 +121,37 @@ namespace DatabaseFinder
 
                 var buffer = new byte[4096];
                 int read = stream.Read(buffer, 0, buffer.Length);
+                if (read > 0)
+                {
+                    var text = Encoding.UTF8.GetString(buffer, 0, read);
+                    if (!string.IsNullOrEmpty(keyword))
+                    {
+                        var idx = text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase);
+                        if (idx >= 0)
+                        {
+                            return text.Substring(idx + keyword.Length, Math.Min(30, text.Length - idx - keyword.Length)).Trim();
+                        }
+                    }
+                    return Truncate(text, 80);
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        private static async Task<string> GetBannerAsync(NetworkStream stream, string? send, string? keyword)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(send))
+                {
+                    var bytes = Encoding.ASCII.GetBytes(send);
+                    await stream.WriteAsync(bytes, 0, bytes.Length);
+                    await stream.FlushAsync();
+                }
+
+                var buffer = new byte[4096];
+                int read = await stream.ReadAsync(buffer, 0, buffer.Length);
                 if (read > 0)
                 {
                     var text = Encoding.UTF8.GetString(buffer, 0, read);

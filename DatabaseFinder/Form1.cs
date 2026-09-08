@@ -22,16 +22,16 @@ namespace DatabaseFinder
             FormClosed += (_, _) => { _refreshTimer?.Dispose(); notifyIcon.Dispose(); };
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
-            if (_restored == null) DetectDatabases();
+            if (_restored == null) await DetectDatabasesAsync();
             else RestoreView(_restored);
 
             if (_settings.AutoRefresh)
             {
                 _refreshTimer = new System.Windows.Forms.Timer();
                 _refreshTimer.Interval = _settings.AutoRefreshIntervalSec * 1000;
-                _refreshTimer.Tick += (s, ev) => DetectDatabases(showStatus: false);
+                _refreshTimer.Tick += async (s, ev) => await DetectDatabasesAsync(showStatus: false);
                 _refreshTimer.Start();
             }
         }
@@ -76,9 +76,9 @@ namespace DatabaseFinder
             notifyIcon.Visible = false;
         }
 
-        private void miRefresh_Click(object sender, EventArgs e)
+        private async void miRefresh_Click(object sender, EventArgs e)
         {
-            DetectDatabases();
+            await DetectDatabasesAsync();
         }
 
         private void miExit_Click(object sender, EventArgs e)
@@ -89,7 +89,7 @@ namespace DatabaseFinder
             Application.Exit();
         }
 
-        private void btnRefresh_Click(object sender, EventArgs e)
+        private async void btnRefresh_Click(object sender, EventArgs e)
         {
             switch (cmbScanMode.SelectedIndex)
             {
@@ -97,11 +97,11 @@ namespace DatabaseFinder
                     RunOfflineScan();
                     break;
                 case 2:
-                    DetectDatabases();
+                    await DetectDatabasesAsync();
                     RunOfflineScan();
                     break;
                 default:
-                    DetectDatabases();
+                    await DetectDatabasesAsync();
                     break;
             }
         }
@@ -171,7 +171,7 @@ namespace DatabaseFinder
             UpdateDetails();
         }
 
-        private void btnSettings_Click(object sender, EventArgs e)
+        private async void btnSettings_Click(object sender, EventArgs e)
         {
             var form = new SettingsForm(_settings);
             if (form.ShowDialog(this) == DialogResult.OK)
@@ -179,7 +179,7 @@ namespace DatabaseFinder
                 // بازیابی تنظیمات بعد از تغییرات
                 _settings = AppSettings.Load();
                 _detector.ReloadSettings(_settings);
-                DetectDatabases();
+                await DetectDatabasesAsync();
             }
         }
 
@@ -432,40 +432,62 @@ namespace DatabaseFinder
             return $"{size:0.#} {units[unit]}";
         }
 
-        private void DetectDatabases(bool showStatus = true)
-        {
-            if (showStatus)
-            {
-                lblStatus.Text = L.Text("S227");
-                lblStatus.Refresh();
-            }
+        private bool _detectBusy = false;
 
+        private async Task DetectDatabasesAsync(bool showStatus = true)
+        {
+            if (_detectBusy || IsDisposed || !IsHandleCreated) return;
+            _detectBusy = true;
             try
             {
+                if (showStatus)
+                {
+                    lblStatus.Text = L.Text("S227");
+                    lblStatus.Refresh();
+                }
+
                 var results = _detector.Detect();
                 _lastResults = results.ToList();
                 var models = results.Select(BuildModel).ToList();
 
-                // تست سریع اتصال برای دریافت نسخه
-                foreach (var db in results.Where(d => d.Port.HasValue))
-                {
-                    var testResult = DatabaseTester.TestConnection(db);
-                    if (testResult.Success && testResult.Version.Length > 0)
-                    {
-                        db.Version = testResult.Version;
-                        var model = models.FirstOrDefault(m => m.TypeDisplayName == db.TypeDisplayName && m.Port == db.Port?.ToString());
-                        if (model != null) model.Version = testResult.Version;
-                    }
-                }
-
                 RebindGrid(models);
                 lblStatus.Text = L.Format("S228", results.Count);
+
+                // تست اتصال در پس‌زمینه برای دریافت نسخه؛ رابط را مسدود نمی‌کند
+                var withPorts = results.Where(d => d.Port.HasValue).ToList();
+                if (withPorts.Count == 0) return;
+
+                var versions = await Task.WhenAll(withPorts.Select(DatabaseTester.TestConnectionAsync));
+
+                if (IsDisposed || !IsHandleCreated) return;
+                for (int i = 0; i < withPorts.Count; i++)
+                {
+                    var testResult = versions[i];
+                    if (!testResult.Success || testResult.Version.Length == 0) continue;
+
+                    var db = withPorts[i];
+                    db.Version = testResult.Version;
+
+                    // مدل و ردیف متناظر از روی شاخص، نه تطبیق نام+پورت (که ممکن بود ردیف اشتباه را بگیرد)
+                    var idx = results.IndexOf(db);
+                    if (idx >= 0 && idx < models.Count)
+                    {
+                        models[idx].Version = testResult.Version;
+                        if (idx < dgvDatabases.Rows.Count)
+                            dgvDatabases.Rows[idx].Cells["colVersion"].Value = testResult.Version;
+                    }
+                }
             }
             catch (Exception ex)
             {
+                if (IsDisposed || !IsHandleCreated) return;
                 lblStatus.Text = L.Text("S229");
                 MessageBox.Show(L.Format("S230", ex.Message),
                     L.Text("S195"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _detectBusy = false;
             }
         }
     }

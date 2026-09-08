@@ -14,7 +14,7 @@ namespace DatabaseFinder
 
     public static class ManifestGenerator
     {
-        public const string ToolVersion = "1.8.0";
+        public const string ToolVersion = "1.8.1";
 
         public static string Sha256File(string path)
         {
@@ -50,12 +50,23 @@ namespace DatabaseFinder
                         size = fi.Length;
                         modified = fi.LastWriteTimeUtc;
                     }
-                    catch { }
+                    catch (Exception ex) { AppLog.Write("Manifest.FileInfo: " + file, ex); }
+
+                    string sha256;
+                    try
+                    {
+                        sha256 = Sha256File(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLog.Write("Manifest.Hash: " + file, ex);
+                        throw;
+                    }
 
                     entries.Add(new ManifestEntry
                     {
                         Path = rel,
-                        Sha256 = Sha256File(file),
+                        Sha256 = sha256,
                         Size = size,
                         ModifiedUtc = modified
                     });

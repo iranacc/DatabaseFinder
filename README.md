@@ -15,6 +15,15 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.1
+
+- Port detection performance: the port→PID map is now built with a single netstat run instead of one per port.
+- Version probing moved off the UI thread with a 5-second connect timeout; the interface no longer freezes on slow networks and rows update as tests finish.
+- Version results are matched to grid rows by index instead of name+port.
+- Fewer MySQL false positives (only mysqld/mysql processes are detected).
+- A technical error log for swallowed failures in settings, profiles, detection, the manifest and Shadow Copy (`%AppData%\DatabaseFinder\debug.log`).
+- Added a solution file so all projects build in one command.
+
 ## What's new in v1.8
 
 - Redesigned desktop interface with sidebar navigation, consistent colors, a selection toolbar and a path/details panel.

@@ -25,7 +25,7 @@ namespace DatabaseFinder
                     return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("Settings.Load", ex); }
             return new AppSettings();
         }
 
@@ -38,7 +38,7 @@ namespace DatabaseFinder
                 var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, json);
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("Settings.Save", ex); }
         }
 
         public int GetPort(DatabaseType type, int defaultPort)
@@ -83,7 +83,7 @@ namespace DatabaseFinder
                     return JsonSerializer.Deserialize<List<DatabaseProfile>>(json) ?? new List<DatabaseProfile>();
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("Profiles.Load", ex); }
             return new List<DatabaseProfile>();
         }
 
@@ -96,7 +96,7 @@ namespace DatabaseFinder
                 var json = JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ProfilesPath, json);
             }
-            catch { }
+            catch (Exception ex) { AppLog.Write("Profiles.Save", ex); }
         }
     }
 }
