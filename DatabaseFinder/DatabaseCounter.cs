@@ -15,31 +15,36 @@ namespace DatabaseFinder
             var profiles = ProfileManager.Load();
             Parallel.ForEach(services, new ParallelOptions { MaxDegreeOfParallelism = 4 }, service =>
             {
-                try { service.DatabaseCount = CountFor(service, profiles); }
-                catch { service.DatabaseCount = null; }
+                try
+                {
+                    var names = ListFor(service, profiles);
+                    service.DatabaseNames = names;
+                    service.DatabaseCount = names.Count;
+                }
+                catch { service.DatabaseCount = null; service.DatabaseNames = null; }
             });
         }
 
-        private static int? CountFor(DatabaseInfo db, List<DatabaseProfile> profiles)
+        private static List<string> ListFor(DatabaseInfo db, List<DatabaseProfile> profiles)
         {
             switch (db.Type)
             {
                 case DatabaseType.SQLServer:
-                    return CountSqlServer(db, profiles);
+                    return ListSqlServer(db, profiles);
                 case DatabaseType.MySQL:
                 case DatabaseType.MariaDB:
-                    return CountMySql(db, profiles);
+                    return ListMySql(db, profiles);
                 case DatabaseType.PostgreSQL:
-                    return CountPostgre(db, profiles);
+                    return ListPostgre(db, profiles);
                 default:
-                    return null;
+                    return new List<string>();
             }
         }
 
-        private static int? CountMySql(DatabaseInfo db, List<DatabaseProfile> profiles)
+        private static List<string> ListMySql(DatabaseInfo db, List<DatabaseProfile> profiles)
         {
             var p = FindProfile(db, profiles);
-            if (p == null || string.IsNullOrEmpty(p.Username)) return null;
+            if (p == null || string.IsNullOrEmpty(p.Username)) return new List<string>();
             var csb = new MySqlConnectionStringBuilder
             {
                 Server = db.Host,
@@ -50,13 +55,13 @@ namespace DatabaseFinder
             };
             using var conn = new MySqlConnection(csb.ConnectionString);
             conn.Open();
-            return ScalarCount(conn, "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema','mysql','performance_schema','sys');");
+            return QueryNames(conn, "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema','mysql','performance_schema','sys') ORDER BY SCHEMA_NAME;");
         }
 
-        private static int? CountPostgre(DatabaseInfo db, List<DatabaseProfile> profiles)
+        private static List<string> ListPostgre(DatabaseInfo db, List<DatabaseProfile> profiles)
         {
             var p = FindProfile(db, profiles);
-            if (p == null || string.IsNullOrEmpty(p.Username)) return null;
+            if (p == null || string.IsNullOrEmpty(p.Username)) return new List<string>();
             var csb = new NpgsqlConnectionStringBuilder
             {
                 Host = db.Host,
@@ -68,16 +73,16 @@ namespace DatabaseFinder
             };
             using var conn = new NpgsqlConnection(csb.ConnectionString);
             conn.Open();
-            return ScalarCount(conn, "SELECT COUNT(*) FROM pg_database WHERE datistemplate = false;");
+            return QueryNames(conn, "SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname;");
         }
 
-        private static int? CountSqlServer(DatabaseInfo db, List<DatabaseProfile> profiles)
+        private static List<string> ListSqlServer(DatabaseInfo db, List<DatabaseProfile> profiles)
         {
             var p = FindProfile(db, profiles);
             var cs = BuildSqlServerCs(db, p);
             using var conn = new SqlConnection(cs);
             conn.Open();
-            return ScalarCount(conn, "SELECT COUNT(*) FROM sys.databases WHERE database_id > 4;");
+            return QueryNames(conn, "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name;");
         }
 
         private static string BuildSqlServerCs(DatabaseInfo db, DatabaseProfile? p)
@@ -113,12 +118,15 @@ namespace DatabaseFinder
             catch { return false; }
         }
 
-        private static int ScalarCount(IDbConnection conn, string sql)
+        private static List<string> QueryNames(IDbConnection conn, string sql)
         {
+            var names = new List<string>();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             cmd.CommandTimeout = 5;
-            return Convert.ToInt32(cmd.ExecuteScalar());
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read()) names.Add(reader.GetString(0));
+            return names;
         }
     }
 }

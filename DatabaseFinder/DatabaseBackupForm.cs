@@ -15,6 +15,10 @@ namespace DatabaseFinder
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
         private string _manifestPath = "";
+        private string _planDest = "";
+        private readonly CheckBox _chkCompress;
+        private readonly CheckBox _chkVerify;
+        private readonly CheckBox _chkChecksum;
 
         public DatabaseBackupForm(List<DatabaseInfo> servers)
         {
@@ -213,8 +217,45 @@ namespace DatabaseFinder
             };
             Controls.Add(_lblStatus);
 
+            var grpOptions = new GroupBox
+            {
+                Text = L.Text("S332"),
+                Location = new Point(520, 232),
+                Size = new Size(248, 140),
+                ForeColor = Color.FromArgb(66, 66, 66),
+                Font = new Font("Segoe UI", 9F)
+            };
+            _chkCompress = new CheckBox
+            {
+                Text = L.Text("S333"),
+                Checked = true,
+                Location = new Point(14, 28),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(66, 66, 66)
+            };
+            _chkVerify = new CheckBox
+            {
+                Text = L.Text("S334"),
+                Checked = true,
+                Location = new Point(14, 58),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(66, 66, 66)
+            };
+            _chkChecksum = new CheckBox
+            {
+                Text = L.Text("S335"),
+                Checked = false,
+                Location = new Point(14, 88),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(66, 66, 66)
+            };
+            grpOptions.Controls.Add(_chkCompress);
+            grpOptions.Controls.Add(_chkVerify);
+            grpOptions.Controls.Add(_chkChecksum);
+            Controls.Add(grpOptions);
+
             Load += DatabaseBackupForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand},null,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
@@ -251,6 +292,60 @@ namespace DatabaseFinder
             }
 
             _tree.ExpandAll();
+            _planDest = _txtDest.Text.Trim();
+            _btnStart.Enabled = true;
+            _lblStatus.Text = L.Format("S043", _items.Count);
+        }
+
+        private async Task RebuildPlanAsync()
+        {
+            var dest = _txtDest.Text.Trim();
+            if (string.IsNullOrEmpty(dest) || string.Equals(dest, _planDest, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var checkedNames = new HashSet<string>();
+            foreach (TreeNode node in _tree.Nodes)
+            {
+                foreach (TreeNode child in node.Nodes)
+                {
+                    if (child.Checked && child.Tag is DatabaseBackupItem item)
+                        checkedNames.Add(item.DatabaseName);
+                }
+            }
+
+            _btnStart.Enabled = false;
+            AppendLog(L.Text("S042"));
+
+            var result = await Task.Run(() =>
+                DatabaseBackuper.BuildBackupPlan(_servers, dest, message => AppendLogSafe(message)));
+
+            _items = result;
+            _tree.Nodes.Clear();
+
+            foreach (var group in _items.GroupBy(i => i.Server.TypeDisplayName))
+            {
+                var serverNode = new TreeNode(group.Key) { Checked = true };
+                foreach (var item in group)
+                {
+                    var node = new TreeNode(TextFor(item))
+                    {
+                        Tag = item,
+                        Checked = (item.Server.IsOnline && string.IsNullOrEmpty(item.Error))
+                            && checkedNames.Contains(item.DatabaseName)
+                    };
+                    if (!string.IsNullOrEmpty(item.Error))
+                    {
+                        node.Text += "  ⚠ " + ShortError(item.Error);
+                        node.ForeColor = Color.FromArgb(211, 47, 47);
+                        node.Checked = false;
+                    }
+                    serverNode.Nodes.Add(node);
+                }
+                _tree.Nodes.Add(serverNode);
+            }
+
+            _tree.ExpandAll();
+            _planDest = dest;
             _btnStart.Enabled = true;
             _lblStatus.Text = L.Format("S043", _items.Count);
         }
@@ -313,7 +408,7 @@ namespace DatabaseFinder
             return selected;
         }
 
-        private void BtnBrowse_Click(object? sender, EventArgs e)
+        private async void BtnBrowse_Click(object? sender, EventArgs e)
         {
             using var fbd = new FolderBrowserDialog
             {
@@ -323,16 +418,27 @@ namespace DatabaseFinder
             if (fbd.ShowDialog(this) == DialogResult.OK)
             {
                 _txtDest.Text = fbd.SelectedPath;
+                await RebuildPlanAsync();
             }
         }
 
         private async void BtnStart_Click(object? sender, EventArgs e)
         {
+            if (!string.Equals(_planDest, _txtDest.Text.Trim(), StringComparison.OrdinalIgnoreCase))
+                await RebuildPlanAsync();
+
             var items = GetCheckedItems();
             if (items.Count == 0)
             {
                 _lblStatus.Text = L.Text("S045");
                 return;
+            }
+
+            foreach (var it in items)
+            {
+                it.Compress = _chkCompress.Checked;
+                it.Verify = _chkVerify.Checked;
+                it.Checksum = _chkChecksum.Checked;
             }
 
             var destRoot = _txtDest.Text.Trim();
@@ -366,7 +472,7 @@ namespace DatabaseFinder
                 if (ok > 0)
                 {
                     AppendLog(L.Text("S051"));
-                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot));
+                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, items));
                     AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
@@ -396,7 +502,7 @@ namespace DatabaseFinder
             AppendLog(L.Text("S051"));
             try
             {
-                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim()));
+                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim(), GetCheckedItems()));
                 AppendLog(L.Format("S052", _manifestPath));
                 _lblStatus.Text = L.Text("S057");
             }

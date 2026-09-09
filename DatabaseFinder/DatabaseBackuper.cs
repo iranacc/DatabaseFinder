@@ -21,6 +21,12 @@ namespace DatabaseFinder
         public string? Error { get; set; }
         public List<string> OutputFiles { get; set; } = new();
         public long BytesProduced { get; set; }
+        public bool Compress { get; set; } = true;
+        public bool Verify { get; set; } = true;
+        public bool Checksum { get; set; }
+        public string Chain { get; set; } = "full";
+        public DateTime StartedUtc { get; set; }
+        public DateTime EndedUtc { get; set; }
     }
 
     public static class DatabaseBackuper
@@ -155,13 +161,124 @@ namespace DatabaseFinder
             var cs = BuildSqlServerCs(item.Server);
             using var conn = new SqlConnection(cs);
             conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandTimeout = 0;
             var dbName = item.DatabaseName.Replace("]", "]]");
             var dest = item.DestFile.Replace("'", "''");
-            cmd.CommandText = $"BACKUP DATABASE [{dbName}] TO DISK = N'{dest}' WITH INIT, COMPRESSION;";
-            log?.Invoke(L.Format("S007", item.DatabaseName));
-            cmd.ExecuteNonQuery();
+
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandTimeout = 0;
+                var opts = item.Compress ? "COMPRESSION" : "NO_COMPRESSION";
+                if (item.Checksum) opts += ", CHECKSUM";
+                cmd.CommandText = $"BACKUP DATABASE [{dbName}] TO DISK = N'{dest}' WITH INIT, {opts};";
+                log?.Invoke(L.Format("S007", item.DatabaseName));
+                cmd.ExecuteNonQuery();
+            }
+
+            if (item.Verify)
+            {
+                log?.Invoke(L.Format("S336", item.DatabaseName));
+                using var vcmd = conn.CreateCommand();
+                vcmd.CommandTimeout = 0;
+                vcmd.CommandText = $"RESTORE VERIFYONLY FROM DISK = N'{dest}';";
+                using var reader = vcmd.ExecuteReader();
+                while (reader.Read()) { }
+            }
+        }
+
+        internal static string ProbeServerVersion(DatabaseInfo server)
+        {
+            try
+            {
+                switch (server.Type)
+                {
+                    case DatabaseType.SQLServer:
+                        using (var conn = new SqlConnection(BuildSqlServerCs(server)))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = "SELECT CONCAT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(64)), ' ', " +
+                                              "CAST(SERVERPROPERTY('Edition') AS nvarchar(128)));";
+                            return (cmd.ExecuteScalar() as string ?? "").Trim();
+                        }
+
+                    case DatabaseType.MySQL:
+                    case DatabaseType.MariaDB:
+                        var port = server.Port ?? (server.Type == DatabaseType.MariaDB ? 3307 : 3306);
+                        var creds = GetMySqlCreds(server, port);
+                        using (var conn = new MySqlConnection(creds.Item1))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = "SELECT CONCAT(VERSION(), ' ', @@hostname);";
+                            return (cmd.ExecuteScalar() as string ?? "").Trim();
+                        }
+
+                    case DatabaseType.PostgreSQL:
+                        var pgPort = server.Port ?? 5432;
+                        var pgCsb = BuildPostgresCsb(server, pgPort);
+                        using (var conn = new NpgsqlConnection(pgCsb.ConnectionString))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = "SELECT current_setting('server_version');";
+                            return (cmd.ExecuteScalar() as string ?? "").Trim();
+                        }
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        internal static long ProbeDatabaseSizeBytes(DatabaseInfo server, string dbName)
+        {
+            try
+            {
+                switch (server.Type)
+                {
+                    case DatabaseType.SQLServer:
+                        var esc = dbName.Replace("]", "]]");
+                        using (var conn = new SqlConnection(BuildSqlServerCs(server)))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = $"SELECT CAST(COALESCE(SUM(d.size) * 8192.0, 0) AS bigint) FROM [{esc}].sys.database_files AS d WHERE d.type_desc = 'ROWS';";
+                            return Convert.ToInt64(cmd.ExecuteScalar() ?? 0L);
+                        }
+
+                    case DatabaseType.MySQL:
+                    case DatabaseType.MariaDB:
+                        var port = server.Port ?? (server.Type == DatabaseType.MariaDB ? 3307 : 3306);
+                        var creds = GetMySqlCreds(server, port);
+                        using (var conn = new MySqlConnection(creds.Item1))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = "SELECT CAST(COALESCE(SUM(data_length + index_length), 0) AS SIGNED) FROM information_schema.tables WHERE table_schema = @db;";
+                            cmd.Parameters.AddWithValue("@db", dbName);
+                            return Convert.ToInt64(cmd.ExecuteScalar() ?? 0L);
+                        }
+
+                    case DatabaseType.PostgreSQL:
+                        var pgPort = server.Port ?? 5432;
+                        var pgCsb = BuildPostgresCsb(server, pgPort);
+                        using (var conn = new NpgsqlConnection(pgCsb.ConnectionString))
+                        {
+                            conn.Open();
+                            using var cmd = conn.CreateCommand();
+                            cmd.CommandTimeout = 5;
+                            cmd.CommandText = "SELECT COALESCE(pg_database_size(@db), 0);";
+                            cmd.Parameters.AddWithValue("@db", dbName);
+                            return Convert.ToInt64(cmd.ExecuteScalar() ?? 0L);
+                        }
+                }
+            }
+            catch { }
+            return 0;
         }
 
         // ---------- MySQL / MariaDB ----------
@@ -489,6 +606,7 @@ namespace DatabaseFinder
 
                 try
                 {
+                    item.StartedUtc = DateTime.UtcNow;
                     Directory.CreateDirectory(item.BackupDir);
 
                     switch (item.Server.Type)
@@ -517,11 +635,13 @@ namespace DatabaseFinder
                         ? Directory.EnumerateFiles(item.BackupDir, "*", SearchOption.AllDirectories).ToList()
                         : new List<string>();
                     item.BytesProduced = item.OutputFiles.Sum(f => new FileInfo(f).Length);
+                    item.EndedUtc = DateTime.UtcNow;
                     item.Done = true;
                     log?.Invoke(L.Format("S024", item.FolderName, DatabaseFileLocator.FormatSize(item.BytesProduced)));
                 }
                 catch (Exception ex)
                 {
+                    item.EndedUtc = DateTime.UtcNow;
                     item.Failed = true;
                     item.Error = ex.Message;
                     log?.Invoke(L.Format("S025", item.FolderName, ex.Message));

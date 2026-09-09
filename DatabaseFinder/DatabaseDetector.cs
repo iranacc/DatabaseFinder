@@ -35,6 +35,7 @@ namespace DatabaseFinder
         public string Host { get; set; } = "localhost";
         public string ServerName { get; set; } = "";
         public int? DatabaseCount { get; set; }
+        public List<string>? DatabaseNames { get; set; }
 
         // وضعیت آنلاین/آفلاین
         public bool IsOnline { get; set; } = true;

@@ -15,6 +15,14 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.5
+
+- **Fixed backup destination bug:** the backup plan was built only once when the window opened; changing the destination silently sent the files to the default folder (`C:\DatabaseFinder\Backup`) while the log and manifest pointed at the new (empty) folder. The plan is now rebuilt whenever the destination changes (checked databases are preserved).
+- **SQL Server backup options:** compression (COMPRESSION), verify on completion (VERIFYONLY) and checksum before writing to media (CHECKSUM) — SSMS-style.
+- **Rich, prettier manifest:** `manifest.txt` gained a framed layout headed by a 181 "stamp", an execution summary, per-database cards with options/timing/status/compression ratio, a file-hash table and a `sha256sum -c manifest.txt`-compatible block; `manifest.md` (GitHub-ready) and `manifest.json` (structured) are also produced, with live server versions and the manifest's own SHA-256.
+- **Article 181 stamp:** a large 181 logo (Article 181 of the Iranian Direct Tax Law) with the caption `TAX 181 ARTICLE . MSAM Group` heads every manifest, marking it as machine-readable extracted data.
+- **Database list:** double-click the "# Databases" column to open the database names of that service.
+
 ## What's new in v1.8.4
 
 - Network range scanning: scan an IP range, a local subnet (advertised interfaces listed in a dropdown) or a CIDR block with bounded parallelism and a per-host timeout; every finding is resolved with a SQL Browser (SSRP, UDP 1434) probe.
@@ -86,7 +94,7 @@ Windows utility to detect databases currently running on your system.
   - PostgreSQL: `pg_dump` (custom format) with automatic binary discovery
   - Redis: runs `SAVE` and copies `dump.rdb`
   - MongoDB: `mongodump` (when MongoDB Database Tools are installed)
-- **SHA-256 manifest (for the case file)** — after any file copy or backup, `manifest.txt` (hash + path, printable) and `manifest.json` (structured) are auto-generated in the destination folder so every captured file is verifiable
+- **SHA-256 manifest (for the case file)** — after any file copy or backup, three files are auto-generated in the destination folder: `manifest.txt` (a framed, printable report with a 181 stamp, execution summary, per-database cards, a `sha256sum -c`-compatible block and the manifest's own hash), `manifest.md` (GitHub-ready) and `manifest.json` (structured)
 - Connection test with version detection
 - Customizable settings (custom ports, auto refresh)
 - Saved database profiles

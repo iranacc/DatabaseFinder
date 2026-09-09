@@ -293,10 +293,23 @@ namespace DatabaseFinder
 
         private void dgvDatabases_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
+            if (e.RowIndex < 0) return;
+            if (dgvDatabases.Columns[e.ColumnIndex]?.Name == "colDbCount")
             {
-                ShowDetailForSelected();
+                if (dgvDatabases.Rows[e.RowIndex].Tag is DatabaseInfo db)
+                {
+                    if (db.DatabaseNames == null || db.DatabaseNames.Count == 0)
+                    {
+                        lblStatus.Text = L.Text("S331");
+                        lblStatus.ForeColor = Color.FromArgb(244, 67, 54);
+                        return;
+                    }
+                    using var form = new DatabaseListForm(db);
+                    form.ShowDialog(this);
+                }
+                return;
             }
+            ShowDetailForSelected();
         }
 
         private void ShowDetailForSelected()
