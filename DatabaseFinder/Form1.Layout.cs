@@ -9,6 +9,7 @@ public partial class Form1
     private readonly MainViewState? _restored;
     private Label _selectionCount = null!;
     private TextBox _pathDetail = null!;
+    private LinkLabel _lnkUpdate = null!;
     private Label _detailTitle = null!;
     public MainViewState CaptureView()
     {
@@ -33,7 +34,7 @@ public partial class Form1
     {
         SuspendLayout();
         Controls.Clear();
-        Text = "Database Finder 1.8.0 • MSAM Group";
+        Text = "Database Finder " + UpdateChecker.VersionString(UpdateChecker.CurrentVersion) + " • MSAM Group";
         ClientSize = new Size(1200, 740);
         MinimumSize = new Size(1040, 650);
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -61,7 +62,19 @@ public partial class Form1
         var language = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 132, AccessibleName = "Language / زبان", RightToLeft = RightToLeft.No };
         language.Items.AddRange(new object[] { "فارسی", "English" }); language.SelectedIndex = L.IsFa ? 0 : 1;
         language.SelectedIndexChanged += (_, _) => LanguageRequested?.Invoke(language.SelectedIndex == 0 ? "fa" : "en");
-        content.Controls.Add(UiTheme.Flow(lblTitle, language), 0, 0);
+        _lnkUpdate = new LinkLabel
+        {
+            AutoSize = true,
+            Visible = false,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            LinkColor = UiTheme.Accent,
+            ActiveLinkColor = UiTheme.Accent,
+            LinkBehavior = LinkBehavior.HoverUnderline,
+            Padding = new Padding(4, 9, 4, 0),
+            Margin = new Padding(14, 0, 0, 0),
+        };
+        _lnkUpdate.Click += _lnkUpdate_Click;
+        content.Controls.Add(UiTheme.Flow(lblTitle, language, _lnkUpdate), 0, 0);
         btnRefresh.Tag = "primary";
         btnRefresh.AutoSize = true; btnRefresh.MinimumSize = new Size(110, 36);
         cmbScanMode.Width = 235;

@@ -15,6 +15,11 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.6
+
+- **In-app self-update:** on startup the app reads the latest release from GitHub (iranacc/DatabaseFinder) and compares it with its own version. When a newer one exists, an "Update" link shows in the header and a "Check for updates" item is added to the tray menu. Clicking it downloads the update with a live percentage, verifies the file's SHA-256 against the release `SHA256SUMS.txt`, then swaps the executable and restarts automatically. The matching variant is downloaded on its own (Light → Light, standalone → standalone).
+- **Honest title bar:** the window title now shows the actual version of the running executable instead of a fixed number.
+
 ## What's new in v1.8.5
 
 - **Fixed backup destination bug:** the backup plan was built only once when the window opened; changing the destination silently sent the files to the default folder (`C:\DatabaseFinder\Backup`) while the log and manifest pointed at the new (empty) folder. The plan is now rebuilt whenever the destination changes (checked databases are preserved).

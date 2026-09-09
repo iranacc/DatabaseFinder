@@ -34,6 +34,7 @@ partial class Form1
         this.trayMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
         this.miShow = new System.Windows.Forms.ToolStripMenuItem();
         this.miRefresh = new System.Windows.Forms.ToolStripMenuItem();
+        this.miUpdate = new System.Windows.Forms.ToolStripMenuItem();
         this.miExit = new System.Windows.Forms.ToolStripMenuItem();
 
         ((System.ComponentModel.ISupportInitialize)(this.dgvDatabases)).BeginInit();
@@ -289,7 +290,7 @@ partial class Form1
 
         // trayMenu
         this.trayMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.miShow, this.miRefresh, this.miExit});
+            this.miShow, this.miRefresh, this.miUpdate, this.miExit});
         this.trayMenu.Name = "trayMenu";
 
         this.miShow.Text = L.Text("S245");
@@ -297,6 +298,9 @@ partial class Form1
 
         this.miRefresh.Text = L.Text("S239");
         this.miRefresh.Click += new System.EventHandler(this.miRefresh_Click);
+
+        this.miUpdate.Text = L.Text("S338");
+        this.miUpdate.Click += new System.EventHandler(this.miUpdate_Click);
 
         this.miExit.Text = L.Text("S246");
         this.miExit.Click += new System.EventHandler(this.miExit_Click);
@@ -349,6 +353,7 @@ partial class Form1
     private System.Windows.Forms.ContextMenuStrip trayMenu;
     private System.Windows.Forms.ToolStripMenuItem miShow;
     private System.Windows.Forms.ToolStripMenuItem miRefresh;
+    private System.Windows.Forms.ToolStripMenuItem miUpdate;
     private System.Windows.Forms.ToolStripMenuItem miExit;
     private System.Windows.Forms.DataGridViewTextBoxColumn colType;
     private System.Windows.Forms.DataGridViewCheckBoxColumn colCheck;

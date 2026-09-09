@@ -8,6 +8,8 @@ namespace DatabaseFinder
         private AppSettings _settings;
         private System.Windows.Forms.Timer? _refreshTimer;
         private List<DatabaseInfo> _lastResults = new();
+        private UpdateInfo? _updateInfo;
+        private bool _updating;
 
         public Form1(MainViewState? restored = null)
         {
@@ -32,6 +34,8 @@ namespace DatabaseFinder
                 _refreshTimer.Tick += async (s, ev) => await DetectDatabasesAsync(showStatus: false);
                 _refreshTimer.Start();
             }
+
+            if (UpdateChecker.Enabled) _ = CheckForUpdateAsync(interactive: false);
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -77,6 +81,80 @@ namespace DatabaseFinder
             notifyIcon.Visible = false;
             Close();
             Application.Exit();
+        }
+
+        private async void miUpdate_Click(object? sender, EventArgs e)
+        {
+            await CheckForUpdateAsync(interactive: true);
+        }
+
+        private async void _lnkUpdate_Click(object? sender, EventArgs e)
+        {
+            if (_updateInfo == null || _updating) return;
+            if (MessageBox.Show(L.Format("S339", _updateInfo.Tag), L.Text("S337"), MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                await StartUpdateAsync();
+            }
+        }
+
+        private async Task CheckForUpdateAsync(bool interactive)
+        {
+            if (_updating || _lnkUpdate == null) return;
+            UpdateInfo? info = null;
+            var error = "";
+            try
+            {
+                var assetName = Path.GetFileName(Application.ExecutablePath);
+                info = await Task.Run(() => UpdateChecker.FetchLatest(assetName)).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+            if (IsDisposed) return;
+            if (info is { IsNewer: true })
+            {
+                _updateInfo = info;
+                _lnkUpdate.Text = L.Format("S344", info.Tag);
+                _lnkUpdate.Visible = true;
+                if (interactive) await StartUpdateAsync();
+            }
+            else if (interactive)
+            {
+                MessageBox.Show(info == null ? L.Format("S341", error) : L.Text("S342"), L.Text("S337"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private async Task StartUpdateAsync()
+        {
+            if (_updateInfo == null || _updating) return;
+            _updating = true;
+            _lnkUpdate.Enabled = false;
+            var destination = Path.Combine(Path.GetTempPath(), "df_update_" + _updateInfo.AssetName);
+            try
+            {
+                var progress = new Progress<(long Downloaded, long Total)>(value =>
+                {
+                    var percent = value.Total > 0 ? value.Downloaded * 100L / value.Total : 0L;
+                    _lnkUpdate.Text = L.Format("S340", percent);
+                });
+                await UpdateChecker.DownloadAsync(_updateInfo.AssetUrl, destination, progress, CancellationToken.None);
+                lblStatus.Text = L.Text("S343");
+                UpdateChecker.Apply(destination, Application.ExecutablePath);
+                notifyIcon.Visible = false;
+                Close();
+                Application.Exit();
+            }
+            catch (Exception ex)
+            {
+                _updating = false;
+                _lnkUpdate.Enabled = true;
+                _lnkUpdate.Text = L.Format("S344", _updateInfo.Tag);
+                MessageBox.Show(L.Format("S341", ex.Message), L.Text("S337"), MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private async void btnRefresh_Click(object sender, EventArgs e)

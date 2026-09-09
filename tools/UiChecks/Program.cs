@@ -16,12 +16,32 @@ internal static class Program
         Check(fa.Keys.Order().SequenceEqual(en.Keys.Order()),"Resource keys match");
         foreach(var (key,value) in fa)Check(Regex.Matches(value,@"\{#\}").Count==Regex.Matches(en[key],@"\{#\}").Count,"Placeholders "+key);
         var results=new List<DatabaseInfo>{new(){Name="SQL Server",Type=DatabaseType.SQLServer,ServiceName="MSSQLSERVER",Host="localhost",Port=1433,Version="2022",IsOnline=true,IsRunningAsService=true},new(){Name="Accounting",Type=DatabaseType.SQLite,IsOnline=false,LocalPath=@"D:\Accounting\داده‌ها\accounts.sqlite",FileSize=4194304,FormatName="SQLite"}};
+        UpdateChecker.Enabled=false;
+        var upJson=@"{""tag_name"":""v9.9.9"",""body"":""test"",""assets"":[{""name"":""DatabaseFinder-Light.exe"",""browser_download_url"":""https://x/light.exe""},{""name"":""DatabaseFinder.exe"",""browser_download_url"":""https://x/full.exe""}]}";
+        var upFull=UpdateChecker.Parse(upJson,"DatabaseFinder.exe");
+        Check(upFull is { IsNewer:true } && upFull.AssetName=="DatabaseFinder.exe" && upFull.AssetUrl.StartsWith("https://x/"),"update parse picks the running exe asset");
+        var upLight=UpdateChecker.Parse(upJson,"DatabaseFinder-Light.exe");
+        Check(upLight is { AssetName:"DatabaseFinder-Light.exe" },"update light build picks its own asset");
+        var currentTag="v"+UpdateChecker.VersionString(UpdateChecker.CurrentVersion);
+        var upEqualJson="{\"tag_name\":\""+currentTag+"\",\"assets\":[{\"name\":\"DatabaseFinder.exe\",\"browser_download_url\":\"u\"}]}";
+        var upEqual=UpdateChecker.Parse(upEqualJson,"DatabaseFinder.exe");
+        Check(upEqual is { IsNewer:false },"update same version is not newer");
+        Check(UpdateChecker.Parse("{broken","DatabaseFinder.exe") is null,"update malformed json fails softly");
+        var upEmpty=UpdateChecker.Parse(@"{""tag_name"":""v9.9.9"",""assets"":[]}","DatabaseFinder.exe");
+        Check(upEmpty is null,"update without exe asset yields nothing");
+        var sumsTxt="f4b53d3562fcf9c6ed98faa86fe7b7bc0fdb920cd6b0fda880bcc0034887a3af  DatabaseFinder.exe\n034bd136ce553b78a854a87b5470a22b4231612389c47deb42138340109455d3*DatabaseFinder-Light.exe\n";
+        Check(UpdateChecker.ParseChecksum(sumsTxt,"DatabaseFinder.exe")=="f4b53d3562fcf9c6ed98faa86fe7b7bc0fdb920cd6b0fda880bcc0034887a3af","checksum line parsed for standalone build");
+        Check(UpdateChecker.ParseChecksum(sumsTxt,"DatabaseFinder-Light.exe")=="034bd136ce553b78a854a87b5470a22b4231612389c47deb42138340109455d3","binary-mode marker parsed for light build");
+        Check(UpdateChecker.ParseChecksum(sumsTxt,"Missing.exe") is null,"unknown asset yields no checksum");
+        Check(UpdateChecker.ParseChecksum(new string('g',64)+"  a.exe","a.exe") is null,"non-hex checksum line rejected");
         foreach(var language in new[]{"fa","en"})
         {
             L.Language=language;
             using var main=new Form1(new MainViewState(results,new HashSet<int>{1},0));main.Show();Application.DoEvents();
             Check(main.CaptureView().Checked.SetEquals(new[]{1}),language+" restored selection");
             Check(main.CaptureView().Results[1].LocalPath==results[1].LocalPath,language+" unchanged path");
+            Check(main.Text.Contains(UpdateChecker.VersionString(UpdateChecker.CurrentVersion)),language+" main title carries version");
+            Check(!Descendants(main).OfType<LinkLabel>().Single().Visible,language+" update link hidden until a newer release is published");
             var mainGrid=Descendants(main).OfType<DataGridView>().First();
             Check(mainGrid.Rows[0].Cells["colDbCount"].Value is string s1 && s1=="-",language+" online count placeholder without live measure");
             Check(mainGrid.Rows[1].Cells["colDbCount"].Value is string s2 && s2=="-",language+" offline database shows no service count");
