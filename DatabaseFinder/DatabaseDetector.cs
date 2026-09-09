@@ -33,6 +33,8 @@ namespace DatabaseFinder
         public string Version { get; set; } = "";
         public DateTime DetectedAt { get; set; } = DateTime.Now;
         public string Host { get; set; } = "localhost";
+        public string ServerName { get; set; } = "";
+        public int? DatabaseCount { get; set; }
 
         // وضعیت آنلاین/آفلاین
         public bool IsOnline { get; set; } = true;

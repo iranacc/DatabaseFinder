@@ -15,6 +15,15 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.4
+
+- Network range scanning: scan an IP range, a local subnet (advertised interfaces listed in a dropdown) or a CIDR block with bounded parallelism and a per-host timeout; every finding is resolved with a SQL Browser (SSRP, UDP 1434) probe.
+- "Open ports only" network filter (open ports by default; a check box shows every host).
+- SQL Server discovery without SSMS via the SSRP probe.
+- Windows Authentication in Run Query (Integrated Security), with automatic machine-name resolution for IP hosts.
+- A "# Databases" column on the main page showing the real database count of each online service (via saved profile or Windows auth).
+- The Close (X) button now really exits; minimizing still goes to the tray. "Run Query" works on any selected scan result row.
+
 ## What's new in v1.8.3
 
 - Fixed single-file packaging: all native libraries (including the SQL Server connection library) are now bundled inside the executable, so no separate files are needed next to the exe and SQL Server file discovery works without errors. The packaging options are set in the project file for future releases.

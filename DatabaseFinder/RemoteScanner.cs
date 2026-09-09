@@ -5,6 +5,7 @@ namespace DatabaseFinder
     public class RemoteScanResult
     {
         public string Host { get; set; } = "";
+        public string ServerName { get; set; } = "";
         public DatabaseType Type { get; set; }
         public int Port { get; set; }
         public bool IsOpen { get; set; }
@@ -63,6 +64,57 @@ namespace DatabaseFinder
             }
 
             return results.OrderBy(r => r.TypeDisplayName).ToList();
+        }
+
+        /// <summary>
+        /// اسکن چند هاست با همزمانی محدود برای رنج‌های شبکه. هر هاست با <see cref="ScanWithBrowser"/> پردازش می‌شود.
+        /// </summary>
+        public static List<RemoteScanResult> ScanNetwork(IEnumerable<string> hosts, int[] ports, int timeoutMs = 1500, int concurrency = 50)
+        {
+            var results = new List<RemoteScanResult>();
+            var sync = new object();
+            try
+            {
+                Parallel.ForEachAsync(hosts, new ParallelOptions { MaxDegreeOfParallelism = concurrency },
+                    (host, _) =>
+                    {
+                        var perHost = ScanWithBrowser(host, ports, timeoutMs);
+                        lock (sync) results.AddRange(perHost);
+                        return ValueTask.CompletedTask;
+                    }).GetAwaiter().GetResult();
+            }
+            catch { }
+            return results.OrderBy(r => r.Host).ThenBy(r => r.TypeDisplayName).ToList();
+        }
+
+        /// <summary>
+        /// اسکن TCP پورت‌های شناخته‌شده به‌همراه پرس‌وجوی SQL Browser (UDP 1434) برای یافتن
+        /// instance های دارای پورت داینامیک که روی پورت استاندارد نیستند.
+        /// </summary>
+        public static List<RemoteScanResult> ScanWithBrowser(string host, int[] ports, int timeoutMs = 1500)
+        {
+            var results = Scan(host, ports, timeoutMs);
+            var seen = new HashSet<int>(results.Where(r => r.IsOpen).Select(r => r.Port));
+
+            foreach (var inst in SqlBrowser.Probe(host, SqlBrowser.DefaultPort, Math.Min(timeoutMs, 1000)))
+            {
+                if (seen.Contains(inst.TcpPort)) continue;
+
+                var check = CheckPort(host, inst.TcpPort, DatabaseType.SQLServer, timeoutMs);
+                if (!check.IsOpen) continue;
+
+                check.ServerName = inst.ServerName;
+                if (!string.IsNullOrEmpty(inst.Version)) check.Version = inst.Version;
+                if (!string.IsNullOrEmpty(inst.InstanceName) &&
+                    !inst.InstanceName.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase))
+                {
+                    check.Message = inst.InstanceName;
+                }
+                results.Add(check);
+                seen.Add(inst.TcpPort);
+            }
+
+            return results.OrderBy(r => r.Host).ThenBy(r => r.TypeDisplayName).ToList();
         }
 
         public static RemoteScanResult CheckPort(string host, int port, DatabaseType type, int timeoutMs = 2000)

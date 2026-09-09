@@ -28,7 +28,7 @@ public partial class Form1
         lblStatus.Text = L.Format("S228", models.Count);
         UpdateSelection();
     }
-    public void CloseForLanguageChange() { _exitRequested = true; _isClosing = true; Close(); }
+    public void CloseForLanguageChange() { Close(); }
     private void BuildModernShell()
     {
         SuspendLayout();

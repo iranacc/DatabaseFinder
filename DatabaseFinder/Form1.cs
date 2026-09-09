@@ -7,8 +7,6 @@ namespace DatabaseFinder
         private readonly DatabaseDetector _detector;
         private AppSettings _settings;
         private System.Windows.Forms.Timer? _refreshTimer;
-        private bool _isClosing = false;
-        private bool _exitRequested = false;
         private List<DatabaseInfo> _lastResults = new();
 
         public Form1(MainViewState? restored = null)
@@ -51,13 +49,6 @@ namespace DatabaseFinder
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_settings.MinimizeToTray && !_exitRequested && !_isClosing)
-            {
-                e.Cancel = true;
-                Hide();
-                notifyIcon.Visible = true;
-                return;
-            }
         }
 
         private void notifyIcon_DoubleClick(object sender, EventArgs e)
@@ -83,7 +74,6 @@ namespace DatabaseFinder
 
         private void miExit_Click(object sender, EventArgs e)
         {
-            _exitRequested = true;
             notifyIcon.Visible = false;
             Close();
             Application.Exit();
@@ -160,6 +150,8 @@ namespace DatabaseFinder
                 var db = _lastResults[i];
                 var row = dgvDatabases.Rows[i];
                 row.Tag = db;
+                row.Cells["colDbCount"].Value = db.IsOnline && db.DatabaseCount is int cnt ? cnt.ToString() : "-";
+
                 if (!db.IsOnline)
                 {
                     row.DefaultCellStyle.BackColor = Color.FromArgb(255, 244, 222);
@@ -457,6 +449,28 @@ namespace DatabaseFinder
                 // مهلت سراسری: حتی اگر سرویسی پاسخ بنر ندهد، تشخیص هرگز به‌طور نامحدود معلق نمی‌ماند.
                 var withPorts = results.Where(d => d.Port.HasValue).ToList();
                 if (withPorts.Count == 0) return;
+
+                // شمارش واقعی دیتابیس‌های هر سرویس با اتصال (پروفایل یا احراز هویت ویندوز).
+                // قبل از تست نسخه اجرا می‌شود تا تعداد بلافاصله بعد از بارگذاری جدول نمایان شود.
+                try
+                {
+                    await Task.Run(() => DatabaseCounter.Measure(withPorts));
+                    if (IsDisposed || !IsHandleCreated) return;
+                    for (int i = 0; i < withPorts.Count; i++)
+                    {
+                        var db = withPorts[i];
+                        if (db.DatabaseCount is int cnt)
+                        {
+                            var idx = results.IndexOf(db);
+                            if (idx >= 0 && idx < dgvDatabases.Rows.Count)
+                                dgvDatabases.Rows[idx].Cells["colDbCount"].Value = cnt.ToString();
+                        }
+                    }
+                }
+                catch
+                {
+                    // شمارش یک قابلیت اختیاری است؛ خطا در آن نباید جریان تشخیص را متوقف کند.
+                }
 
                 try
                 {

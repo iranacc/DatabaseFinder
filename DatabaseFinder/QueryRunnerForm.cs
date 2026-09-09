@@ -1,4 +1,5 @@
 using System.Data;
+using System.Net;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using MySqlConnector;
@@ -15,6 +16,7 @@ namespace DatabaseFinder
         private readonly NumericUpDown _numPort;
         private readonly TextBox _txtUser;
         private readonly TextBox _txtPass;
+        private readonly CheckBox _chkWinAuth;
         private readonly TextBox _txtDbName;
         private readonly TextBox _txtQuery;
         private readonly Button _btnRun;
@@ -25,6 +27,9 @@ namespace DatabaseFinder
         public QueryRunnerForm(DatabaseInfo db)
         {
             _db = db;
+            var profile = ProfileManager.Load().FirstOrDefault(p => p.Type == db.Type && p.Host == db.Host && p.Port == (db.Port ?? 0));
+            var useWinAuth = db.Type == DatabaseType.SQLServer &&
+                (profile == null || string.IsNullOrEmpty(profile.Username));
 
             Text = L.Format("S263", db.TypeDisplayName);
             StartPosition = FormStartPosition.CenterParent;
@@ -75,11 +80,27 @@ namespace DatabaseFinder
             var lblPass = new Label { Text = L.Text("S269"), Location = new Point(585, 30), AutoSize = true };
             _txtPass = new TextBox { Location = new Point(635, 26), Size = new Size(90, 27), UseSystemPasswordChar = true };
 
+            _chkWinAuth = new CheckBox
+            {
+                Text = L.Text("S328"),
+                Checked = useWinAuth,
+                Visible = db.Type == DatabaseType.SQLServer,
+                AutoSize = true,
+                Padding = new Padding(6, 24, 0, 0)
+            };
+            _chkWinAuth.CheckedChanged += (s, e) =>
+            {
+                _txtUser.Enabled = !_chkWinAuth.Checked;
+                _txtPass.Enabled = !_chkWinAuth.Checked;
+            };
+            _txtUser.Enabled = !useWinAuth;
+            _txtPass.Enabled = !useWinAuth;
+
             var lblDb = new Label { Text = L.Text("S270"), Location = new Point(12, 60), AutoSize = true };
             _txtDbName = new TextBox { Location = new Point(95, 56), Size = new Size(150, 27) };
 
             grpConn.Controls.AddRange(new Control[] {
-                lblHost, _txtHost, lblPort, _numPort, lblUser, _txtUser, lblPass, _txtPass, lblDb, _txtDbName
+                lblHost, _txtHost, lblPort, _numPort, lblUser, _txtUser, lblPass, _txtPass, lblDb, _txtDbName, _chkWinAuth
             });
             Controls.Add(grpConn);
 
@@ -153,14 +174,13 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             // پر کردن از پروفایل ذخیره‌شده در صورت وجود
-            var profile = ProfileManager.Load().FirstOrDefault(p => p.Type == db.Type && p.Host == db.Host && p.Port == (db.Port ?? 0));
             if (profile != null)
             {
                 _txtUser.Text = profile.Username;
                 _txtPass.Text = profile.Password;
                 _txtDbName.Text = profile.DatabaseName;
             }
-            var fields=UiTheme.Flow(FormLayout.Field(L.Text("S266"),_txtHost,200),FormLayout.Field(L.Text("S267"),_numPort,90),FormLayout.Field(L.Text("S268"),_txtUser,150),FormLayout.Field(L.Text("S269"),_txtPass,150),FormLayout.Field(L.Text("S270"),_txtDbName,200));
+            var fields=UiTheme.Flow(FormLayout.Field(L.Text("S266"),_txtHost,200),FormLayout.Field(L.Text("S267"),_numPort,90),FormLayout.Field(L.Text("S268"),_txtUser,150),FormLayout.Field(L.Text("S269"),_txtPass,150),FormLayout.Field(L.Text("S270"),_txtDbName,200),_chkWinAuth);
             var work=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};work.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));work.RowStyles.Add(new RowStyle(SizeType.Absolute,26));work.RowStyles.Add(new RowStyle(SizeType.Percent,40));work.RowStyles.Add(new RowStyle(SizeType.Percent,60));
             work.Controls.Add(lblQuery,0,0);_txtQuery.Dock=DockStyle.Fill;_dgvResult.Dock=DockStyle.Fill;work.Controls.Add(_txtQuery,0,1);work.Controls.Add(_dgvResult,0,2);
             FormLayout.Build(this,lblTitle,fields,work,_lblStatus,_btnRun,_btnSaveProfile);
@@ -223,16 +243,16 @@ namespace DatabaseFinder
                     Type = _db.Type,
                     Host = _txtHost.Text.Trim(),
                     Port = (int)_numPort.Value,
-                    Username = _txtUser.Text.Trim(),
-                    Password = _txtPass.Text,
+                    Username = _chkWinAuth.Visible && _chkWinAuth.Checked ? "" : _txtUser.Text.Trim(),
+                    Password = _chkWinAuth.Visible && _chkWinAuth.Checked ? "" : _txtPass.Text,
                     DatabaseName = _txtDbName.Text.Trim()
                 };
                 profiles.Add(profile);
             }
             else
             {
-                profile.Username = _txtUser.Text.Trim();
-                profile.Password = _txtPass.Text;
+                profile.Username = _chkWinAuth.Visible && _chkWinAuth.Checked ? "" : _txtUser.Text.Trim();
+                profile.Password = _chkWinAuth.Visible && _chkWinAuth.Checked ? "" : _txtPass.Text;
                 profile.DatabaseName = _txtDbName.Text.Trim();
             }
 
@@ -261,10 +281,11 @@ namespace DatabaseFinder
             var user = _txtUser.Text.Trim();
             var pass = _txtPass.Text;
             var dbName = _txtDbName.Text.Trim();
+            var winAuth = _chkWinAuth.Visible && _chkWinAuth.Checked;
 
             try
             {
-                var dt = await Task.Run(() => ExecuteQuery(_db.Type, host, port, user, pass, dbName, query));
+                var dt = await Task.Run(() => ExecuteQuery(_db.Type, host, port, user, pass, dbName, query, winAuth, _db.ServerName ?? ""));
                 ShowResult(dt, L.Text("S276"));
             }
             catch (Exception ex)
@@ -280,7 +301,7 @@ namespace DatabaseFinder
             }
         }
 
-        private DataTable ExecuteQuery(DatabaseType type, string host, int port, string user, string pass, string dbName, string query)
+        private DataTable ExecuteQuery(DatabaseType type, string host, int port, string user, string pass, string dbName, string query, bool winAuth, string serverName)
         {
             switch (type)
             {
@@ -290,7 +311,7 @@ namespace DatabaseFinder
                 case DatabaseType.PostgreSQL:
                     return ExecutePostgre(host, port, user, pass, dbName, query);
                 case DatabaseType.SQLServer:
-                    return ExecuteSqlServer(host, port, user, pass, dbName, query);
+                    return ExecuteSqlServer(host, port, user, pass, dbName, query, winAuth, serverName);
                 case DatabaseType.SQLite:
                     return ExecuteSqlite(dbName, query);
                 case DatabaseType.Redis:
@@ -333,21 +354,73 @@ namespace DatabaseFinder
             return FillData(conn, query);
         }
 
-        private static DataTable ExecuteSqlServer(string host, int port, string user, string pass, string dbName, string query)
+        private static DataTable ExecuteSqlServer(string host, int port, string user, string pass, string dbName, string query, bool winAuth, string serverName)
+        {
+            if (!winAuth)
+            {
+                using var conn = new SqlConnection(BuildSqlCs(host, port, user, pass, dbName, false));
+                conn.Open();
+                return FillData(conn, query);
+            }
+
+            var candidates = new List<string>();
+            if (!IPAddress.TryParse(host, out _)) candidates.Add(host);
+            if (!string.IsNullOrWhiteSpace(serverName)) candidates.Add(serverName);
+            var resolved = ResolveForWinAuth(host);
+            if (!string.IsNullOrWhiteSpace(resolved)) candidates.Add(resolved);
+            if (!candidates.Contains(host)) candidates.Add(host);
+
+            Exception? last = null;
+            foreach (var candidate in candidates.Distinct())
+            {
+                try
+                {
+                    using var conn = new SqlConnection(BuildSqlCs(candidate, port, "", "", dbName, true));
+                    conn.Open();
+                    return FillData(conn, query);
+                }
+                catch (Exception ex) { last = ex; }
+            }
+            throw last ?? new InvalidOperationException(L.Text("S312"));
+        }
+
+        private static string BuildSqlCs(string host, int port, string user, string pass, string dbName, bool winAuth)
         {
             var server = port > 0 ? $"{host},{port}" : host;
             var csb = new SqlConnectionStringBuilder
             {
                 DataSource = server,
-                UserID = user,
-                Password = pass,
                 InitialCatalog = string.IsNullOrEmpty(dbName) ? "" : dbName,
                 TrustServerCertificate = true
             };
+            if (winAuth)
+            {
+                csb.IntegratedSecurity = true;
+                csb.ConnectTimeout = 5;
+            }
+            else
+            {
+                csb.UserID = user;
+                csb.Password = pass;
+            }
+            return csb.ConnectionString;
+        }
 
-            using var conn = new SqlConnection(csb.ConnectionString);
-            conn.Open();
-            return FillData(conn, query);
+        private static string ResolveForWinAuth(string host)
+        {
+            if (!IPAddress.TryParse(host, out _)) return host;
+            try
+            {
+                var resolved = Dns.GetHostEntry(host).HostName;
+                if (!string.IsNullOrWhiteSpace(resolved) &&
+                    !resolved.Equals(host, StringComparison.OrdinalIgnoreCase) &&
+                    resolved.Any(char.IsLetter))
+                {
+                    return resolved;
+                }
+            }
+            catch { }
+            return host;
         }
 
         private static DataTable ExecuteSqlite(string dbName, string query)

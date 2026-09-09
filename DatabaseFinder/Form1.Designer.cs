@@ -91,6 +91,13 @@ partial class Form1
         this.colService.ReadOnly = true;
         this.colService.Width = 150;
 
+        this.colDbCount = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colDbCount.HeaderText = L.Text("S329");
+        this.colDbCount.Name = "colDbCount";
+        this.colDbCount.ReadOnly = true;
+        this.colDbCount.Width = 70;
+        this.colDbCount.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+
         this.colProcess = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colProcess.HeaderText = L.Text("S232");
         this.colProcess.Name = "colProcess";
@@ -124,6 +131,7 @@ partial class Form1
         this.dgvDatabases.Columns.Add(this.colVersion);
         this.dgvDatabases.Columns.Add(this.colPort);
         this.dgvDatabases.Columns.Add(this.colService);
+        this.dgvDatabases.Columns.Add(this.colDbCount);
         this.dgvDatabases.Columns.Add(this.colProcess);
         this.dgvDatabases.Columns.Add(this.colHow);
         this.dgvDatabases.Columns.Add(this.colLocation);
@@ -347,6 +355,7 @@ partial class Form1
     private System.Windows.Forms.DataGridViewTextBoxColumn colVersion;
     private System.Windows.Forms.DataGridViewTextBoxColumn colPort;
     private System.Windows.Forms.DataGridViewTextBoxColumn colService;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colDbCount;
     private System.Windows.Forms.DataGridViewTextBoxColumn colProcess;
     private System.Windows.Forms.DataGridViewTextBoxColumn colHow;
     private System.Windows.Forms.DataGridViewTextBoxColumn colLocation;
