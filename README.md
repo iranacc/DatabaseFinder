@@ -15,6 +15,12 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.7
+
+- **Backup without sa password:** when SQL login fails, "Copy files" falls back to physical MDF/LDF acquisition from registry/service paths via VSS (no password needed); attach the files later in your lab.
+- **Find saved password (manual):** "Find saved password..." button scans vendor config folders (Mahak/Holoo/Parsian...) on demand only — never automatic.
+- **Emergency sysadmin (manual):** red "Emergency sysadmin..." button (Administrator only, double-confirmed) grants the current Windows user sysadmin via single-user mode; every step is logged for the Art.181 case file.
+
 ## What's new in v1.8.6
 
 - **In-app self-update:** on startup the app reads the latest release from GitHub (iranacc/DatabaseFinder) and compares it with its own version. When a newer one exists, an "Update" link shows in the header and a "Check for updates" item is added to the tray menu. Clicking it downloads the update with a live percentage, verifies the file's SHA-256 against the release `SHA256SUMS.txt`, then swaps the executable and restarts automatically. The matching variant is downloaded on its own (Light → Light, standalone → standalone).
