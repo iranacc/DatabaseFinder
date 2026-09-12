@@ -11,8 +11,22 @@ static class Program
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
+        // تور ایمنی: هر خطای مهارنشده به‌جای بسته‌شدن بی‌صدا، در debug.log ثبت می‌شود.
+        Application.ThreadException += (s, e) => CrashGuard("UI", e.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (s, e) => CrashGuard("BG", e.ExceptionObject as Exception);
         L.Language = AppSettings.Load().Language;
         Application.Run(new AppSession());
+    }
+
+    static void CrashGuard(string where, Exception? ex)
+    {
+        try
+        {
+            AppLog.Write("Crash." + where, ex ?? new Exception("unknown"));
+            MessageBox.Show("خطای غیرمنتظره ثبت شد. جزئیات در فایل debug.log (%AppData%\\DatabaseFinder) ذخیره شد.\n\n" + ex?.Message,
+                "Database Finder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        catch { }
     }
 }
 

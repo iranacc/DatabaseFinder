@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
@@ -308,95 +307,32 @@ namespace DatabaseFinder
     }
 
     /// <summary>
-    /// پروب سبک «آیا فایل همین حالا دست کسی است؟» — باز کردن لحظه‌ای انحصاری؛
-    /// به دارنده فایل دست نمی‌زند و در صورت قفل بودن بلافاصله رها می‌کند.
-    /// نام پروسس مالک با Restart Manager خود ویندوز خوانده می‌شود (با ادمین دقیق‌تر).
+    /// پروب امن «آیا فایل همین حالا دست کسی است؟» — فقط باز کردن لحظه‌ای
+    /// انحصاری با FileStream خالص دات‌نت؛ هیچ کد native صدا زده نمی‌شود تا
+    /// برنامه در ماموریت کرش نکند. نام پروسس مالک فعلا نمایش داده نمی‌شود.
     /// قفل بودن «سرنخ» زنده بودن است، نه حکم قطعی (SSMS/آنتی‌ویروس هم قفل می‌کنند).
     /// </summary>
     public static class FileLockProbe
     {
         public static void Apply(FileCopyItem file)
         {
+            file.IsInUse = false;
+            file.InUseBy = null;
             try
             {
+                if (!File.Exists(file.SourcePath)) return;
                 using var fs = new FileStream(file.SourcePath, FileMode.Open,
                     FileAccess.Read, FileShare.None, 1, FileOptions.None);
-                file.IsInUse = false;
-                file.InUseBy = null;
             }
             catch (IOException)
             {
+                // قفل توسط پروسس دیگری (به احتمال زیاد سرویس دیتابیس)
                 file.IsInUse = true;
-                file.InUseBy = TryGetLockingProcess(file.SourcePath);
             }
             catch
             {
                 file.IsInUse = false;
-                file.InUseBy = null;
             }
-        }
-
-        private static string? TryGetLockingProcess(string path)
-        {
-            uint handle = 0;
-            try
-            {
-                if (RmStartSession(out handle, 0, Guid.NewGuid().ToString()) != 0) return null;
-                var files = new[] { path };
-                if (RmRegisterResources(handle, (uint)files.Length, files,
-                        0, null, 0, null) != 0) return null;
-
-                uint needed = 0, count = 0, reboot = 0;
-                var err = RmGetList(handle, out needed, ref count, null, ref reboot);
-                if (err != 0 && err != 234) return null; // 234 = بافر کوچک است
-                if (needed == 0) return null;
-
-                var infos = new RM_PROCESS_INFO[needed];
-                count = needed;
-                if (RmGetList(handle, out _, ref count, infos, ref reboot) != 0 || count == 0)
-                    return null;
-
-                try
-                {
-                    var p = Process.GetProcessById(infos[0].ProcessId);
-                    return p.ProcessName;
-                }
-                catch { return infos[0].AppName; }
-            }
-            catch (Exception ex) { AppLog.Write("FileLock.WhoUses", ex); return null; }
-            finally
-            {
-                if (handle != 0) RmEndSession(handle);
-            }
-        }
-
-        [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
-        private static extern int RmStartSession(out uint pSessionHandle, int dwSessionFlags, string strSessionKey);
-
-        [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
-        private static extern int RmRegisterResources(uint pSessionHandle, uint nFiles,
-            string[] rgsFilenames, uint nApplications, object? rgApplications,
-            uint nServices, object? rgsServiceNames);
-
-        [DllImport("rstrtmgr.dll")]
-        private static extern int RmGetList(uint dwSessionHandle, out uint pnProcInfoNeeded,
-            ref uint pnProcInfo, [In, Out] RM_PROCESS_INFO[]? rgAffectedApps,
-            ref uint lpdwRebootReasons);
-
-        [DllImport("rstrtmgr.dll")]
-        private static extern int RmEndSession(uint pSessionHandle);
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private class RM_PROCESS_INFO
-        {
-            public int ProcessId;
-            public int CreationTimeHigh;
-            public int CreationTimeLow;
-            public int ApplicationType;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-            public string AppName = "";
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
-            public string ServiceName = "";
         }
     }
     /// <summary>
