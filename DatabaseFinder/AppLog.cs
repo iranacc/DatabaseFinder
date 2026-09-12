@@ -10,11 +10,7 @@ namespace DatabaseFinder
     public static class AppLog
     {
         private static readonly object Sync = new();
-        private static string? _file;
-
-        private static string FilePath => _file ??= Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DatabaseFinder", "debug.log");
+        private static string FilePath => AppPaths.LogPath;
 
         public static void Write(string category, Exception ex)
         {

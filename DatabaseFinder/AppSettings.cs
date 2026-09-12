@@ -11,9 +11,7 @@ namespace DatabaseFinder
         public int AutoRefreshIntervalSec { get; set; } = 30;
         public bool ShowNotifications { get; set; } = true;
 
-        private static readonly string SettingsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DatabaseFinder", "settings.json");
+        private static string SettingsPath => AppPaths.SettingsPath;
 
         public static AppSettings Load()
         {
@@ -69,9 +67,7 @@ namespace DatabaseFinder
 
     public static class ProfileManager
     {
-        private static readonly string ProfilesPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DatabaseFinder", "profiles.json");
+        private static string ProfilesPath => AppPaths.ProfilesPath;
 
         public static List<DatabaseProfile> Load()
         {

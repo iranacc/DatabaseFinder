@@ -132,7 +132,7 @@ namespace DatabaseFinder
             if (_updateInfo == null || _updating) return;
             _updating = true;
             _lnkUpdate.Enabled = false;
-            var destination = Path.Combine(Path.GetTempPath(), "df_update_" + _updateInfo.AssetName);
+            var destination = AppPaths.DownloadPath("df_update_" + _updateInfo.AssetName);
             try
             {
                 var progress = new Progress<(long Downloaded, long Total)>(value =>

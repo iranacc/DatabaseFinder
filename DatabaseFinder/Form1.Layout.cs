@@ -34,7 +34,8 @@ public partial class Form1
     {
         SuspendLayout();
         Controls.Clear();
-        Text = "Database Finder " + UpdateChecker.VersionString(UpdateChecker.CurrentVersion) + " • MSAM Group";
+        Text = "Database Finder " + UpdateChecker.VersionString(UpdateChecker.CurrentVersion) + " • MSAM Group"
+            + (AppPaths.IsPortable ? " • Portable" : "");
         ClientSize = new Size(1200, 740);
         MinimumSize = new Size(1040, 650);
         AutoScaleMode = AutoScaleMode.Dpi;
