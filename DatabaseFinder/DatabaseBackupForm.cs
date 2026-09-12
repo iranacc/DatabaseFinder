@@ -11,6 +11,8 @@ namespace DatabaseFinder
         private readonly TreeView _tree;
         private readonly TextBox _txtLog;
         private readonly Button _btnStart;
+        private readonly Button _btnFindPass;
+        private readonly Button _btnSysadmin;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
@@ -145,6 +147,32 @@ namespace DatabaseFinder
             btnExpand.Click += (s, e) => _tree.ExpandAll();
             Controls.Add(btnExpand);
 
+            _btnFindPass = new Button
+            {
+                Text = L.Text("S357"),
+                Location = new Point(520, 194),
+                Size = new Size(248, 30),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnFindPass.Click += BtnFindPass_Click;
+            Controls.Add(_btnFindPass);
+
+            _btnSysadmin = new Button
+            {
+                Text = L.Text("S358"),
+                Location = new Point(520, 194),
+                Size = new Size(248, 30),
+                BackColor = Color.FromArgb(211, 47, 47),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnSysadmin.Click += BtnSysadmin_Click;
+            Controls.Add(_btnSysadmin);
+
             var lblLog = new Label
             {
                 Text = L.Text("S037"),
@@ -255,7 +283,7 @@ namespace DatabaseFinder
             Controls.Add(grpOptions);
 
             Load += DatabaseBackupForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
@@ -494,6 +522,71 @@ namespace DatabaseFinder
                 _btnStart.Enabled = true;
                 _btnStart.Text = L.Text("S038");
             }
+        }
+
+        private async void BtnFindPass_Click(object? sender, EventArgs e)
+        {
+            _btnFindPass.Enabled = false;
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                var hits = await SavedPasswordFinder.FindAsync(m => AppendLogSafe(m), cts.Token);
+                if (hits.Count == 0)
+                {
+                    MessageBox.Show(L.Format("S352", "?", 0), L.Text("S357"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                var first = hits[0];
+                if (MessageBox.Show($"{first.FilePath}\nUser: {first.Username}\n{first.Line}", L.Text("S357"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    var profiles = ProfileManager.Load();
+                    var sql = _servers.FirstOrDefault(s => s.Type == DatabaseType.SQLServer);
+                    var host = sql?.Host ?? "localhost";
+                    var port = sql?.Port ?? 1433;
+                    var p = profiles.FirstOrDefault(x => x.Type == DatabaseType.SQLServer && x.Host == host && x.Port == port);
+                    if (p == null)
+                    {
+                        p = new DatabaseProfile { Name = $"SQL Server @ {host}", Type = DatabaseType.SQLServer, Host = host, Port = port };
+                        profiles.Add(p);
+                    }
+                    p.Username = first.Username.StartsWith("sa") ? "sa" : first.Username;
+                    p.Password = first.Password;
+                    ProfileManager.Save(profiles);
+                    AppendLog(L.Format("S351", first.FilePath));
+                    await RebuildPlanAsync();
+                }
+            }
+            catch (Exception ex) { AppendLog(L.Format("S055", ex.Message)); }
+            finally { _btnFindPass.Enabled = true; }
+        }
+
+        private async void BtnSysadmin_Click(object? sender, EventArgs e)
+        {
+            if (!SysadminGranter.IsAdministrator())
+            {
+                MessageBox.Show(L.Text("S360"), L.Text("S358"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (MessageBox.Show(L.Text("S359"), L.Text("S358"), MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+            _btnSysadmin.Enabled = false;
+            try
+            {
+                var sql = _servers.FirstOrDefault(s => s.Type == DatabaseType.SQLServer);
+                var svc = sql?.ServiceName ?? "MSSQLSERVER";
+                AppendLog(L.Format("S354", svc, Environment.UserName));
+                var err = await Task.Run(() => SysadminGranter.GrantForInstance(svc, m => AppendLogSafe(m)));
+                if (err == null)
+                {
+                    AppendLog(L.Text("S356"));
+                    _planDest = "";
+                    await RebuildPlanAsync();
+                }
+                else AppendLog(L.Format("S055", err));
+            }
+            finally { _btnSysadmin.Enabled = true; }
         }
 
         private async void BtnManifest_Click(object? sender, EventArgs e)

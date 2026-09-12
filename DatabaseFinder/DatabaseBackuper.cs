@@ -121,14 +121,22 @@ namespace DatabaseFinder
         {
             var cs = BuildSqlServerCs(server);
             var names = new List<string>();
-            using (var conn = new SqlConnection(cs))
+            try
             {
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandTimeout = 10;
-                cmd.CommandText = "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name;";
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read()) names.Add(reader.GetString(0));
+                using (var conn = new SqlConnection(cs))
+                {
+                    conn.Open();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandTimeout = 10;
+                    cmd.CommandText = "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name;";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read()) names.Add(reader.GetString(0));
+                }
+            }
+            catch (Exception ex) when (ex.Message.IndexOf("login failed", StringComparison.OrdinalIgnoreCase) >= 0
+                || ex.Message.Contains("18456") || ex.Message.Contains("18452"))
+            {
+                throw new InvalidOperationException(L.Text("S347"), ex);
             }
 
             var items = names.Select(db =>

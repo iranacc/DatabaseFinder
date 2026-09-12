@@ -160,6 +160,83 @@ namespace DatabaseFinder
         // ---------- SQL Server ----------
         private static List<DatabaseCopyItem> EnumerateSqlServer(DatabaseInfo server, Action<string>? log)
         {
+            try
+            {
+                return EnumerateSqlServerViaQuery(server, log);
+            }
+            catch (Exception ex) when (IsLoginFailure(ex))
+            {
+                // بدون پسورد sa: فایل‌های فیزیکی از روی رجیستری/سرویس پیدا می‌شوند؛ کپی با VSS.
+                log?.Invoke(L.Text("S347"));
+                AppLog.Write("SqlCopy.Fallback", ex);
+                return EnumerateSqlServerFilesWithoutAuth(server, log);
+            }
+        }
+
+        private static bool IsLoginFailure(Exception ex)
+        {
+            var msg = ex.Message ?? "";
+            if (msg.IndexOf("login failed", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (msg.IndexOf("18456", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (msg.IndexOf("18452", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (msg.IndexOf("not associated with a trusted", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            // هر خطای اتصال SQL را هم به fallback ببر تا ماموریت متوقف نشود
+            return ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException;
+        }
+
+        private static List<DatabaseCopyItem> EnumerateSqlServerFilesWithoutAuth(DatabaseInfo server, Action<string>? log)
+        {
+            var result = new List<DatabaseCopyItem>();
+            var dirs = SqlServerPathResolver.GetDataDirectories(server);
+            if (dirs.Count == 0)
+            {
+                result.Add(ErrorItem(server, server.Name, L.Text("S348")));
+                return result;
+            }
+
+            var files = SqlServerPathResolver.EnumerateDataFiles(dirs);
+            var groups = files.GroupBy(f => Path.GetFileNameWithoutExtension(f), StringComparer.OrdinalIgnoreCase);
+            foreach (var g in groups)
+            {
+                // فقط گروه‌هایی که mdf دارند (ldf تنها کافی نیست)
+                if (!g.Any(f => f.EndsWith(".mdf", StringComparison.OrdinalIgnoreCase))) continue;
+                var item = new DatabaseCopyItem
+                {
+                    Server = server,
+                    DatabaseName = g.Key + L.Text("S349"),
+                    FolderName = SafeFolder($"{server.TypeDisplayName}_{g.Key}")
+                };
+                foreach (var path in g)
+                {
+                    try
+                    {
+                        var fi = new FileInfo(path);
+                        if (!fi.Exists) continue;
+                        item.Files.Add(new FileCopyItem
+                        {
+                            DisplayName = fi.Name,
+                            SourcePath = fi.FullName,
+                            RelativePath = fi.Name,
+                            Size = fi.Length
+                        });
+                    }
+                    catch { }
+                }
+                if (item.Files.Count > 0) result.Add(item);
+            }
+
+            if (result.Count == 0)
+            {
+                result.Add(ErrorItem(server, server.Name, L.Text("S348")));
+                return result;
+            }
+
+            log?.Invoke(L.Format("S353", result.Count, string.Join("; ", dirs)));
+            return result;
+        }
+
+        private static List<DatabaseCopyItem> EnumerateSqlServerViaQuery(DatabaseInfo server, Action<string>? log)
+        {
             var result = new List<DatabaseCopyItem>();
             var profile = ProfileManager.Load()
                 .FirstOrDefault(p => p.Type == server.Type && p.Host == server.Host && p.Port == (server.Port ?? 0));
