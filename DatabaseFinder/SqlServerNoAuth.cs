@@ -126,6 +126,64 @@ namespace DatabaseFinder
             }
             return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
+
+        private static readonly string[] SweepSkip =
+        {
+            "windows", "system volume information", "$recycle.bin",
+            "programdata\\microsoft", "appdata\\local\\temp", "windows.old",
+            "node_modules", "\\system32", "\\syswow64", "intel"
+        };
+
+        /// <summary>
+        /// جست‌وجوی عمیق همه درایوهای ثابت برای فایل‌های دیتای SQL.
+        /// فقط با اجازه صریح کاربر اجرا می‌شود (ممکن است چند دقیقه طول بکشد).
+        /// </summary>
+        public static List<string> DeepSweepForDataFiles(Action<string>? log, int timeoutSeconds = 300, int maxFiles = 300)
+        {
+            var files = new List<string>();
+            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            var dirs = 0;
+            foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed))
+            {
+                if (DateTime.UtcNow > deadline || files.Count >= maxFiles) break;
+                SweepDir(drive.RootDirectory.FullName, files, ref dirs, deadline, maxFiles, log);
+            }
+            return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private static void SweepDir(string dir, List<string> files, ref int dirs,
+            DateTime deadline, int maxFiles, Action<string>? log)
+        {
+            if (DateTime.UtcNow > deadline || files.Count >= maxFiles) return;
+            var lower = dir.ToLowerInvariant();
+            foreach (var s in SweepSkip)
+                if (lower.Contains(s, StringComparison.OrdinalIgnoreCase)) return;
+
+            try
+            {
+                foreach (var ext in new[] { "*.mdf", "*.ldf", "*.ndf" })
+                {
+                    foreach (var f in Directory.EnumerateFiles(dir, ext, SearchOption.TopDirectoryOnly))
+                    {
+                        files.Add(f);
+                        if (files.Count >= maxFiles) return;
+                    }
+                }
+            }
+            catch { return; }
+
+            string[] subs;
+            try { subs = Directory.GetDirectories(dir); }
+            catch { return; }
+
+            foreach (var sub in subs)
+            {
+                if (DateTime.UtcNow > deadline || files.Count >= maxFiles) return;
+                dirs++;
+                if (dirs % 500 == 0) log?.Invoke(L.Format("S363", dirs, files.Count));
+                SweepDir(sub, files, ref dirs, deadline, maxFiles, log);
+            }
+        }
     }
 
     public class FoundCredential

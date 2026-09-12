@@ -308,6 +308,17 @@ namespace DatabaseFinder
                 DatabaseFileLocator.BuildPlan(_servers, message => AppendLogSafe(message)));
 
             _items = result;
+            FillTree();
+
+            _tree.ExpandAll();
+            _btnCopy.Enabled = true;
+            _lblStatus.Text = L.Format("S077", _items.Count);
+
+            await OfferDeepSweepAsync();
+        }
+
+        private void FillTree()
+        {
             _tree.Nodes.Clear();
 
             foreach (var group in _items.GroupBy(i =>
@@ -346,10 +357,56 @@ namespace DatabaseFinder
                 }
                 _tree.Nodes.Add(serverNode);
             }
+        }
 
-            _tree.ExpandAll();
-            _btnCopy.Enabled = true;
-            _lblStatus.Text = L.Format("S077", _items.Count);
+        /// <summary>
+        /// اگر برای SQL Server آنلاینی هیچ فایلی پیدا نشده باشد، به‌جای
+        /// توقف با خطا، اجازه جست‌وجوی عمیق درایوها را از کاربر می‌گیرد.
+        /// </summary>
+        private async Task OfferDeepSweepAsync()
+        {
+            List<DatabaseInfo> need;
+            try
+            {
+                need = DatabaseFileLocator.SqlServersNeedingSweep(_servers, _items);
+            }
+            catch { return; }
+
+            if (need.Count == 0) return;
+
+            if (MessageBox.Show(L.Text("S362"), Text,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button1) != DialogResult.Yes)
+                return;
+
+            _btnCopy.Enabled = false;
+            _lblStatus.Text = L.Format("S363", 0, 0);
+            try
+            {
+                foreach (var s in need)
+                {
+                    var found = await Task.Run(() =>
+                        DatabaseFileLocator.SweepSqlServerFiles(s, m => AppendLogSafe(m)));
+                    // موارد خطای قبلی همان سرور را حذف کن تا درخت تمیز بماند
+                    _items.RemoveAll(i => i.Server.Type == DatabaseType.SQLServer
+                        && string.Equals(i.Server.Host, s.Host, StringComparison.OrdinalIgnoreCase)
+                        && (i.Server.Port ?? 0) == (s.Port ?? 0)
+                        && i.Files.Count == 0);
+                    _items.AddRange(found);
+                }
+
+                FillTree();
+                _tree.ExpandAll();
+                _lblStatus.Text = L.Format("S077", _items.Count);
+            }
+            catch (Exception ex)
+            {
+                AppendLog(L.Format("S055", ex.Message));
+            }
+            finally
+            {
+                _btnCopy.Enabled = true;
+            }
         }
 
         private static string HandlingText(LockedFileHandling h)

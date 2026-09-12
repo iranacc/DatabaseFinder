@@ -195,16 +195,47 @@ namespace DatabaseFinder
             }
 
             var files = SqlServerPathResolver.EnumerateDataFiles(dirs);
-            var groups = files.GroupBy(f => Path.GetFileNameWithoutExtension(f), StringComparer.OrdinalIgnoreCase);
+            var built = BuildNoAuthItems(server, files);
+            if (built.Count == 0)
+            {
+                result.Add(ErrorItem(server, server.Name, L.Text("S348")));
+                return result;
+            }
+
+            result.AddRange(built);
+            log?.Invoke(L.Format("S353", result.Count, string.Join("; ", dirs)));
+            return result;
+        }
+
+        /// <summary>
+        /// فایل‌های mdf/ldf/ndf را بر اساس (پوشه + نام) گروه‌بندی و به آیتم کپی تبدیل می‌کند؛
+        /// نام پوشه مقصد یکتا می‌شود تا فایل‌های هم‌نامِ پوشه‌های مختلف روی هم نروند.
+        /// </summary>
+        private static List<DatabaseCopyItem> BuildNoAuthItems(DatabaseInfo server, List<string> files)
+        {
+            var result = new List<DatabaseCopyItem>();
+            var usedFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var groups = files
+                .Where(f => !string.IsNullOrEmpty(Path.GetDirectoryName(f)))
+                .GroupBy(f => (Path.GetDirectoryName(f) ?? "").ToLowerInvariant() + "|" +
+                              Path.GetFileNameWithoutExtension(f).ToLowerInvariant())
+                .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
             foreach (var g in groups)
             {
                 // فقط گروه‌هایی که mdf دارند (ldf تنها کافی نیست)
                 if (!g.Any(f => f.EndsWith(".mdf", StringComparison.OrdinalIgnoreCase))) continue;
+                var baseName = Path.GetFileNameWithoutExtension(g.First());
+                var folder = SafeFolder($"{server.TypeDisplayName}_{baseName}");
+                for (var i = 2; usedFolders.Contains(folder); i++)
+                    folder = SafeFolder($"{server.TypeDisplayName}_{baseName}_{i}");
+                usedFolders.Add(folder);
+
                 var item = new DatabaseCopyItem
                 {
                     Server = server,
-                    DatabaseName = g.Key + L.Text("S349"),
-                    FolderName = SafeFolder($"{server.TypeDisplayName}_{g.Key}")
+                    DatabaseName = baseName + L.Text("S349"),
+                    FolderName = folder
                 };
                 foreach (var path in g)
                 {
@@ -225,14 +256,38 @@ namespace DatabaseFinder
                 if (item.Files.Count > 0) result.Add(item);
             }
 
-            if (result.Count == 0)
-            {
-                result.Add(ErrorItem(server, server.Name, L.Text("S348")));
-                return result;
-            }
-
-            log?.Invoke(L.Format("S353", result.Count, string.Join("; ", dirs)));
             return result;
+        }
+
+        /// <summary>
+        /// سرورهای SQL Server آنلاینی که هیچ فایلی برایشان پیدا نشده و
+        /// کاندیدای جست‌وجوی عمیق درایوها هستند.
+        /// </summary>
+        public static List<DatabaseInfo> SqlServersNeedingSweep(List<DatabaseInfo> servers, List<DatabaseCopyItem> items)
+        {
+            var need = new List<DatabaseInfo>();
+            foreach (var s in servers)
+            {
+                if (s.Type != DatabaseType.SQLServer || !s.IsOnline || !IsLocalHost(s)) continue;
+                var mine = items.Where(i => i.Server.Type == DatabaseType.SQLServer
+                    && string.Equals(i.Server.Host, s.Host, StringComparison.OrdinalIgnoreCase)
+                    && (i.Server.Port ?? 0) == (s.Port ?? 0));
+                if (mine.Any() && mine.All(i => i.Files.Count == 0))
+                    need.Add(s);
+            }
+            return need;
+        }
+
+        /// <summary>
+        /// جست‌وجوی عمیق درایوها برای فایل‌های دیتای SQL؛ فقط پس از اجازه صریح کاربر.
+        /// </summary>
+        public static List<DatabaseCopyItem> SweepSqlServerFiles(DatabaseInfo server, Action<string>? log)
+        {
+            var files = SqlServerPathResolver.DeepSweepForDataFiles(log);
+            var built = BuildNoAuthItems(server, files);
+            if (built.Count > 0)
+                log?.Invoke(L.Format("S353", built.Count, L.Text("S364")));
+            return built;
         }
 
         private static List<DatabaseCopyItem> EnumerateSqlServerViaQuery(DatabaseInfo server, Action<string>? log)
