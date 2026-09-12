@@ -363,6 +363,8 @@
   "S362": "No SQL Server data files were found in the usual locations. Would you like to run a deep search across all fixed drives? It runs entirely on this computer and may take a few minutes.",
   "S363": "Deep search in progress: {#} folders scanned, {#} files found so far...",
   "S364": "deep drive sweep",
+  "S365": "Deep search drives...",
+  "S366": "Deep search finished: no new database files found.",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

@@ -14,6 +14,7 @@ namespace DatabaseFinder
         private readonly Button _btnManualPath;
         private readonly Button _btnFindPass;
         private readonly Button _btnSysadmin;
+        private readonly Button _btnDeepSweep;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
@@ -165,6 +166,19 @@ namespace DatabaseFinder
             _btnSysadmin.Click += BtnSysadmin_Click;
             Controls.Add(_btnSysadmin);
 
+            _btnDeepSweep = new Button
+            {
+                Text = L.Text("S365"),
+                Location = new Point(500, 172),
+                Size = new Size(248, 30),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnDeepSweep.Click += BtnDeepSweep_Click;
+            Controls.Add(_btnDeepSweep);
+
             _btnManifest = new Button
             {
                 Text = L.Text("S063"),
@@ -295,7 +309,7 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
@@ -405,6 +419,63 @@ namespace DatabaseFinder
             }
             finally
             {
+                _btnCopy.Enabled = true;
+            }
+        }
+
+        /// <summary>
+        /// جست‌وجوی عمیق دستی: حتی اگر در مسیرهای معمول چیزی پیدا شده باشد،
+        /// کل درایوها گشته می‌شود (مثلا دیتای سپیدار در D:\sepidar) و موارد
+        /// جدید بدون تکرار به درخت اضافه می‌شوند.
+        /// </summary>
+        private async void BtnDeepSweep_Click(object? sender, EventArgs e)
+        {
+            var targets = _servers
+                .Where(s => s.Type == DatabaseType.SQLServer && s.IsOnline)
+                .ToList();
+            if (targets.Count == 0)
+            {
+                _lblStatus.Text = L.Text("S085");
+                return;
+            }
+
+            _btnDeepSweep.Enabled = false;
+            _btnCopy.Enabled = false;
+            _lblStatus.Text = L.Format("S363", 0, 0);
+            try
+            {
+                var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var it in _items)
+                    foreach (var f in it.Files)
+                        known.Add(f.SourcePath);
+
+                var added = 0;
+                foreach (var s in targets)
+                {
+                    var found = await Task.Run(() =>
+                        DatabaseFileLocator.SweepSqlServerFiles(s, m => AppendLogSafe(m)));
+                    foreach (var item in found)
+                    {
+                        item.Files.RemoveAll(f => known.Contains(f.SourcePath));
+                        if (item.Files.Count == 0) continue;
+                        foreach (var f in item.Files) known.Add(f.SourcePath);
+                        _items.Add(item);
+                        added++;
+                    }
+                }
+
+                FillTree();
+                _tree.ExpandAll();
+                _lblStatus.Text = L.Format("S077", _items.Count);
+                if (added == 0) AppendLog(L.Text("S366"));
+            }
+            catch (Exception ex)
+            {
+                AppendLog(L.Format("S055", ex.Message));
+            }
+            finally
+            {
+                _btnDeepSweep.Enabled = true;
                 _btnCopy.Enabled = true;
             }
         }
