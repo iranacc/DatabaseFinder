@@ -429,32 +429,94 @@ namespace DatabaseFinder
 
         private void BtnManualPath_Click(object? sender, EventArgs e)
         {
-            if (_tree.SelectedNode?.Tag is DatabaseCopyItem item)
-            {
-                if (item.Files.Count > 0 && string.IsNullOrEmpty(item.Error))
-                {
-                    _lblStatus.Text = L.Text("S081");
-                    return;
-                }
-
-                using var fbd = new FolderBrowserDialog
-                {
-                    Description = L.Format("S082", item.DatabaseName)
-                };
-                if (fbd.ShowDialog(this) == DialogResult.OK)
-                {
-                    item.ManualPath = fbd.SelectedPath;
-                    item.UseManualPath = true;
-                    item.Error = null;
-                    _tree.SelectedNode.Text = L.Format("S083", item.DatabaseName, fbd.SelectedPath);
-                    _tree.SelectedNode.ForeColor = Color.FromArgb(255, 152, 0);
-                    _lblStatus.Text = L.Text("S084");
-                }
-            }
-            else
+            var item = ResolveManualTarget();
+            if (item == null)
             {
                 _lblStatus.Text = L.Text("S085");
+                return;
             }
+
+            // اگر فایل خودکار پیدا شده، با تایید کاربر اجازه بازنویسی بده
+            // (مسیر خودکار در حالت بدون لاگین ممکن است ناقص باشد).
+            if (item.Value.Item2.Files.Count > 0 && string.IsNullOrEmpty(item.Value.Item2.Error))
+            {
+                if (MessageBox.Show(L.Format("S361", item.Value.Item2.DatabaseName), L.Text("S062"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                        MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    return;
+            }
+
+            using var fbd = new FolderBrowserDialog
+            {
+                Description = L.Format("S082", item.Value.Item2.DatabaseName),
+                SelectedPath = item.Value.Item2.UseManualPath && Directory.Exists(item.Value.Item2.ManualPath)
+                    ? item.Value.Item2.ManualPath
+                    : _txtDest.Text
+            };
+            if (fbd.ShowDialog(this) == DialogResult.OK)
+            {
+                var target = item.Value.Item2;
+                target.ManualPath = fbd.SelectedPath;
+                target.UseManualPath = true;
+                target.Error = null;
+                var node = item.Value.Item1;
+                node.Text = L.Format("S083", target.DatabaseName, fbd.SelectedPath);
+                node.ForeColor = Color.FromArgb(255, 152, 0);
+                node.Checked = true;
+                _tree.SelectedNode = node;
+                _lblStatus.Text = L.Text("S084");
+            }
+        }
+
+        /// <summary>
+        /// گره دیتابیس هدف را هوشمند پیدا می‌کند: گره انتخابی، وگرنه اولین
+        /// فرزند خطادار گروه انتخابی، وگرنه اولین مورد خطادار کل درخت.
+        /// </summary>
+        private (TreeNode, DatabaseCopyItem)? ResolveManualTarget()
+        {
+            if (_tree.SelectedNode?.Tag is DatabaseCopyItem direct)
+                return (_tree.SelectedNode, direct);
+
+            if (_tree.SelectedNode != null)
+            {
+                foreach (TreeNode child in _tree.SelectedNode.Nodes)
+                {
+                    if (child.Tag is DatabaseCopyItem c && !string.IsNullOrEmpty(c.Error))
+                    {
+                        _tree.SelectedNode = child;
+                        return (child, c);
+                    }
+                }
+                if (_tree.SelectedNode.Nodes.Count > 0 &&
+                    _tree.SelectedNode.Nodes[0].Tag is DatabaseCopyItem first)
+                {
+                    _tree.SelectedNode = _tree.SelectedNode.Nodes[0];
+                    return (_tree.SelectedNode, first);
+                }
+            }
+
+            foreach (TreeNode group in _tree.Nodes)
+            {
+                foreach (TreeNode child in group.Nodes)
+                {
+                    if (child.Tag is DatabaseCopyItem c && !string.IsNullOrEmpty(c.Error))
+                    {
+                        _tree.SelectedNode = child;
+                        return (child, c);
+                    }
+                }
+            }
+
+            foreach (TreeNode group in _tree.Nodes)
+            {
+                if (group.Nodes.Count > 0 && group.Nodes[0].Tag is DatabaseCopyItem any)
+                {
+                    _tree.SelectedNode = group.Nodes[0];
+                    return (group.Nodes[0], any);
+                }
+            }
+
+            return null;
         }
 
         private async void BtnCopy_Click(object? sender, EventArgs e)

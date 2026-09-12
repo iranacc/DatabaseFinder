@@ -359,6 +359,7 @@
   "S358": "Emergency sysadmin...",
   "S359": "This restarts the SQL service in single-user mode. Continue? The action is logged for the Art.181 case file.",
   "S360": "Run the app as Administrator to use this action.",
+  "S361": "Files were already located automatically for {#}. Replace them with the manual folder?",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

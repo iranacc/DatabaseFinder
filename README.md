@@ -15,6 +15,10 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.8
+
+- **"Choose folder manually" fix:** works even when a group node is selected or nothing is selected (auto-finds the first failed item), asks to override auto-located files, and auto-checks the database for copying.
+
 ## What's new in v1.8.7
 
 - **Backup without sa password:** when SQL login fails, "Copy files" falls back to physical MDF/LDF acquisition from registry/service paths via VSS (no password needed); attach the files later in your lab.
