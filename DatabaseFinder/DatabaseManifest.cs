@@ -53,6 +53,22 @@ namespace DatabaseFinder
         public string Version { get; set; } = "";
     }
 
+    /// <summary>
+    /// رکورد برداشت یک فایل: هش مبدأ (از همان بایت‌های کپی‌شده) در برابر هش مقصد.
+    /// MATCH یعنی برداشت عین اصل است؛ DIFF یعنی مغایرت؛ unverified یعنی هش گرفته نشد.
+    /// </summary>
+    public class CopyAcquisition
+    {
+        public string RelPath { get; set; } = "";
+        public string SourcePath { get; set; } = "";
+        public string SourceHash { get; set; } = "";
+        public string DestHash { get; set; } = "";
+        public bool Verified { get; set; }
+        public long Bytes { get; set; }
+        public string Match => Verified && !string.IsNullOrEmpty(SourceHash) && SourceHash == DestHash ? "MATCH"
+            : !string.IsNullOrEmpty(SourceHash) && !string.IsNullOrEmpty(DestHash) ? "DIFF" : "unverified";
+    }
+
     public static class ManifestGenerator
     {
         public const string ToolVersion = "1.8.8";
@@ -111,7 +127,7 @@ namespace DatabaseFinder
         /// نسبت فشرده‌سازی نیز ثبت می‌شود.
         /// خروجی: مسیر فایل متنی.
         /// </summary>
-        public static string Generate(string rootFolder, IReadOnlyList<DatabaseBackupItem>? items = null, string? outputBase = null)
+        public static string Generate(string rootFolder, IReadOnlyList<DatabaseBackupItem>? items = null, string? outputBase = null, IReadOnlyList<CopyAcquisition>? acquisitions = null)
         {
             outputBase ??= Path.Combine(rootFolder, "manifest");
             var rootFull = Path.GetFullPath(rootFolder);
@@ -342,6 +358,21 @@ namespace DatabaseFinder
             foreach (var e in entries)
                 body.Add($"{e.Sha256}  {e.Path.Replace('\\', '/')}");
 
+            if (acquisitions is { Count: > 0 })
+            {
+                var matched = acquisitions.Count(a => a.Match == "MATCH");
+                var diff = acquisitions.Count(a => a.Match == "DIFF");
+                body.Add("");
+                body.Add($"Acquisition (source -> dest): {matched} MATCH, {diff} DIFF, " +
+                    $"{acquisitions.Count - matched - diff} unverified of {acquisitions.Count} files");
+                foreach (var a in acquisitions.OrderBy(a => a.RelPath, StringComparer.OrdinalIgnoreCase))
+                {
+                    body.Add($"  [{a.Match}] {a.RelPath}  {FormatBytes(a.Bytes)}");
+                    body.Add($"    src  {a.SourceHash}");
+                    body.Add($"    dest {a.DestHash}");
+                }
+            }
+
             var framed = Frame(body);
             var banner = BuildTaxStamp181();
             var bodySource = banner + "\n" + framed;
@@ -399,6 +430,14 @@ namespace DatabaseFinder
                     md.Append($"| `{e.Sha256}` | {FormatBytes(e.Size)} | `{e.Path}` |\n");
                 md.Append("\n");
             }
+            if (acquisitions is { Count: > 0 })
+            {
+                md.Append("## Acquisition (source → dest)\n\n");
+                md.Append("| Match | File | Source SHA-256 | Size |\n|---|---|---|---:|\n");
+                foreach (var a in acquisitions.OrderBy(a => a.RelPath, StringComparer.OrdinalIgnoreCase))
+                    md.Append($"| **{a.Match}** | `{a.RelPath}` | `{a.SourceHash}` | {FormatBytes(a.Bytes)} |\n");
+                md.Append("\n");
+            }
             md.Append($"_Manifest SHA-256 (of `manifest.txt`): `{bodyHash}`_\n");
             var mdPath = outputBase + ".md";
             File.WriteAllText(mdPath, md.ToString(), new UTF8Encoding(false));
@@ -420,6 +459,7 @@ namespace DatabaseFinder
                 servers,
                 databases,
                 files = entries,
+                acquisition = acquisitions,
                 totalFiles = entries.Count,
                 totalBytes = totalBackupBytes,
                 selfSha256 = bodyHash

@@ -22,6 +22,8 @@ namespace DatabaseFinder
         private readonly RadioButton _rdoVss;
         private readonly RadioButton _rdoStopStart;
         private readonly RadioButton _rdoReportOnly;
+        private readonly CheckBox _chkVerifyCopy;
+        private List<CopyAcquisition> _lastAcquisitions = new();
         private string _manifestPath = "";
 
         public DatabaseCopyForm(List<DatabaseInfo> servers)
@@ -277,6 +279,16 @@ namespace DatabaseFinder
                 Font = new Font("Segoe UI", 8.8F)
             };
             grpLocked.Controls.Add(_rdoReportOnly);
+
+            _chkVerifyCopy = new CheckBox
+            {
+                Text = L.Text("S373"),
+                Location = new Point(10, 178),
+                Size = new Size(228, 34),
+                Checked = true,
+                Font = new Font("Segoe UI", 8.8F)
+            };
+            grpLocked.Controls.Add(_chkVerifyCopy);
             Controls.Add(grpLocked);
 
             var lblLog = new Label
@@ -694,6 +706,22 @@ namespace DatabaseFinder
                 return;
             }
 
+            // پیش‌برآورد فضا: وسط ماموریت با خطای دیسک مواجه نشویم
+            try
+            {
+                var need = items.Sum(i => i.TotalSize);
+                var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(destRoot)) ?? destRoot);
+                if (need > 0 && drive.IsReady && need > drive.AvailableFreeSpace)
+                {
+                    _lblStatus.Text = L.Format("S374", drive.Name,
+                        DatabaseFileLocator.FormatSize(need),
+                        DatabaseFileLocator.FormatSize(drive.AvailableFreeSpace));
+                    _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
+                    return;
+                }
+            }
+            catch { }
+
             _btnCopy.Enabled = false;
             _btnCopy.Text = L.Text("S086");
             _btnManifest.Enabled = false;
@@ -709,17 +737,21 @@ namespace DatabaseFinder
 
             try
             {
+                var verify = _chkVerifyCopy.Checked;
                 var result = await Task.Run(() =>
-                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message)));
+                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message), verify));
 
                 AppendLog("");
                 AppendLog("--------------------------");
                 AppendLog(L.Format("S088", result.FilesCopied, DatabaseFileLocator.FormatSize(result.BytesCopied), result.Failed));
+                if (result.Mismatched > 0)
+                    AppendLog(L.Format("S375", result.Mismatched));
 
+                _lastAcquisitions = result.Acquisitions;
                 if (result.FilesCopied > 0)
                 {
                     AppendLog(L.Text("S051"));
-                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot));
+                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, null, null, result.Acquisitions));
                     AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
@@ -857,7 +889,8 @@ namespace DatabaseFinder
             AppendLog(L.Text("S051"));
             try
             {
-                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim()));
+                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(
+                    _txtDest.Text.Trim(), null, null, _lastAcquisitions));
                 AppendLog(L.Format("S052", _manifestPath));
                 _lblStatus.Text = L.Text("S057");
             }

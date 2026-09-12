@@ -29,6 +29,11 @@ namespace DatabaseFinder
         /// <summary>فایل همین حالا توسط پروسسی قفل است (سرنخ زنده بودن).</summary>
         public bool IsInUse { get; set; }
         public string? InUseBy { get; set; }
+        /// <summary>هش مبدأ/مقصد و مسیر نهایی برای اثبات یکسان بودن برداشت.</summary>
+        public string? SourceHash { get; set; }
+        public string? DestHash { get; set; }
+        public string? CopiedPath { get; set; }
+        public bool Verified { get; set; }
     }
 
     public class DatabaseCopyItem
@@ -675,14 +680,16 @@ namespace DatabaseFinder
         }
 
         // ---------- اجرای کپی ----------
-        public static (int FilesCopied, long BytesCopied, int Failed, string Errors) ExecuteCopy(
+        public static (int FilesCopied, long BytesCopied, int Failed, int Mismatched, string Errors, List<CopyAcquisition> Acquisitions) ExecuteCopy(
             List<DatabaseCopyItem> items, string destRoot, LockedFileHandling lockedHandling,
-            Action<string>? log = null)
+            Action<string>? log = null, bool verifyHash = true)
         {
             var filesCopied = 0;
             long bytesCopied = 0;
             var failed = 0;
+            var mismatched = 0;
             var errorLines = new List<string>();
+            var acquisitions = new List<CopyAcquisition>();
             var shadowCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var stoppedServices = new List<string>();
 
@@ -710,7 +717,7 @@ namespace DatabaseFinder
                                     item.Error = L.Text("S134");
                                 failed++;
                             }
-                            return (0, 0, failed, string.Join(Environment.NewLine, errorLines));
+                            return (0, 0, failed, mismatched, string.Join(Environment.NewLine, errorLines), acquisitions);
                         }
                         stoppedServices.AddRange(serviceNames);
                     }
@@ -735,13 +742,14 @@ namespace DatabaseFinder
                         if (sourceRoot != null && Directory.Exists(sourceRoot))
                         {
                             // کپی کل پوشه دستی
-                            CopyDirectory(sourceRoot, destDir, ref filesCopied, ref bytesCopied, ref failed, errorLines, log);
+                            CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied, ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log);
                             continue;
                         }
 
                         foreach (var file in item.Files)
                         {
                             var dest = Path.Combine(destDir, file.RelativePath);
+                            var relToRoot = Path.Combine(item.FolderName, file.RelativePath);
                             try
                             {
                                 Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destDir);
@@ -755,39 +763,43 @@ namespace DatabaseFinder
                                     continue;
                                 }
 
-                                File.Copy(src, dest, overwrite: true);
-                                filesCopied++;
-                                bytesCopied += info.Length;
-                                log?.Invoke(L.Format("S137", item.FolderName, file.DisplayName, FormatSize(info.Length)));
-                            }
-                            catch (IOException ex)
-                            {
-                                file.Locked = true;
-                                if (lockedHandling == LockedFileHandling.Vss)
+                                string effectiveSrc = src;
+                                bool viaShadow = false;
+                                try
                                 {
-                                    var vol = Path.GetPathRoot(file.SourcePath);
-                                    if (TryCopyViaShadow(file.SourcePath, dest, vol, shadowCache, out var shadowErr))
+                                    File.Copy(src, dest, overwrite: true);
+                                }
+                                catch (IOException ex)
+                                {
+                                    // فایل قفل است؛ تلاش از روی Shadow Copy
+                                    file.Locked = true;
+                                    if (lockedHandling != LockedFileHandling.Vss)
                                     {
-                                        var info2 = new FileInfo(dest);
-                                        file.Locked = false;
-                                        file.Error = null;
-                                        filesCopied++;
-                                        bytesCopied += info2.Length;
-                                        log?.Invoke(L.Format("S138", item.FolderName, file.DisplayName, FormatSize(info2.Length)));
+                                        file.Error = L.Text("S140");
+                                        errorLines.Add(L.Format("S141", item.FolderName, file.DisplayName, ex.Message));
+                                        failed++;
+                                        continue;
                                     }
-                                    else
+                                    var vol = Path.GetPathRoot(file.SourcePath);
+                                    if (!TryCopyViaShadow(file.SourcePath, dest, vol, shadowCache, out var shadowErr, out var shadowSrc))
                                     {
                                         file.Error = L.Text("S139") + shadowErr;
                                         errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {file.Error}");
                                         failed++;
+                                        continue;
                                     }
+                                    effectiveSrc = shadowSrc;
+                                    viaShadow = true;
+                                    file.Locked = false;
+                                    file.Error = null;
                                 }
-                                else
-                                {
-                                    file.Error = L.Text("S140");
-                                    errorLines.Add(L.Format("S141", item.FolderName, file.DisplayName, ex.Message));
-                                    failed++;
-                                }
+
+                                var destInfo = new FileInfo(dest);
+                                RecordCopy(file, relToRoot, effectiveSrc, dest, destInfo.Length,
+                                    ref filesCopied, ref bytesCopied, ref failed, ref mismatched,
+                                    acquisitions, errorLines, verifyHash, log,
+                                    viaShadow ? L.Format("S138", item.FolderName, file.DisplayName, FormatSize(destInfo.Length))
+                                              : L.Format("S137", item.FolderName, file.DisplayName, FormatSize(destInfo.Length)));
                             }
                             catch (UnauthorizedAccessException ex)
                             {
@@ -824,12 +836,81 @@ namespace DatabaseFinder
                     VolumeShadowCopy.DeleteShadow(shadow);
             }
 
-            return (filesCopied, bytesCopied, failed, string.Join(Environment.NewLine, errorLines));
+            return (filesCopied, bytesCopied, failed, mismatched, string.Join(Environment.NewLine, errorLines), acquisitions);
         }
 
-        private static void CopyDirectory(string sourceRoot, string destRoot,
-            ref int filesCopied, ref long bytesCopied, ref int failed,
-            List<string> errorLines, Action<string>? log)
+        /// <summary>هش SHA-256 فایل؛ null یعنی خواندن ممکن نشد.</summary>
+        public static string? TryHashFile(string path)
+        {
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite, 1024 * 1024);
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                return Convert.ToHexString(sha.ComputeHash(fs)).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Write("Copy.Hash: " + path, ex);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// ثبت یک فایل کپی‌شده: هش مبدأ از همان بایت‌هایی که کپی شد، هش مقصد،
+        /// مقایسه و ثبت در مانیفست. عدم تطابق = failed (فایل نگه داشته می‌شود تا دیده شود).
+        /// </summary>
+        private static void RecordCopy(FileCopyItem? file, string relToRoot, string effectiveSrc, string dest,
+            long bytes, ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
+            List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log,
+            string doneMessage)
+        {
+            string? srcHash = null, dstHash = null;
+            var verified = false;
+            if (verifyHash)
+            {
+                srcHash = TryHashFile(effectiveSrc);
+                dstHash = TryHashFile(dest);
+                verified = srcHash != null && dstHash != null && srcHash == dstHash;
+            }
+
+            if (file != null)
+            {
+                file.SourceHash = srcHash;
+                file.DestHash = dstHash;
+                file.CopiedPath = dest;
+                file.Verified = verified;
+                file.Error = null;
+            }
+
+            acquisitions.Add(new CopyAcquisition
+            {
+                RelPath = relToRoot,
+                SourcePath = effectiveSrc,
+                SourceHash = srcHash ?? "",
+                DestHash = dstHash ?? "",
+                Verified = verified,
+                Bytes = bytes
+            });
+
+            if (verifyHash && srcHash != null && dstHash != null && !verified)
+            {
+                mismatched++;
+                failed++;
+                var msg = L.Format("S375", relToRoot);
+                errorLines.Add(msg);
+                log?.Invoke(msg);
+                return;
+            }
+
+            filesCopied++;
+            bytesCopied += bytes;
+            log?.Invoke(doneMessage + (verifyHash && verified ? "  ✓" : ""));
+        }
+
+        private static void CopyDirectory(string sourceRoot, string destRoot, string folderName,
+            ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
+            List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log)
         {
             foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
             {
@@ -838,11 +919,12 @@ namespace DatabaseFinder
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destRoot);
-                    var info = new FileInfo(file);
                     File.Copy(file, dest, overwrite: true);
-                    filesCopied++;
-                    bytesCopied += info.Length;
-                    log?.Invoke(L.Format("S137", Path.GetFileName(destRoot), rel, FormatSize(info.Length)));
+                    var destInfo = new FileInfo(dest);
+                    RecordCopy(null, Path.Combine(folderName, rel), file, dest, destInfo.Length,
+                        ref filesCopied, ref bytesCopied, ref failed, ref mismatched,
+                        acquisitions, errorLines, verifyHash, log,
+                        L.Format("S137", Path.GetFileName(destRoot), rel, FormatSize(destInfo.Length)));
                 }
                 catch (Exception ex)
                 {
@@ -854,9 +936,10 @@ namespace DatabaseFinder
 
         private static bool TryCopyViaShadow(
             string src, string dest, string? volumeRoot,
-            Dictionary<string, string> shadowCache, out string? error)
+            Dictionary<string, string> shadowCache, out string? error, out string shadowSrc)
         {
             error = null;
+            shadowSrc = src;
             if (string.IsNullOrEmpty(volumeRoot))
             {
                 error = L.Text("S146");
@@ -874,7 +957,7 @@ namespace DatabaseFinder
                 shadowCache[volumeRoot] = shadowId;
             }
 
-            var shadowSrc = VolumeShadowCopy.MapToShadow(shadowId, src, volumeRoot);
+            shadowSrc = VolumeShadowCopy.MapToShadow(shadowId, src, volumeRoot);
             try
             {
                 if (!File.Exists(shadowSrc))
