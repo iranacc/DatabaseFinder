@@ -59,7 +59,7 @@ namespace DatabaseFinder
 
                 if (!server.IsOnline)
                 {
-                    items.Add(BuildOfflineItem(server));
+                    items.Add(BuildOfflineItem(server, log));
                     continue;
                 }
 
@@ -116,7 +116,33 @@ namespace DatabaseFinder
                 .ToList();
         }
 
-        private static DatabaseCopyItem BuildOfflineItem(DatabaseInfo server)
+        /// <summary>
+        /// فایل‌های همراه SQLite (همان نام + ‎-wal / ‎-shm). بدون این‌ها، تراکنش‌های
+        /// آخر (ثبت‌های امروز مودی) در کپی نیست و تصویر دیتا ناقص می‌ماند.
+        /// </summary>
+        public static List<string> GetSqliteCompanions(string dbPath)
+        {
+            var found = new List<string>();
+            try
+            {
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var p = dbPath + suffix;
+                    if (File.Exists(p)) found.Add(p);
+                }
+            }
+            catch { }
+            return found;
+        }
+
+        private static bool IsSqliteFile(DatabaseInfo server, string path)
+        {
+            if (server.Type == DatabaseType.SQLite) return true;
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext is ".db" or ".sqlite" or ".sqlite3" or ".sqlitedb";
+        }
+
+        private static DatabaseCopyItem BuildOfflineItem(DatabaseInfo server, Action<string>? log = null)
         {
             if (!string.IsNullOrEmpty(server.LocalPath) && File.Exists(server.LocalPath))
             {
@@ -134,8 +160,30 @@ namespace DatabaseFinder
                     SourcePath = fi.FullName,
                     RelativePath = fi.Name,
                     Size = fi.Length,
-                            Modified = fi.LastWriteTime
+                    Modified = fi.LastWriteTime
                 });
+                if (IsSqliteFile(server, fi.FullName))
+                {
+                    var companions = GetSqliteCompanions(fi.FullName);
+                    foreach (var c in companions)
+                    {
+                        try
+                        {
+                            var cfi = new FileInfo(c);
+                            item.Files.Add(new FileCopyItem
+                            {
+                                DisplayName = cfi.Name,
+                                SourcePath = cfi.FullName,
+                                RelativePath = cfi.Name,
+                                Size = cfi.Length,
+                                Modified = cfi.LastWriteTime
+                            });
+                        }
+                        catch { }
+                    }
+                    if (companions.Count > 0)
+                        log?.Invoke(L.Format("S385", string.Join(", ", companions.Select(Path.GetFileName))));
+                }
                 return item;
             }
 

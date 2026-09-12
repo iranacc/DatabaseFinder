@@ -581,9 +581,16 @@ namespace DatabaseFinder
         {
             using var dlg = new FolderBrowserDialog { Description = L.Text("S196") };
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
-            var dest = Path.Combine(dlg.SelectedPath, Path.GetFileName(path));
-            File.Copy(path, dest, overwrite: true);
-            MessageBox.Show(L.Text("S197") + dest, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var all = new List<string> { path };
+            all.AddRange(DatabaseFileLocator.GetSqliteCompanions(path));
+            var copied = new List<string>();
+            foreach (var src in all)
+            {
+                var dest = Path.Combine(dlg.SelectedPath, Path.GetFileName(src));
+                File.Copy(src, dest, overwrite: true);
+                copied.Add(dest);
+            }
+            MessageBox.Show(L.Text("S197") + string.Join("\n", copied), string.Empty, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private List<DatabaseInfo> GetSelectedResults()
