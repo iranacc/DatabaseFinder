@@ -27,8 +27,9 @@ namespace DatabaseFinder
         public bool IsRunningAsService { get; set; }
         public bool IsRunningAsProcess { get; set; }
         public string? ServiceName { get; set; }
-        public int ProcessId { get; set; }
-        public string? ProcessName { get; set; }
+        /// <summary>سرویس نصب است ولی در حال اجرا نیست (از رجیستری/سرویس‌های خاموش پیدا شده).</summary>
+        public bool IsServiceStopped { get; set; }
+        public int ProcessId { get; set; }        public string? ProcessName { get; set; }
 
         public string Version { get; set; } = "";
         public DateTime DetectedAt { get; set; } = DateTime.Now;
@@ -115,9 +116,10 @@ namespace DatabaseFinder
             databases.AddRange(DetectByServices(runningServices, runningProcesses));
             databases.AddRange(DetectByProcesses(runningProcesses));
             databases.AddRange(DetectByPorts(runningProcesses));
+            databases.AddRange(DetectStoppedSqlInstances(runningServices));
 
             var unique = databases
-                .GroupBy(d => $"{d.Type}-{d.Port?.ToString() ?? d.ProcessName ?? ""}")
+                .GroupBy(d => $"{d.Type}-{d.Port?.ToString() ?? d.ProcessName ?? d.ServiceName ?? ""}")
                 .Select(g => g.First())
                 .OrderBy(d => d.TypeDisplayName)
                 .ToList();
@@ -156,6 +158,73 @@ namespace DatabaseFinder
                         Port = GetPortForType(type.Value)
                     });
                 }
+            }
+
+            return result;
+        }
+
+        private List<DatabaseInfo> DetectStoppedSqlInstances(List<ServiceInfo> runningServices)
+        {
+            var result = new List<DatabaseInfo>();
+            var running = new HashSet<string>(runningServices.Select(s => s.Name),
+                StringComparer.OrdinalIgnoreCase);
+
+            // ۱) اینستنس‌های نصب‌شده از رجیستری (حتی اگر سرویسشان پاک/غیرفعال شده باشد)
+            var registryInstances = new List<(string Service, string Display)>();
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL");
+                if (key != null)
+                {
+                    foreach (var inst in key.GetValueNames())
+                    {
+                        var svc = inst.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase)
+                            ? "MSSQLSERVER" : "MSSQL$" + inst;
+                        registryInstances.Add((svc, inst.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase)
+                            ? "SQL Server (MSSQLSERVER)" : $"SQL Server ({inst})"));
+                    }
+                }
+            }
+            catch (Exception ex) { AppLog.Write("Detect.StoppedRegistry", ex); }
+
+            // ۲) سرویس‌های متوقف‌شده sqlservr از WMI
+            var stoppedServices = new List<(string Service, string Display)>();
+            try
+            {
+                using var searcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT Name, DisplayName, PathName FROM Win32_Service WHERE State != 'Running'");
+                foreach (System.Management.ManagementObject obj in searcher.Get())
+                {
+                    using (obj)
+                    {
+                        var path = obj["PathName"]?.ToString() ?? "";
+                        if (path.IndexOf("sqlservr.exe", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        var name = obj["Name"]?.ToString() ?? "";
+                        if (string.IsNullOrEmpty(name)) continue;
+                        stoppedServices.Add((name, obj["DisplayName"]?.ToString() ?? name));
+                    }
+                }
+            }
+            catch (Exception ex) { AppLog.Write("Detect.StoppedWmi", ex); }
+
+            foreach (var (svc, display) in registryInstances.Concat(stoppedServices)
+                .Distinct().OrderBy(x => x.Service, StringComparer.OrdinalIgnoreCase))
+            {
+                if (running.Contains(svc)) continue;
+                if (result.Any(r => r.ServiceName!.Equals(svc, StringComparison.OrdinalIgnoreCase))) continue;
+                result.Add(new DatabaseInfo
+                {
+                    Type = DatabaseType.SQLServer,
+                    Name = display,
+                    IsRunningAsService = false,
+                    IsServiceStopped = true,
+                    ServiceName = svc,
+                    Host = "localhost",
+                    Port = null,
+                    IsOnline = true,
+                    DetectedAt = DateTime.Now
+                });
             }
 
             return result;

@@ -119,6 +119,8 @@ namespace DatabaseFinder
         // ---------- SQL Server ----------
         private static List<DatabaseBackupItem> PlanSqlServer(DatabaseInfo server, string destRoot, Action<string>? log)
         {
+            if (server.IsServiceStopped)
+                throw new InvalidOperationException(L.Text("S384"));
             var cs = BuildSqlServerCs(server);
             var names = new List<string>();
             try

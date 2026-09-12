@@ -17,6 +17,8 @@ namespace DatabaseFinder
             {
                 try
                 {
+                    // سرویس خاموش قابل اتصال نیست؛ شمارش را رد کن تا تشخیص معطل نشود
+                    if (service.IsServiceStopped) return;
                     var names = ListFor(service, profiles);
                     service.DatabaseNames = names;
                     service.DatabaseCount = names.Count;

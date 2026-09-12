@@ -75,7 +75,11 @@ namespace DatabaseFinder
                     switch (server.Type)
                     {
                         case DatabaseType.SQLServer:
-                            items.AddRange(EnumerateSqlServer(server, log));
+                            // سرویس خاموش: فایل‌ها قفل نیستند؛ مستقیم از پوشه DATA برمی‌داریم
+                            if (server.IsServiceStopped)
+                                items.AddRange(EnumerateStoppedSqlServer(server, log));
+                            else
+                                items.AddRange(EnumerateSqlServer(server, log));
                             break;
                         case DatabaseType.MySQL:
                         case DatabaseType.MariaDB:
@@ -193,6 +197,26 @@ namespace DatabaseFinder
             if (msg.IndexOf("not associated with a trusted", StringComparison.OrdinalIgnoreCase) >= 0) return true;
             // هر خطای اتصال SQL را هم به fallback ببر تا ماموریت متوقف نشود
             return ex is Microsoft.Data.SqlClient.SqlException || ex is InvalidOperationException;
+        }
+
+        /// <summary>
+        /// سرویس SQL خاموش است: فایل‌ها قفل نیستند، پس همان برداشت بدون لاگین
+        /// کافی است (کپی مستقیم، بدون نیاز به VSS).
+        /// </summary>
+        private static List<DatabaseCopyItem> EnumerateStoppedSqlServer(DatabaseInfo server, Action<string>? log)
+        {
+            var dirs = SqlServerPathResolver.GetDataDirectories(server);
+            if (dirs.Count == 0)
+            {
+                return new List<DatabaseCopyItem> { ErrorItem(server, server.Name, L.Text("S348")) };
+            }
+            var built = BuildNoAuthItems(server, SqlServerPathResolver.EnumerateDataFiles(dirs));
+            if (built.Count == 0)
+            {
+                return new List<DatabaseCopyItem> { ErrorItem(server, server.Name, L.Text("S348")) };
+            }
+            log?.Invoke(L.Format("S353", built.Count, string.Join("; ", dirs)));
+            return built;
         }
 
         private static List<DatabaseCopyItem> EnumerateSqlServerFilesWithoutAuth(DatabaseInfo server, Action<string>? log)

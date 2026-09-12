@@ -381,6 +381,8 @@
   "S380": "Notes:",
   "S381": "Save with case info",
   "S382": "Skip",
+  "S383": "Service stopped",
+  "S384": "The SQL Server service is stopped. Start it for a native backup, or use file copy instead.",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

@@ -466,6 +466,7 @@ namespace DatabaseFinder
             var how = new List<string>();
             if (db.IsOnline)
             {
+                if (db.IsServiceStopped) how.Add(L.Text("S383"));
                 if (db.IsRunningAsService) how.Add(L.Text("S101"));
                 if (db.IsRunningAsProcess) how.Add(L.Text("S102"));
                 if (db.Port.HasValue) how.Add(L.Text("S103"));
@@ -493,7 +494,7 @@ namespace DatabaseFinder
                 Version = db.Version,
                 HostAddress = db.Host,
                 Location = db.IsOnline
-                    ? (db.Host + ":" + db.Port)
+                    ? (db.IsServiceStopped ? (db.ServiceName ?? "-") : (db.Host + ":" + db.Port))
                     : (db.LocalPath ?? "-"),
                 SizeInfo = db.IsOnline
                     ? ""
