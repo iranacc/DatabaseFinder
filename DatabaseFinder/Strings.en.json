@@ -365,6 +365,8 @@
   "S364": "deep drive sweep",
   "S365": "Deep search drives...",
   "S366": "Deep search finished: no new database files found.",
+  "S367": "in use",
+  "S368": "free",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

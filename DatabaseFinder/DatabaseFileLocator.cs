@@ -24,6 +24,11 @@ namespace DatabaseFinder
         public long Size { get; set; }
         public bool Locked { get; set; }
         public string? Error { get; set; }
+        /// <summary>آخرین تغییر فایل (سرنخ قدمت دیتا).</summary>
+        public DateTime Modified { get; set; }
+        /// <summary>فایل همین حالا توسط پروسسی قفل است (سرنخ زنده بودن).</summary>
+        public bool IsInUse { get; set; }
+        public string? InUseBy { get; set; }
     }
 
     public class DatabaseCopyItem
@@ -119,7 +124,8 @@ namespace DatabaseFinder
                     DisplayName = fi.Name,
                     SourcePath = fi.FullName,
                     RelativePath = fi.Name,
-                    Size = fi.Length
+                    Size = fi.Length,
+                            Modified = fi.LastWriteTime
                 });
                 return item;
             }
@@ -243,13 +249,16 @@ namespace DatabaseFinder
                     {
                         var fi = new FileInfo(path);
                         if (!fi.Exists) continue;
-                        item.Files.Add(new FileCopyItem
+                        var cf = new FileCopyItem
                         {
                             DisplayName = fi.Name,
                             SourcePath = fi.FullName,
                             RelativePath = fi.Name,
-                            Size = fi.Length
-                        });
+                            Size = fi.Length,
+                            Modified = fi.LastWriteTime
+                        };
+                        FileLockProbe.Apply(cf);
+                        item.Files.Add(cf);
                     }
                     catch { }
                 }
@@ -346,13 +355,16 @@ namespace DatabaseFinder
                     if (File.Exists(path))
                     {
                         var fi = new FileInfo(path);
-                        item.Files.Add(new FileCopyItem
+                        var cf = new FileCopyItem
                         {
                             DisplayName = fileName,
                             SourcePath = path,
                             RelativePath = fileName,
-                            Size = fi.Length
-                        });
+                            Size = fi.Length,
+                            Modified = fi.LastWriteTime
+                        };
+                        FileLockProbe.Apply(cf);
+                        item.Files.Add(cf);
                     }
                     else
                     {
@@ -434,7 +446,8 @@ namespace DatabaseFinder
                                 DisplayName = Path.GetFileName(f),
                                 SourcePath = f,
                                 RelativePath = rel,
-                                Size = fi.Length
+                                Size = fi.Length,
+                            Modified = fi.LastWriteTime
                             });
                         }
                     }
@@ -508,7 +521,8 @@ namespace DatabaseFinder
                                 DisplayName = Path.GetFileName(f),
                                 SourcePath = f,
                                 RelativePath = rel,
-                                Size = fi.Length
+                                Size = fi.Length,
+                            Modified = fi.LastWriteTime
                             });
                         }
                     }
@@ -584,7 +598,8 @@ namespace DatabaseFinder
                             DisplayName = fi.Name,
                             SourcePath = f,
                             RelativePath = fi.Name,
-                            Size = fi.Length
+                            Size = fi.Length,
+                            Modified = fi.LastWriteTime
                         });
                     }
                 }
@@ -639,7 +654,8 @@ namespace DatabaseFinder
                         DisplayName = fi.Name,
                         SourcePath = f,
                         RelativePath = fi.Name,
-                        Size = fi.Length
+                        Size = fi.Length,
+                            Modified = fi.LastWriteTime
                     });
                 }
 

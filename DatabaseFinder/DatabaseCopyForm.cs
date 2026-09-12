@@ -90,6 +90,7 @@ namespace DatabaseFinder
                 Location = new Point(12, 136),
                 Size = new Size(480, 330),
                 CheckBoxes = true,
+                ShowNodeToolTips = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = new Font("Segoe UI", 9.5F)
             };
@@ -344,7 +345,9 @@ namespace DatabaseFinder
                 {
                     Checked = true
                 };
-                foreach (var item in group)
+                foreach (var item in group
+                    .OrderByDescending(i => i.Files.Any(f => f.IsInUse))
+                    .ThenByDescending(i => i.Files.Select(f => f.Modified).DefaultIfEmpty().Max()))
                 {
                     var sizeText = item.Files.Count > 0
                         ? L.Format("S075", item.Files.Count, DatabaseFileLocator.FormatSize(item.TotalSize))
@@ -357,6 +360,20 @@ namespace DatabaseFinder
                         Tag = item,
                         Checked = true
                     };
+                    if (item.Files.Count > 0)
+                    {
+                        var liveBy = item.Files.Where(f => f.IsInUse)
+                            .Select(f => f.InUseBy).Distinct().ToList();
+                        if (liveBy.Count > 0)
+                            node.Text += "  🔒 " + (liveBy.Count == 1 && !string.IsNullOrEmpty(liveBy[0])
+                                ? liveBy[0] : L.Text("S367"));
+                        var newest = item.Files.Select(f => f.Modified).Max();
+                        if (newest != default)
+                            node.Text += "  •  " + newest.ToString("yyyy-MM-dd HH:mm");
+                        node.ToolTipText = string.Join("\n", item.Files.Select(f =>
+                            $"{f.DisplayName}  •  {f.Modified:yyyy-MM-dd HH:mm}  •  " +
+                            (f.IsInUse ? "🔒 " + (f.InUseBy ?? L.Text("S367")) : L.Text("S368"))));
+                    }
                     if (!string.IsNullOrEmpty(item.Error))
                     {
                         node.Text += "  ⚠ " + ShortError(item.Error);
