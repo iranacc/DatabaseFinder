@@ -427,6 +427,98 @@ namespace DatabaseFinder
             return null;
         }
 
+        /// <summary>پسورد قوی تصادفی برای sa (فقط برای پرونده، جایی ذخیره نمی‌شود).</summary>
+        public static string NewStrongPassword(int length = 16)
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+            var buf = new byte[length];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(buf);
+            return new string(buf.Select(b => chars[b % chars.Length]).ToArray());
+        }
+
+        private static string ToSqlInstance(string? serviceName)
+        {
+            var svc = string.IsNullOrEmpty(serviceName) ? "MSSQLSERVER" : serviceName;
+            if (svc.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase)) return ".";
+            return ".\\" + svc.Replace("MSSQL$", "", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// حالت B (تهاجمی، روی سیستم مودی): ریست پسورد sa با تک‌کاربره.
+        /// فقط پس از تایید صریح؛ هر مرحله لاگ می‌شود.
+        /// </summary>
+        public static string? ResetSaPasswordOnSite(string? serviceName, string newPassword, Action<string> log)
+        {
+            try
+            {
+                if (!IsAdministrator()) return L.Text("S310");
+                var svc = string.IsNullOrEmpty(serviceName) ? "MSSQLSERVER" : serviceName;
+                var inst = ToSqlInstance(svc);
+                log(L.Format("S372", svc));
+                AppLog.Write("SaReset.OnSite", new Exception(svc));
+
+                if (!RunNet($"stop \"{svc}\"", log)) return L.Format("S132", svc);
+                if (!RunNet($"start \"{svc}\" /mSQLCMD", log))
+                {
+                    RunNet($"start \"{svc}\"", log);
+                    return L.Format("S132", svc + " /mSQLCMD");
+                }
+
+                try
+                {
+                    var sqlcmd = FindSqlCmd();
+                    if (sqlcmd == null) return L.Text("S355");
+                    var safe = newPassword.Replace("'", "''");
+                    var sql = $"ALTER LOGIN [sa] WITH PASSWORD=N'{safe}'; ALTER LOGIN [sa] ENABLE;";
+                    if (!RunProcess(sqlcmd, $"-E -S \"{inst}\" -Q \"{sql}\"", log))
+                        return L.Text("S331");
+                }
+                finally
+                {
+                    RunNet($"stop \"{svc}\"", log);
+                    RunNet($"start \"{svc}\"", log);
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Write("SaReset.OnSite", ex);
+                return ex.Message;
+            }
+        }
+
+        /// <summary>
+        /// حالت A (تمیز، آزمایشگاهی): اسکریپت آماده ریست sa روی کپی لب می‌سازد.
+        /// روی سیستم مودی اجرا نمی‌شود؛ خروجی کنار پوشه پرونده ذخیره می‌شود.
+        /// </summary>
+        public static string GenerateLabResetScript(string destDir, string? serviceName, string newPassword)
+        {
+            Directory.CreateDirectory(destDir);
+            var svc = string.IsNullOrEmpty(serviceName) ? "MSSQLSERVER" : serviceName;
+            var inst = ToSqlInstance(svc);
+            var bat = Path.Combine(destDir, "LabReset-Sa.bat");
+            var lines = new[]
+            {
+                "@echo off",
+                "REM === DatabaseFinder lab script: run on YOUR lab machine, NEVER on the taxpayer system ===",
+                $"REM Service: {svc}   Instance: {inst}",
+                $"net stop \"{svc}\" /y",
+                $"net start \"{svc}\" /mSQLCMD",
+                $"sqlcmd -E -S \"{inst}\" -Q \"ALTER LOGIN [sa] WITH PASSWORD=N'{newPassword.Replace("'", "''")}'; ALTER LOGIN [sa] ENABLE;\"",
+                $"net stop \"{svc}\"",
+                $"net start \"{svc}\"",
+                "echo Done. Log in with sa and the new password, then attach the acquired MDF files.",
+            };
+            File.WriteAllLines(bat, lines);
+            File.WriteAllText(Path.Combine(destDir, "LabReadme.txt"),
+                "1) Copy the acquired MDF/LDF files to this lab machine.\r\n" +
+                "2) Right-click LabReset-Sa.bat > Run as Administrator.\r\n" +
+                "3) In SSMS attach each database (CREATE DATABASE ... FOR ATTACH) or restore the .bak files.\r\n" +
+                "4) Keep this folder hashed with the case manifest.\r\n");
+            return bat;
+        }
+
         private static bool RunNet(string args, Action<string> log)
         {
             log("net " + args);

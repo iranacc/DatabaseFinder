@@ -15,6 +15,7 @@ namespace DatabaseFinder
         private readonly Button _btnFindPass;
         private readonly Button _btnSysadmin;
         private readonly Button _btnDeepSweep;
+        private readonly Button _btnLabScript;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
@@ -180,6 +181,19 @@ namespace DatabaseFinder
             _btnDeepSweep.Click += BtnDeepSweep_Click;
             Controls.Add(_btnDeepSweep);
 
+            _btnLabScript = new Button
+            {
+                Text = L.Text("S369"),
+                Location = new Point(500, 172),
+                Size = new Size(248, 30),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnLabScript.Click += BtnLabScript_Click;
+            Controls.Add(_btnLabScript);
+
             _btnManifest = new Button
             {
                 Text = L.Text("S063"),
@@ -310,7 +324,7 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
@@ -788,6 +802,22 @@ namespace DatabaseFinder
                     AppendLog(L.Text("S356"));
                     AppendLog(L.Text("S354").Replace("{#}", svc));
                     _lblStatus.Text = L.Text("S356");
+
+                    // حالت B: پیشنهاد ریست sa روی همین سیستم زنده
+                    if (MessageBox.Show(L.Text("S370"), L.Text("S358"), MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                    {
+                        var pwd = SysadminGranter.NewStrongPassword();
+                        var rerr = await Task.Run(() => SysadminGranter.ResetSaPasswordOnSite(
+                            svc, pwd, m => AppendLogSafe(m)));
+                        if (rerr == null)
+                        {
+                            AppendLog(L.Format("S371", pwd));
+                            MessageBox.Show(L.Format("S371", pwd), L.Text("S358"),
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else AppendLog(L.Format("S055", rerr));
+                    }
                 }
                 else
                 {
@@ -796,6 +826,29 @@ namespace DatabaseFinder
                 }
             }
             finally { _btnSysadmin.Enabled = true; }
+        }
+
+        /// <summary>
+        /// حالت A (تمیز): ساخت اسکریپت ریست sa برای اجرای روی کپی آزمایشگاهی.
+        /// روی سیستم مودی هیچ تغییری ایجاد نمی‌کند.
+        /// </summary>
+        private void BtnLabScript_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                var sql = _servers.FirstOrDefault(s => s.Type == DatabaseType.SQLServer);
+                var svc = sql?.ServiceName ?? "MSSQLSERVER";
+                var pwd = SysadminGranter.NewStrongPassword();
+                var dest = _txtDest.Text.Trim();
+                if (string.IsNullOrEmpty(dest)) dest = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "DatabaseFilesBackup");
+                var bat = SysadminGranter.GenerateLabResetScript(dest, svc, pwd);
+                AppendLog(L.Format("S052", bat));
+                AppendLog(L.Format("S371", pwd));
+                MessageBox.Show(bat + "\n\n" + L.Format("S371", pwd), L.Text("S369"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex) { AppendLog(L.Format("S055", ex.Message)); }
         }
 
         private async void BtnManifest_Click(object? sender, EventArgs e)
