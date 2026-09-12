@@ -18,6 +18,8 @@ namespace DatabaseFinder
         private readonly Label _lblStatus;
         private string _manifestPath = "";
         private string _planDest = "";
+        private bool _caseAsked;
+        private CaseInfo? _caseInfo;
         private readonly CheckBox _chkCompress;
         private readonly CheckBox _chkVerify;
         private readonly CheckBox _chkChecksum;
@@ -378,6 +380,8 @@ namespace DatabaseFinder
             _lblStatus.Text = L.Format("S043", _items.Count);
         }
 
+        private CaseInfo? AskCaseInfo() => CaseInfoForm.AskOnce(this, ref _caseAsked, ref _caseInfo);
+
         private static string TextFor(DatabaseBackupItem item)
         {
             var method = string.IsNullOrEmpty(item.Method) ? "" : $"  ({item.Method})";
@@ -500,7 +504,8 @@ namespace DatabaseFinder
                 if (ok > 0)
                 {
                     AppendLog(L.Text("S051"));
-                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, items));
+                    var ci = AskCaseInfo();
+                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, items, null, null, ci));
                     AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
@@ -595,7 +600,7 @@ namespace DatabaseFinder
             AppendLog(L.Text("S051"));
             try
             {
-                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim(), GetCheckedItems()));
+                _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim(), GetCheckedItems(), null, null, AskCaseInfo()));
                 AppendLog(L.Format("S052", _manifestPath));
                 _lblStatus.Text = L.Text("S057");
             }

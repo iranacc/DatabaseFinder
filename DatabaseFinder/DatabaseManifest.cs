@@ -127,7 +127,7 @@ namespace DatabaseFinder
         /// نسبت فشرده‌سازی نیز ثبت می‌شود.
         /// خروجی: مسیر فایل متنی.
         /// </summary>
-        public static string Generate(string rootFolder, IReadOnlyList<DatabaseBackupItem>? items = null, string? outputBase = null, IReadOnlyList<CopyAcquisition>? acquisitions = null)
+        public static string Generate(string rootFolder, IReadOnlyList<DatabaseBackupItem>? items = null, string? outputBase = null, IReadOnlyList<CopyAcquisition>? acquisitions = null, CaseInfo? caseInfo = null)
         {
             outputBase ??= Path.Combine(rootFolder, "manifest");
             var rootFull = Path.GetFullPath(rootFolder);
@@ -294,6 +294,14 @@ namespace DatabaseFinder
             body.Add($"OS           : {osText}");
             body.Add($"Created (UTC): {nowUtc:yyyy-MM-dd HH:mm:ss}");
             body.Add($"Root         : {rootFull}");
+            if (caseInfo != null)
+            {
+                body.Add($"Case         : {caseInfo.CaseNumber}");
+                body.Add($"Officer      : {caseInfo.Officer}");
+                body.Add($"Warrant      : {caseInfo.Warrant}");
+                if (!string.IsNullOrWhiteSpace(caseInfo.Notes))
+                    body.Add($"Notes        : {caseInfo.Notes}");
+            }
             body.Add("");
             body.Add("Summary: " +
                 $"Databases {summary.databases}    Succeeded {summary.succeeded}    Failed {summary.failed}    " +
@@ -389,6 +397,16 @@ namespace DatabaseFinder
             md.Append($"**Tool** `{ToolVersion}` | **App** `{appVersion}` | **Machine** `{Environment.MachineName}` | **OS** `{osText}`\n\n");
             md.Append($"- Created (UTC): `{nowUtc:yyyy-MM-dd HH:mm:ss}`\n");
             md.Append($"- Root: `{rootFull}`\n\n");
+            if (caseInfo != null)
+            {
+                md.Append("## Case file\n\n");
+                md.Append($"- Case number: `{caseInfo.CaseNumber}`\n");
+                md.Append($"- Officer: `{caseInfo.Officer}`\n");
+                md.Append($"- Warrant / order No: `{caseInfo.Warrant}`\n");
+                if (!string.IsNullOrWhiteSpace(caseInfo.Notes))
+                    md.Append($"- Notes: `{caseInfo.Notes}`\n");
+                md.Append("\n");
+            }
             md.Append("## Summary\n\n");
             md.Append("| Databases | Succeeded | Failed | Skipped | Files | Total | Source | Duration |\n");
             md.Append("|--:|--:|--:|--:|--:|--:|--:|--:|\n");
@@ -460,6 +478,7 @@ namespace DatabaseFinder
                 databases,
                 files = entries,
                 acquisition = acquisitions,
+                caseFile = caseInfo,
                 totalFiles = entries.Count,
                 totalBytes = totalBackupBytes,
                 selfSha256 = bodyHash

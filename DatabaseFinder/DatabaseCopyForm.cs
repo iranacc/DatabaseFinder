@@ -24,7 +24,11 @@ namespace DatabaseFinder
         private readonly RadioButton _rdoReportOnly;
         private readonly CheckBox _chkVerifyCopy;
         private List<CopyAcquisition> _lastAcquisitions = new();
+        private bool _caseAsked;
+        private CaseInfo? _caseInfo;
         private string _manifestPath = "";
+
+        private CaseInfo? AskCaseInfo() => CaseInfoForm.AskOnce(this, ref _caseAsked, ref _caseInfo);
 
         public DatabaseCopyForm(List<DatabaseInfo> servers)
         {
@@ -751,7 +755,8 @@ namespace DatabaseFinder
                 if (result.FilesCopied > 0)
                 {
                     AppendLog(L.Text("S051"));
-                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, null, null, result.Acquisitions));
+                    var ci = AskCaseInfo();
+                    _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, null, null, result.Acquisitions, ci));
                     AppendLog(L.Format("S052", _manifestPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
@@ -890,7 +895,7 @@ namespace DatabaseFinder
             try
             {
                 _manifestPath = await Task.Run(() => ManifestGenerator.Generate(
-                    _txtDest.Text.Trim(), null, null, _lastAcquisitions));
+                    _txtDest.Text.Trim(), null, null, _lastAcquisitions, AskCaseInfo()));
                 AppendLog(L.Format("S052", _manifestPath));
                 _lblStatus.Text = L.Text("S057");
             }
