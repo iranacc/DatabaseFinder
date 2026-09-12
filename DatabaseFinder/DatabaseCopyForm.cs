@@ -16,6 +16,7 @@ namespace DatabaseFinder
         private readonly Button _btnSysadmin;
         private readonly Button _btnDeepSweep;
         private readonly Button _btnLabScript;
+        private readonly Button _btnReport;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
@@ -27,6 +28,7 @@ namespace DatabaseFinder
         private bool _caseAsked;
         private CaseInfo? _caseInfo;
         private string _manifestPath = "";
+        private string _reportPath = "";
 
         private CaseInfo? AskCaseInfo() => CaseInfoForm.AskOnce(this, ref _caseAsked, ref _caseInfo);
 
@@ -228,6 +230,20 @@ namespace DatabaseFinder
             _btnOpen.Click += BtnOpen_Click;
             Controls.Add(_btnOpen);
 
+            _btnReport = new Button
+            {
+                Text = L.Text("S386"),
+                Location = new Point(12, 614),
+                Size = new Size(150, 36),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Enabled = false,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            _btnReport.Click += BtnReport_Click;
+            Controls.Add(_btnReport);
+
             var grpLocked = new GroupBox
             {
                 Text = L.Text("S064"),
@@ -340,7 +356,7 @@ namespace DatabaseFinder
             Controls.Add(_lblStatus);
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen,_btnReport);
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
@@ -730,6 +746,8 @@ namespace DatabaseFinder
             _btnCopy.Text = L.Text("S086");
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
+            _btnReport.Enabled = false;
+            _reportPath = "";
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
             AppendLog(L.Format("S049", items.Count));
@@ -758,8 +776,12 @@ namespace DatabaseFinder
                     var ci = AskCaseInfo();
                     _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, null, null, result.Acquisitions, ci));
                     AppendLog(L.Format("S052", _manifestPath));
+                    _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
+                        Path.ChangeExtension(_manifestPath, ".json")));
+                    AppendLog(L.Format("S052", _reportPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
+                    _btnReport.Enabled = true;
                 }
 
                 _lblStatus.Text = L.Format("S089", result.FilesCopied, result.Failed);
@@ -897,6 +919,10 @@ namespace DatabaseFinder
                 _manifestPath = await Task.Run(() => ManifestGenerator.Generate(
                     _txtDest.Text.Trim(), null, null, _lastAcquisitions, AskCaseInfo()));
                 AppendLog(L.Format("S052", _manifestPath));
+                _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
+                    Path.ChangeExtension(_manifestPath, ".json")));
+                AppendLog(L.Format("S052", _reportPath));
+                _btnReport.Enabled = true;
                 _lblStatus.Text = L.Text("S057");
             }
             catch (Exception ex)
@@ -906,6 +932,21 @@ namespace DatabaseFinder
             finally
             {
                 _btnManifest.Enabled = true;
+            }
+        }
+
+        private void BtnReport_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_reportPath) && File.Exists(_reportPath))
+                    Process.Start(new ProcessStartInfo { FileName = _reportPath, UseShellExecute = true });
+                else
+                    _lblStatus.Text = L.Format("S055", _reportPath);
+            }
+            catch (Exception ex)
+            {
+                _lblStatus.Text = L.Format("S058", ex.Message);
             }
         }
 

@@ -384,6 +384,7 @@
   "S383": "Service stopped",
   "S384": "The SQL Server service is stopped. Start it for a native backup, or use file copy instead.",
   "S385": "SQLite journal files attached: {#}",
+  "S386": "Persian report",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

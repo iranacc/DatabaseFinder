@@ -15,8 +15,10 @@ namespace DatabaseFinder
         private readonly Button _btnSysadmin;
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
+        private readonly Button _btnReport;
         private readonly Label _lblStatus;
         private string _manifestPath = "";
+        private string _reportPath = "";
         private string _planDest = "";
         private bool _caseAsked;
         private CaseInfo? _caseInfo;
@@ -238,6 +240,20 @@ namespace DatabaseFinder
             _btnOpen.Click += BtnOpen_Click;
             Controls.Add(_btnOpen);
 
+            _btnReport = new Button
+            {
+                Text = L.Text("S386"),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(522, 614),
+                Size = new Size(150, 36),
+                Enabled = false,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            _btnReport.Click += BtnReport_Click;
+            Controls.Add(_btnReport);
+
             _lblStatus = new Label
             {
                 AutoSize = true,
@@ -285,7 +301,7 @@ namespace DatabaseFinder
             Controls.Add(grpOptions);
 
             Load += DatabaseBackupForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen,_btnReport);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
@@ -484,6 +500,8 @@ namespace DatabaseFinder
             _btnStart.Text = L.Text("S047");
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
+            _btnReport.Enabled = false;
+            _reportPath = "";
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
             AppendLog(L.Format("S049", items.Count));
@@ -507,8 +525,12 @@ namespace DatabaseFinder
                     var ci = AskCaseInfo();
                     _manifestPath = await Task.Run(() => ManifestGenerator.Generate(destRoot, items, null, null, ci));
                     AppendLog(L.Format("S052", _manifestPath));
+                    _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
+                        Path.ChangeExtension(_manifestPath, ".json")));
+                    AppendLog(L.Format("S052", _reportPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
+                    _btnReport.Enabled = true;
                 }
 
                 _lblStatus.Text = failed > 0
@@ -602,6 +624,10 @@ namespace DatabaseFinder
             {
                 _manifestPath = await Task.Run(() => ManifestGenerator.Generate(_txtDest.Text.Trim(), GetCheckedItems(), null, null, AskCaseInfo()));
                 AppendLog(L.Format("S052", _manifestPath));
+                _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
+                    Path.ChangeExtension(_manifestPath, ".json")));
+                AppendLog(L.Format("S052", _reportPath));
+                _btnReport.Enabled = true;
                 _lblStatus.Text = L.Text("S057");
             }
             catch (Exception ex)
@@ -611,6 +637,21 @@ namespace DatabaseFinder
             finally
             {
                 _btnManifest.Enabled = true;
+            }
+        }
+
+        private void BtnReport_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_reportPath) && File.Exists(_reportPath))
+                    Process.Start(new ProcessStartInfo { FileName = _reportPath, UseShellExecute = true });
+                else
+                    _lblStatus.Text = L.Format("S055", _reportPath);
+            }
+            catch (Exception ex)
+            {
+                _lblStatus.Text = L.Format("S058", ex.Message);
             }
         }
 
