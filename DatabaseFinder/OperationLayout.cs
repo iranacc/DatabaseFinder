@@ -2,7 +2,7 @@ namespace DatabaseFinder;
 
 internal static class OperationLayout
 {
-    public static void Build(Form form, Label title, TextBox destination, Button browse, Label? hint, TreeView tree, Control[] selectionActions, GroupBox? locked, Label logLabel, TextBox log, Label status, params Button[] actions)
+    public static void Build(Form form, Label title, TextBox destination, Button browse, Label? hint, TreeView tree, Control[] selectionActions, GroupBox? locked, Label logLabel, TextBox log, Label status, ProgressBar? progress = null, params Button[] actions)
     {
         form.SuspendLayout(); form.Controls.Clear(); form.ClientSize = new Size(1060, 780); form.MinimumSize = new Size(980, 730); form.AutoScaleMode = AutoScaleMode.Dpi;
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22), ColumnCount = 1, RowCount = 7 }; root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -24,7 +24,17 @@ internal static class OperationLayout
             locked.Controls.Add(options); side.Controls.Add(locked, 0, 1);
         }
         middle.Controls.Add(side, 1, 0); root.Controls.Add(middle, 0, 2); logLabel.Dock = DockStyle.Fill; logLabel.AutoSize = false; logLabel.Padding = new Padding(0, 5, 0, 0); root.Controls.Add(logLabel, 0, 3);
-        log.Dock = DockStyle.Fill; log.Margin = Padding.Empty; root.Controls.Add(log, 0, 4); status.AutoSize = false; status.AutoEllipsis = true; status.Dock = DockStyle.Fill; status.Padding = new Padding(0, 5, 0, 0); root.Controls.Add(status, 0, 5);
+        log.Dock = DockStyle.Fill; log.Margin = Padding.Empty; root.Controls.Add(log, 0, 4);
+        status.AutoSize = false; status.AutoEllipsis = true; status.Dock = DockStyle.Fill; status.Padding = new Padding(0, 5, 0, 0);
+        if (progress == null) root.Controls.Add(status, 0, 5);
+        else
+        {
+            var statusRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(0, 4, 0, 2) };
+            statusRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
+            statusRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            progress.Dock = DockStyle.Fill; progress.Margin = new Padding(0, 4, 12, 4);
+            statusRow.Controls.Add(progress, 0, 0); statusRow.Controls.Add(status, 1, 0); root.Controls.Add(statusRow, 0, 5);
+        }
         foreach (var b in actions) { b.AutoSize = true; b.MinimumSize = new Size(120, 38); }
         actions[0].Tag = "primary"; root.Controls.Add(UiTheme.Flow(actions), 0, 6); form.Controls.Add(root); form.ResumeLayout(true);
     }

@@ -65,11 +65,18 @@ partial class Form1
         this.colCheck.Width = 45;
 
         this.colType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+        this.colStatus = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colType.HeaderText = L.Text("S176");
         this.colType.Name = "colType";
         this.colType.DataPropertyName = "DisplayName";
         this.colType.ReadOnly = true;
         this.colType.Width = 100;
+
+        this.colStatus.HeaderText = L.Text("S409");
+        this.colStatus.Name = "colStatus";
+        this.colStatus.DataPropertyName = "Status";
+        this.colStatus.ReadOnly = true;
+        this.colStatus.Width = 115;
 
         this.colVersion = new System.Windows.Forms.DataGridViewTextBoxColumn();
         this.colVersion.HeaderText = L.Text("S231");
@@ -129,6 +136,7 @@ partial class Form1
 
         this.dgvDatabases.Columns.Add(this.colCheck);
         this.dgvDatabases.Columns.Add(this.colType);
+        this.dgvDatabases.Columns.Add(this.colStatus);
         this.dgvDatabases.Columns.Add(this.colVersion);
         this.dgvDatabases.Columns.Add(this.colPort);
         this.dgvDatabases.Columns.Add(this.colService);
@@ -356,6 +364,7 @@ partial class Form1
     private System.Windows.Forms.ToolStripMenuItem miUpdate;
     private System.Windows.Forms.ToolStripMenuItem miExit;
     private System.Windows.Forms.DataGridViewTextBoxColumn colType;
+    private System.Windows.Forms.DataGridViewTextBoxColumn colStatus;
     private System.Windows.Forms.DataGridViewCheckBoxColumn colCheck;
     private System.Windows.Forms.DataGridViewTextBoxColumn colVersion;
     private System.Windows.Forms.DataGridViewTextBoxColumn colPort;

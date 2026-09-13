@@ -3,52 +3,70 @@ namespace DatabaseFinder;
 public class AppForm : Form
 {
     protected virtual bool ModernLayout => false;
+    private ToolTip? _toolTip;
     protected override void OnLoad(EventArgs e)
     {
         RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No;
         RightToLeftLayout = !ModernLayout && L.IsFa;
         Icon ??= Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         UiTheme.Apply(this);
+        _toolTip = new ToolTip { AutoPopDelay = 5000, InitialDelay = 350, ReshowDelay = 100 };
+        foreach (var button in AllControls(this).OfType<Button>())
+            if (!string.IsNullOrWhiteSpace(button.Text)) _toolTip.SetToolTip(button, button.Text);
+        FormClosed += (_, _) => { _toolTip?.Dispose(); _toolTip = null; };
         base.OnLoad(e);
+    }
+
+    private static IEnumerable<Control> AllControls(Control root)
+    {
+        foreach (Control child in root.Controls)
+        {
+            yield return child;
+            foreach (var descendant in AllControls(child)) yield return descendant;
+        }
     }
 }
 
 public static class UiTheme
 {
-    public static readonly Color Accent = Color.FromArgb(36, 91, 214);
-    public static readonly Color Canvas = Color.FromArgb(243, 245, 249);
-    public static readonly Color Ink = Color.FromArgb(36, 51, 75);
-    public static readonly Color Muted = Color.FromArgb(95, 110, 132);
-    public static readonly Color Line = Color.FromArgb(223, 229, 238);
+    public static bool Dark { get; set; }
+    public static Color Accent => Dark ? Color.FromArgb(91, 145, 255) : Color.FromArgb(36, 91, 214);
+    public static Color Canvas => Dark ? Color.FromArgb(28, 33, 42) : Color.FromArgb(243, 245, 249);
+    public static Color Surface => Dark ? Color.FromArgb(38, 45, 56) : Color.White;
+    public static Color Ink => Dark ? Color.FromArgb(238, 242, 247) : Color.FromArgb(36, 51, 75);
+    public static Color Muted => Dark ? Color.FromArgb(172, 183, 198) : Color.FromArgb(95, 110, 132);
+    public static Color Line => Dark ? Color.FromArgb(70, 82, 99) : Color.FromArgb(223, 229, 238);
     public static void Apply(Control control)
     {
         if (control is Form) { control.BackColor = Canvas; control.ForeColor = Ink; }
+        if (control is Panel or TableLayoutPanel or FlowLayoutPanel) control.BackColor = Surface;
         if (control is Button button)
         {
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderColor = Line;
             button.FlatAppearance.BorderSize = 1;
-            button.BackColor = Equals(button.Tag, "primary") ? Accent : Color.White;
+            button.BackColor = Equals(button.Tag, "primary") ? Accent : Surface;
             button.ForeColor = Equals(button.Tag, "primary") ? Color.White : Ink;
             button.Cursor = Cursors.Hand;
             button.UseVisualStyleBackColor = false;
         }
         if (control is Label label) label.ForeColor = label.Font.Bold ? Ink : Muted;
         if (control is GroupBox) control.ForeColor = Ink;
-        if (control is TextBoxBase box) { box.BorderStyle = BorderStyle.FixedSingle; box.RightToLeft = RightToLeft.No; }
-        if (control is CheckedListBox list) { list.BorderStyle = BorderStyle.None; list.BackColor = Color.White; }
-        if (control is TreeView tree) { tree.BorderStyle = BorderStyle.None; tree.BackColor = Color.White; tree.ItemHeight = 28; }
+        if (control is TextBoxBase box) { box.BorderStyle = BorderStyle.FixedSingle; box.BackColor = Surface; box.ForeColor = Ink; box.RightToLeft = RightToLeft.No; }
+        if (control is ComboBox combo) { combo.BackColor = Surface; combo.ForeColor = Ink; }
+        if (control is CheckedListBox list) { list.BorderStyle = BorderStyle.None; list.BackColor = Surface; list.ForeColor = Ink; }
+        if (control is TreeView tree) { tree.BorderStyle = BorderStyle.None; tree.BackColor = Surface; tree.ForeColor = Ink; tree.ItemHeight = 28; }
         if (control is DataGridView grid)
         {
-            grid.BackgroundColor = Color.White;
+            grid.BackgroundColor = Surface;
             grid.BorderStyle = BorderStyle.None;
             grid.EnableHeadersVisualStyles = false;
-            grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(248, 250, 253), ForeColor = Muted, Font = new Font("Segoe UI", 9.5F), Padding = new Padding(5) };
+            grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = Dark ? Color.FromArgb(45, 54, 68) : Color.FromArgb(248, 250, 253), ForeColor = Muted, Font = new Font("Segoe UI", 9.5F), Padding = new Padding(5) };
             grid.ColumnHeadersHeight = 42;
             grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             grid.GridColor = Line;
-            grid.DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.White, ForeColor = Ink, SelectionBackColor = Color.FromArgb(232, 240, 254), SelectionForeColor = Ink, Padding = new Padding(5) };
+            grid.DefaultCellStyle = new DataGridViewCellStyle { BackColor = Surface, ForeColor = Ink, SelectionBackColor = Dark ? Color.FromArgb(54, 78, 112) : Color.FromArgb(232, 240, 254), SelectionForeColor = Ink, Padding = new Padding(5) };
             grid.RowTemplate.Height = 38;
             foreach (DataGridViewRow row in grid.Rows) row.Height = 38;
             grid.DataBindingComplete += (_, _) => { foreach (DataGridViewRow row in grid.Rows) row.Height = 38; };
@@ -57,7 +75,7 @@ public static class UiTheme
     }
     public static FlowLayoutPanel Flow(params Control[] controls)
     {
-        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Padding = new Padding(6), RightToLeft = RightToLeft.No, FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight };
+        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Padding = new Padding(6), BackColor = Surface, RightToLeft = RightToLeft.No, FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight };
         foreach (var control in controls) { control.Anchor = AnchorStyles.None; control.Margin = new Padding(5); if (control is Label or System.Windows.Forms.Button) control.RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No; panel.Controls.Add(control); }
         return panel;
     }

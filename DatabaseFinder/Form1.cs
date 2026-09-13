@@ -10,6 +10,10 @@ namespace DatabaseFinder
         private List<DatabaseInfo> _lastResults = new();
         private UpdateInfo? _updateInfo;
         private bool _updating;
+        private bool _stoppedAlertShown;
+        private bool _initialDetectionComplete;
+        private bool _formShown;
+        private System.Windows.Forms.Timer? _startupAlertTimer;
 
         public Form1(MainViewState? restored = null)
         {
@@ -19,12 +23,18 @@ namespace DatabaseFinder
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             _restored = restored;
             BuildModernShell();
+            Shown += Form1_Shown;
             FormClosed += (_, _) => { _refreshTimer?.Dispose(); notifyIcon.Dispose(); };
         }
 
         private async void Form1_Load(object sender, EventArgs e)
         {
-            if (_restored == null) await DetectDatabasesAsync();
+            if (_restored == null)
+            {
+                await DetectDatabasesAsync();
+                _initialDetectionComplete = true;
+                ScheduleStoppedServiceAlert();
+            }
             else RestoreView(_restored);
 
             if (_settings.AutoRefresh)
@@ -36,6 +46,76 @@ namespace DatabaseFinder
             }
 
             if (UpdateChecker.Enabled) _ = CheckForUpdateAsync(interactive: false);
+        }
+
+        private void Form1_Shown(object? sender, EventArgs e)
+        {
+            _formShown = true;
+        }
+
+        private void ScheduleStoppedServiceAlert()
+        {
+            _startupAlertTimer?.Dispose();
+            _startupAlertTimer = new System.Windows.Forms.Timer { Interval = 800 };
+            _startupAlertTimer.Tick += async (_, _) =>
+            {
+                _startupAlertTimer?.Stop();
+                _startupAlertTimer?.Dispose();
+                _startupAlertTimer = null;
+                await TryPromptStoppedServicesAsync();
+            };
+            _startupAlertTimer.Start();
+        }
+
+        private async Task TryPromptStoppedServicesAsync()
+        {
+            if (!_initialDetectionComplete || _stoppedAlertShown || IsDisposed) return;
+            if (!_formShown)
+            {
+                ScheduleStoppedServiceAlert();
+                return;
+            }
+            _stoppedAlertShown = true;
+            await PromptStoppedServicesAsync();
+        }
+
+        private async Task PromptStoppedServicesAsync()
+        {
+            var stopped = _lastResults
+                .Where(d => d.IsServiceStopped && !string.IsNullOrWhiteSpace(d.ServiceName))
+                .ToList();
+            if (stopped.Count == 0)
+                stopped = DbServiceHelper.GetStoppedDatabaseServices(DatabaseType.SQLServer);
+            if (stopped.Count > 0)
+                lblStatus.Text = L.Format("S405", stopped[0].ServiceName);
+            var restarted = false;
+
+            foreach (var db in stopped)
+            {
+                var disabled = string.Equals(db.ServiceStartMode, "Disabled", StringComparison.OrdinalIgnoreCase);
+                var prompt = disabled
+                    ? L.Format("S402", db.ServiceName)
+                    : L.Format("S405", db.ServiceName);
+                if (MessageBox.Show(this, prompt, L.Text("S337"), MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    continue;
+
+                var result = await Task.Run(() => DbServiceHelper.StartService(db.ServiceName!, disabled, out var error)
+                    ? (Success: true, Error: (string?)null)
+                    : (Success: false, Error: error));
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, result.Error ?? L.Text("S404"), L.Text("S337"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    restarted = true;
+                }
+            }
+
+            if (restarted)
+                await DetectDatabasesAsync();
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -227,6 +307,7 @@ namespace DatabaseFinder
         {
             dgvDatabases.DataSource = null;
             dgvDatabases.DataSource = models;
+            if (_emptyState != null) _emptyState.Visible = models.Count == 0;
 
             for (int i = 0; i < dgvDatabases.Rows.Count && i < _lastResults.Count; i++)
             {
@@ -251,9 +332,13 @@ namespace DatabaseFinder
             var form = new SettingsForm(_settings);
             if (form.ShowDialog(this) == DialogResult.OK)
             {
+                var view = CaptureView();
                 // بازیابی تنظیمات بعد از تغییرات
                 _settings = AppSettings.Load();
                 _detector.ReloadSettings(_settings);
+                UiTheme.Dark = _settings.DarkMode;
+                BuildModernShell();
+                RestoreView(view);
                 await DetectDatabasesAsync();
             }
         }
@@ -488,6 +573,11 @@ namespace DatabaseFinder
             {
                 TypeDisplayName = db.TypeDisplayName,
                 DisplayName = displayName,
+                Status = db.IsServiceStopped
+                    ? L.Text("S383")
+                    : db.IsOnline
+                        ? L.Text("S406")
+                        : db.IsBackup ? L.Text("S407") : L.Text("S408"),
                 IsOnline = db.IsOnline,
                 IsBackup = db.IsBackup,
                 Port = db.Port?.ToString() ?? "-",
@@ -545,6 +635,13 @@ namespace DatabaseFinder
 
                 RebindGrid(models);
                 lblStatus.Text = L.Format("S228", results.Count);
+                var stoppedSql = results.FirstOrDefault(d => d.IsServiceStopped &&
+                    d.Type == DatabaseType.SQLServer && !string.IsNullOrWhiteSpace(d.ServiceName));
+                if (stoppedSql != null)
+                {
+                    lblStatus.Text = L.Format("S405", stoppedSql.ServiceName);
+                    lblStatus.ForeColor = Color.FromArgb(198, 107, 0);
+                }
 
                 // تست اتصال در پس‌زمینه برای دریافت نسخه؛ رابط را مسدود نمی‌کند.
                 // مهلت سراسری: حتی اگر سرویسی پاسخ بنر ندهد، تشخیص هرگز به‌طور نامحدود معلق نمی‌ماند.

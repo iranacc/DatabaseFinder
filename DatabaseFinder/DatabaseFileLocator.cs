@@ -790,7 +790,7 @@ namespace DatabaseFinder
         // ---------- اجرای کپی ----------
         public static (int FilesCopied, long BytesCopied, int Failed, int Mismatched, string Errors, List<CopyAcquisition> Acquisitions) ExecuteCopy(
             List<DatabaseCopyItem> items, string destRoot, LockedFileHandling lockedHandling,
-            Action<string>? log = null, bool verifyHash = true)
+            Action<string>? log = null, bool verifyHash = true, Action<int, int>? progress = null)
         {
             var filesCopied = 0;
             long bytesCopied = 0;
@@ -800,6 +800,8 @@ namespace DatabaseFinder
             var acquisitions = new List<CopyAcquisition>();
             var shadowCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var stoppedServices = new List<string>();
+            var completedWork = 0;
+            var totalWork = Math.Max(1, items.Sum(i => Math.Max(1, i.Files.Count)));
 
             try
             {
@@ -846,6 +848,7 @@ namespace DatabaseFinder
                         {
                             errorLines.Add($"{item.FolderName}: {item.Error}");
                             failed++;
+                            progress?.Invoke(++completedWork, totalWork);
                             continue;
                         }
 
@@ -856,6 +859,7 @@ namespace DatabaseFinder
 
                             // کپی کل پوشه دستی
                             CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied, ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log);
+                            progress?.Invoke(completedWork += Math.Max(1, item.Files.Count), totalWork);
                             continue;
                         }
 
@@ -926,12 +930,17 @@ namespace DatabaseFinder
                                 errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {ex.Message}");
                                 failed++;
                             }
+                            finally
+                            {
+                                progress?.Invoke(++completedWork, totalWork);
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         errorLines.Add($"{item.FolderName}: {ex.Message}");
                         failed++;
+                        progress?.Invoke(++completedWork, totalWork);
                     }
 
                 }

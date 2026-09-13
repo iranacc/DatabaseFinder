@@ -17,6 +17,7 @@ namespace DatabaseFinder
         private readonly Button _btnOpen;
         private readonly Button _btnReport;
         private readonly Label _lblStatus;
+        private readonly ProgressBar _progress;
         private string _manifestPath = "";
         private string _reportPath = "";
         private string _planDest = "";
@@ -262,6 +263,7 @@ namespace DatabaseFinder
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
             Controls.Add(_lblStatus);
+            _progress = new ProgressBar { Minimum = 0, Maximum = 1, Value = 0, Style = ProgressBarStyle.Continuous };
 
             var grpOptions = new GroupBox
             {
@@ -301,7 +303,7 @@ namespace DatabaseFinder
             Controls.Add(grpOptions);
 
             Load += DatabaseBackupForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_btnStart,_btnManifest,_btnOpen,_btnReport);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_progress,_btnStart,_btnManifest,_btnOpen,_btnReport);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)
@@ -501,6 +503,8 @@ namespace DatabaseFinder
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _btnReport.Enabled = false;
+            _progress.Value = 0;
+            _progress.Maximum = Math.Max(1, items.Count);
             _reportPath = "";
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
@@ -510,7 +514,8 @@ namespace DatabaseFinder
             try
             {
                 await Task.Run(() =>
-                    DatabaseBackuper.ExecuteBackup(items, message => AppendLogSafe(message)));
+                    DatabaseBackuper.ExecuteBackup(items, message => AppendLogSafe(message),
+                        (done, total) => ReportProgress(done, total)));
 
                 var ok = items.Count(i => i.Done);
                 var failed = items.Count(i => i.Failed);
@@ -533,9 +538,8 @@ namespace DatabaseFinder
                     _btnReport.Enabled = true;
                 }
 
-                _lblStatus.Text = failed > 0
-                    ? L.Format("S053", ok, failed)
-                    : L.Format("S054", ok);
+                _lblStatus.Text = L.Format("S414", ok, failed,
+                    DatabaseFileLocator.FormatSize(items.Sum(i => i.BytesProduced)));
                 _lblStatus.ForeColor = failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
             }
             catch (Exception ex)
@@ -548,7 +552,21 @@ namespace DatabaseFinder
             {
                 _btnStart.Enabled = true;
                 _btnStart.Text = L.Text("S038");
+                _progress.Value = _progress.Maximum;
             }
+        }
+
+        private void ReportProgress(int done, int total)
+        {
+            try
+            {
+                if (_progress.IsDisposed) return;
+                if (_progress.InvokeRequired) { _progress.BeginInvoke(new Action(() => ReportProgress(done, total))); return; }
+                _progress.Maximum = Math.Max(1, total);
+                _progress.Value = Math.Min(Math.Max(0, done), _progress.Maximum);
+                _lblStatus.Text = L.Format("S412", done, total);
+            }
+            catch { }
         }
 
         private async void BtnFindPass_Click(object? sender, EventArgs e)

@@ -1,5 +1,6 @@
 using System.Management;
 using System.ServiceProcess;
+using Microsoft.Win32;
 
 namespace DatabaseFinder
 {
@@ -9,6 +10,103 @@ namespace DatabaseFinder
     /// </summary>
     public static class DbServiceHelper
     {
+        public static List<DatabaseInfo> GetStoppedDatabaseServices(DatabaseType type)
+        {
+            var result = new List<DatabaseInfo>();
+            var executable = type switch
+            {
+                DatabaseType.SQLServer => "sqlservr.exe",
+                DatabaseType.MySQL or DatabaseType.MariaDB => "mysqld.exe",
+                DatabaseType.PostgreSQL => "postgres.exe",
+                _ => ""
+            };
+            if (string.IsNullOrEmpty(executable)) return result;
+
+            try
+            {
+                using var searcher = new ManagementObjectSearcher(
+                    "SELECT Name, DisplayName, PathName, StartMode FROM Win32_Service WHERE State != 'Running'");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    using (obj)
+                    {
+                        var path = obj["PathName"]?.ToString() ?? "";
+                        if (path.IndexOf(executable, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        var name = obj["Name"]?.ToString() ?? "";
+                        if (string.IsNullOrWhiteSpace(name)) continue;
+                        result.Add(new DatabaseInfo
+                        {
+                            Type = type,
+                            Name = obj["DisplayName"]?.ToString() ?? name,
+                            ServiceName = name,
+                            ServiceStartMode = obj["StartMode"]?.ToString() ?? GetStartMode(name),
+                            IsServiceStopped = true,
+                            IsOnline = false,
+                            Host = "localhost"
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Write("Service.Stopped", ex);
+            }
+            return result;
+        }
+
+        public static string GetStartMode(string serviceName)
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(
+                    $@"SYSTEM\CurrentControlSet\Services\{serviceName}");
+                return key?.GetValue("Start") switch
+                {
+                    2 => "Automatic",
+                    3 => "Manual",
+                    4 => "Disabled",
+                    _ => "Unknown"
+                };
+            }
+            catch
+            {
+                return "Unknown";
+            }
+        }
+
+        public static bool StartService(string serviceName, bool enable, out string? error)
+        {
+            error = null;
+            try
+            {
+                if (enable)
+                {
+                    using var key = Registry.LocalMachine.OpenSubKey(
+                        $@"SYSTEM\CurrentControlSet\Services\{serviceName}", writable: true);
+                    if (key == null)
+                    {
+                        error = "Service registry key was not found.";
+                        return false;
+                    }
+                    key.SetValue("Start", 3, RegistryValueKind.DWord);
+                }
+
+                using var sc = new ServiceController(serviceName);
+                if (sc.Status == ServiceControllerStatus.Stopped ||
+                    sc.Status == ServiceControllerStatus.StopPending)
+                {
+                    sc.Start();
+                    sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(90));
+                }
+                return sc.Status == ServiceControllerStatus.Running;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
         private static string[] GetExeNames(DatabaseType type)
         {
             switch (type)

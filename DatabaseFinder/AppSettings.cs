@@ -10,6 +10,7 @@ namespace DatabaseFinder
         public bool AutoRefresh { get; set; } = false;
         public int AutoRefreshIntervalSec { get; set; } = 30;
         public bool ShowNotifications { get; set; } = true;
+        public bool DarkMode { get; set; } = false;
 
         private static string SettingsPath => AppPaths.SettingsPath;
 

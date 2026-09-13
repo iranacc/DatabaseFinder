@@ -14,7 +14,9 @@ static class Program
         // تور ایمنی: هر خطای مهارنشده به‌جای بسته‌شدن بی‌صدا، در debug.log ثبت می‌شود.
         Application.ThreadException += (s, e) => CrashGuard("UI", e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (s, e) => CrashGuard("BG", e.ExceptionObject as Exception);
-        L.Language = AppSettings.Load().Language;
+        var settings = AppSettings.Load();
+        L.Language = settings.Language;
+        UiTheme.Dark = settings.DarkMode;
         Application.Run(new AppSession());
     }
 

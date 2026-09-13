@@ -29,6 +29,7 @@ namespace DatabaseFinder
         public string? ServiceName { get; set; }
         /// <summary>سرویس نصب است ولی در حال اجرا نیست (از رجیستری/سرویس‌های خاموش پیدا شده).</summary>
         public bool IsServiceStopped { get; set; }
+        public string ServiceStartMode { get; set; } = "";
         public int ProcessId { get; set; }        public string? ProcessName { get; set; }
 
         public string Version { get; set; } = "";
@@ -220,6 +221,7 @@ namespace DatabaseFinder
                     IsRunningAsService = false,
                     IsServiceStopped = true,
                     ServiceName = svc,
+                    ServiceStartMode = DbServiceHelper.GetStartMode(svc),
                     Host = "localhost",
                     Port = null,
                     IsOnline = false,

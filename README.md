@@ -15,6 +15,14 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.12
+
+- Optional dark mode with a consistent theme across the desktop forms.
+- Status icons, colored status cells, an empty-results state, richer details, and copy-path action on the main screen.
+- Tooltips and keyboard shortcuts on the main workflow; `F5` rescans, `Ctrl+A` selects all, and `Ctrl+Shift+A` clears selection.
+- Responsive main layout for smaller windows and high-DPI displays.
+- Real progress bars and completion summaries for physical copies and native backups.
+
 ## What's new in v1.8.11
 
 - Safer self-update: the downloaded executable is SHA-256 verified before replacement, and a Light/full build can only receive its exact matching asset.

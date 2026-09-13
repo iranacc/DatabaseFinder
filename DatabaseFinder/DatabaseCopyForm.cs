@@ -20,6 +20,7 @@ namespace DatabaseFinder
         private readonly Button _btnManifest;
         private readonly Button _btnOpen;
         private readonly Label _lblStatus;
+        private readonly ProgressBar _progress;
         private readonly RadioButton _rdoVss;
         private readonly RadioButton _rdoStopStart;
         private readonly RadioButton _rdoReportOnly;
@@ -354,9 +355,10 @@ namespace DatabaseFinder
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
             Controls.Add(_lblStatus);
+            _progress = new ProgressBar { Minimum = 0, Maximum = 1, Value = 0, Style = ProgressBarStyle.Continuous };
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_btnCopy,_btnManifest,_btnOpen,_btnReport);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
@@ -747,6 +749,8 @@ namespace DatabaseFinder
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _btnReport.Enabled = false;
+            _progress.Value = 0;
+            _progress.Maximum = Math.Max(1, items.Sum(i => Math.Max(1, i.Files.Count)));
             _reportPath = "";
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
@@ -761,7 +765,8 @@ namespace DatabaseFinder
             {
                 var verify = _chkVerifyCopy.Checked;
                 var result = await Task.Run(() =>
-                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message), verify));
+                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message), verify,
+                        (done, total) => ReportProgress(done, total)));
 
                 AppendLog("");
                 AppendLog("--------------------------");
@@ -784,7 +789,8 @@ namespace DatabaseFinder
                     _btnReport.Enabled = true;
                 }
 
-                _lblStatus.Text = L.Format("S089", result.FilesCopied, result.Failed);
+                _lblStatus.Text = L.Format("S413", result.FilesCopied, result.Failed,
+                    DatabaseFileLocator.FormatSize(result.BytesCopied));
                 _lblStatus.ForeColor = result.Failed > 0 ? Color.FromArgb(211, 47, 47) : Color.FromArgb(76, 175, 80);
             }
             catch (Exception ex)
@@ -797,7 +803,21 @@ namespace DatabaseFinder
             {
                 _btnCopy.Enabled = true;
                 _btnCopy.Text = L.Text("S071");
+                _progress.Value = _progress.Maximum;
             }
+        }
+
+        private void ReportProgress(int done, int total)
+        {
+            try
+            {
+                if (_progress.IsDisposed) return;
+                if (_progress.InvokeRequired) { _progress.BeginInvoke(new Action(() => ReportProgress(done, total))); return; }
+                _progress.Maximum = Math.Max(1, total);
+                _progress.Value = Math.Min(Math.Max(0, done), _progress.Maximum);
+                _lblStatus.Text = L.Format("S412", done, total);
+            }
+            catch { }
         }
 
         private async void BtnFindPass_Click(object? sender, EventArgs e)

@@ -8,6 +8,7 @@ namespace DatabaseFinder
         private readonly CheckBox _chkMinimizeToTray;
         private readonly CheckBox _chkAutoRefresh;
         private readonly CheckBox _chkNotifications;
+        private readonly CheckBox _chkDarkMode;
         private readonly NumericUpDown _numInterval;
         private readonly Button _btnSave;
         private readonly Button _btnCancel;
@@ -109,6 +110,15 @@ namespace DatabaseFinder
             };
             Controls.Add(_chkNotifications);
 
+            _chkDarkMode = new CheckBox
+            {
+                Text = L.Text("S415"),
+                Checked = _settings.DarkMode,
+                Location = new Point(12, 426),
+                AutoSize = true
+            };
+            Controls.Add(_chkDarkMode);
+
             _chkAutoRefresh = new CheckBox
             {
                 Text = L.Text("S304"),
@@ -178,7 +188,7 @@ namespace DatabaseFinder
             var ports=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=INDICES.Length,BackColor=Color.White,Padding=new Padding(12),RightToLeft=RightToLeft.No};ports.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,60));ports.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,40));
             for(var i=0;i<INDICES.Length;i++){ports.RowStyles.Add(new RowStyle(SizeType.Percent,100f/INDICES.Length));ports.Controls.Add(new Label{Text=INDICES[i].Label,AutoSize=true,Anchor=AnchorStyles.Left},0,i);_portBoxes[i].Anchor=AnchorStyles.Left;ports.Controls.Add(_portBoxes[i],1,i);}layout.Controls.Add(ports,0,1);
             var general=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoSize=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new Padding(6)};
-            foreach(var c in new Control[]{_chkMinimizeToTray,_chkNotifications,_chkAutoRefresh}){c.Margin=new Padding(5);general.Controls.Add(c);}
+            foreach(var c in new Control[]{_chkMinimizeToTray,_chkNotifications,_chkDarkMode,_chkAutoRefresh}){c.Margin=new Padding(5);general.Controls.Add(c);}
             general.Controls.Add(UiTheme.Flow(lblInt,_numInterval));layout.Controls.Add(general,0,2);
             _btnSave.Tag="primary";layout.Controls.Add(UiTheme.Flow(_btnSave,_btnCancel),0,3);_lblStatus.Dock=DockStyle.Fill;layout.Controls.Add(_lblStatus,0,4);Controls.Add(layout);
         }
@@ -194,6 +204,7 @@ namespace DatabaseFinder
 
             _settings.MinimizeToTray = _chkMinimizeToTray.Checked;
             _settings.ShowNotifications = _chkNotifications.Checked;
+            _settings.DarkMode = _chkDarkMode.Checked;
             _settings.AutoRefresh = _chkAutoRefresh.Checked;
             _settings.AutoRefreshIntervalSec = (int)_numInterval.Value;
 

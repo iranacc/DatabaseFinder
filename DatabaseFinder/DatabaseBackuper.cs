@@ -608,8 +608,10 @@ namespace DatabaseFinder
         }
 
         // ---------- اجرای بکاپ ها ----------
-        public static void ExecuteBackup(List<DatabaseBackupItem> items, Action<string>? log = null)
+        public static void ExecuteBackup(List<DatabaseBackupItem> items, Action<string>? log = null,
+            Action<int, int>? progress = null)
         {
+            var processed = 0;
             foreach (var item in items)
             {
                 item.OutputFiles.Clear();
@@ -620,6 +622,7 @@ namespace DatabaseFinder
                 {
                     item.Failed = true;
                     log?.Invoke(L.Format("S022", item.FolderName, item.Error));
+                    progress?.Invoke(++processed, items.Count);
                     continue;
                 }
 
@@ -668,6 +671,7 @@ namespace DatabaseFinder
                     item.Error = ex.Message;
                     log?.Invoke(L.Format("S025", item.FolderName, ex.Message));
                 }
+                progress?.Invoke(++processed, items.Count);
             }
         }
 

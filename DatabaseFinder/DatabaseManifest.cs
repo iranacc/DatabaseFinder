@@ -71,7 +71,7 @@ namespace DatabaseFinder
 
     public static class ManifestGenerator
     {
-        public const string ToolVersion = "1.8.11";
+        public const string ToolVersion = "1.8.12";
 
         public static string Sha256File(string path)
         {
