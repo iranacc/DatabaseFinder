@@ -17,11 +17,19 @@ Windows utility to detect databases currently running on your system.
 
 ## What's new in v1.8.12
 
-- Optional dark mode with a consistent theme across the desktop forms.
-- Status icons, colored status cells, an empty-results state, richer details, and copy-path action on the main screen.
-- Tooltips and keyboard shortcuts on the main workflow; `F5` rescans, `Ctrl+A` selects all, and `Ctrl+Shift+A` clears selection.
-- Responsive main layout for smaller windows and high-DPI displays.
-- Real progress bars and completion summaries for physical copies and native backups.
+- **Optional dark mode:** Settings now switches the shared theme across forms, panels, buttons, inputs, trees and grids, and applies it immediately on the main screen.
+- **Main-screen navigation polish:** navigation areas now have icons for running databases, file search, network scan, profiles and settings.
+- **Status column:** the main grid now clearly distinguishes Online, Service stopped, Offline file and Backup file results with bold text and colored cells.
+- **Result summary cards:** the main screen shows total results, online results, files found and selected results.
+- **Richer details panel:** selected rows show name, engine, status, version, connection/service and path; file-backed results include a Copy path action.
+- **Empty state:** an explanatory message is shown when no databases or files have been found.
+- **Tooltips and shortcuts:** buttons have tooltips; `F5` rescans, `Ctrl+A` selects all, `Ctrl+Shift+A` clears selection and `Ctrl+C` copies the list.
+- **Small-window and High-DPI layout:** the main screen has a smaller minimum size and improved spacing.
+- **Stopped-service alert:** on first launch, installed but stopped SQL Server services are reported; the user can start a stopped service or enable and start a Disabled service, followed by an automatic rescan.
+- **Named-instance support:** default and named SQL Server instances use their actual Windows service names for status and start actions.
+- **Real operation progress:** physical copy and native backup forms show determinate progress based on processed items.
+- **Operation summaries:** copy reports successful/failed files and bytes; backup reports successful/failed items and produced bytes.
+- **Shared UI infrastructure:** dark mode, tooltips and progress layout are centralized for consistent behavior across forms.
 
 ## What's new in v1.8.11
 
