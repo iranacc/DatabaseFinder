@@ -1,2 +1,2 @@
-*c2058079e5a8ff500eb887648b0a1f65b9cd063c211045febd7ec836039fd582 *DatabaseFinder.exe
-*17e7ca711f69c4841f2a40d8517d231e2f3094acdd7fc3de2bb64ed9b9c914b2 *DatabaseFinder-Light.exe
+*2f5d936571fa5457bab350d341cbce50f378f57b132aebddc5b043f204ab77b3 *DatabaseFinder.exe
+*adc70b948cc2de2c74dbd8cedb41e25ef0808e1496ecd0cf309ab03206c38821 *DatabaseFinder-Light.exe
