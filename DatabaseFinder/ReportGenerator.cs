@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -113,6 +114,163 @@ namespace DatabaseFinder
                 Path.GetDirectoryName(manifestJsonPath) ?? ".",
                 Path.GetFileNameWithoutExtension(manifestJsonPath).Replace("manifest", "report") + ".html");
             if (htmlPath == manifestJsonPath) htmlPath += ".html";
+            File.WriteAllText(htmlPath, sb.ToString(), new UTF8Encoding(false));
+            return htmlPath;
+        }
+
+        /// <summary>
+        /// گزارش اسکن شبکه (سیستم‌های دارای پورت باز) — سه فایل:
+        /// <c>{outputBase}.txt</c> (صورت‌جلسه قاب‌بندی‌شده)، <c>{outputBase}.json</c> (ساختارمند) و
+        /// <c>{outputBase}.html</c> (گزارش فارسی چاپی). خروجی: مسیر فایل HTML.
+        /// </summary>
+        public static string GenerateRemote(string outputBase, string target, string ports, IReadOnlyList<RemoteScanResult> results)
+        {
+            var nowUtc = DateTime.UtcNow;
+            var appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0";
+            var osText = RuntimeInformation.OSDescription + " (" + RuntimeInformation.OSArchitecture + ")";
+
+            var openResults = results.Where(r => r.IsOpen)
+                .OrderBy(r => r.Host, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => r.Port)
+                .ToList();
+            var summary = new
+            {
+                total = results.Count,
+                open = openResults.Count,
+                openHosts = openResults.Select(r => r.Host).Distinct().Count(),
+                closed = results.Count - openResults.Count
+            };
+
+            // ---------- TXT ----------
+            var body = new List<string> { ManifestGenerator.BuildTaxStamp181(), "" };
+            body.Add("گزارش اسکن شبکه — ماده ۱۸۱ قانون مالیات‌های مستقیم");
+            body.Add("=".PadRight(64, '='));
+            body.Add($"ابزار          : Database Finder {ManifestGenerator.ToolVersion}");
+            body.Add($"هدف اسکن       : {target}");
+            body.Add($"پورت‌ها         : {(string.IsNullOrEmpty(ports) ? "پورت‌های شناخته‌شده" : ports)}");
+            body.Add($"سیستم           : {Environment.MachineName}");
+            body.Add($"کاربر           : {Environment.UserName}");
+            body.Add($"نوع سیستم       : {osText}");
+            body.Add($"زمان (UTC)      : {nowUtc:yyyy-MM-dd HH:mm:ss}");
+            body.Add("");
+            body.Add($"تعداد نتایج کل            : {summary.total}");
+            body.Add($"تعداد پورت‌های باز         : {summary.open}");
+            body.Add($"سیستم‌های دارای پورت باز   : {summary.openHosts}");
+            body.Add($"پورت‌های بسته              : {summary.closed}");
+            body.Add("");
+            if (openResults.Count == 0)
+            {
+                body.Add("هیچ سیستمی با پورت باز یافت نشد.");
+            }
+            else
+            {
+                body.Add("سیستم‌های دارای پورت باز:");
+                body.Add("-".PadRight(64, '-'));
+                foreach (var r in openResults)
+                {
+                    var detail = string.IsNullOrEmpty(r.Version) ? r.Message : r.Version;
+                    body.Add($"[{r.Host}]  {r.TypeDisplayName}  (پورت {r.Port})" +
+                        (string.IsNullOrEmpty(r.ServerName) ? "" : $"  — {r.ServerName}") +
+                        (string.IsNullOrEmpty(detail) ? "" : $"  — {detail}"));
+                }
+            }
+            var bodyHash = ManifestGenerator.Sha256Text(string.Join("\n", body));
+            body.Add("");
+            body.Add($"Manifest SHA-256 (of this file): {bodyHash}");
+            var txt = string.Join("\n", body) + "\n";
+            File.WriteAllText(outputBase + ".txt", txt, new UTF8Encoding(false));
+
+            // ---------- JSON ----------
+            var json = new
+            {
+                schema = "remote-scan-1",
+                taxNotice = "TAX 181 ARTICLE . MSAM Group",
+                tool = "Database Finder",
+                version = ManifestGenerator.ToolVersion,
+                appVersion,
+                machine = Environment.MachineName,
+                user = Environment.UserName,
+                os = osText,
+                target,
+                ports = string.IsNullOrEmpty(ports) ? "default known ports" : ports,
+                createdUtc = nowUtc,
+                summary,
+                hosts = openResults.Select(r => new
+                {
+                    r.Host,
+                    r.Port,
+                    type = r.Type,
+                    typeDisplayName = r.TypeDisplayName,
+                    open = true,
+                    r.Version,
+                    r.ServerName,
+                    r.Message
+                }),
+                selfSha256 = bodyHash
+            };
+            var jsonPath = outputBase + ".json";
+            File.WriteAllText(jsonPath,
+                JsonSerializer.Serialize(json, new JsonSerializerOptions { WriteIndented = true }),
+                new UTF8Encoding(false));
+
+            // ---------- HTML ----------
+            var sb = new StringBuilder();
+            sb.Append("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\">");
+            sb.Append("<title>گزارش اسکن شبکه ـ ماده ۱۸۱</title><style>");
+            sb.Append("body{font-family:Tahoma,Arial,sans-serif;margin:40px;color:#111;}");
+            sb.Append("h1{text-align:center;font-size:20px;margin-bottom:0;}");
+            sb.Append(".sub{text-align:center;color:#444;margin-top:4px;}");
+            sb.Append(".stamp{text-align:center;font-weight:bold;letter-spacing:2px;margin:12px 0;}");
+            sb.Append("table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;}");
+            sb.Append("th,td{border:1px solid #555;padding:6px 8px;text-align:right;}");
+            sb.Append("th{background:#eee;}");
+            sb.Append(".ltr{direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:11px;}");
+            sb.Append(".ok{color:#1b5e20;font-weight:bold;}");
+            sb.Append(".sig{display:flex;gap:40px;margin-top:60px;}");
+            sb.Append(".sig div{flex:1;border-top:1px solid #000;padding-top:6px;text-align:center;}");
+            sb.Append("@media print{body{margin:10mm;}}");
+            sb.Append("</style></head><body>");
+
+            sb.Append("<div class=\"stamp\">TAX 181 ARTICLE . MSAM Group</div>");
+            sb.Append("<h1>گزارش اسکن شبکه — سیستم‌های دارای پورت باز (ماده ۱۸۱ قانون مالیات‌های مستقیم)</h1>");
+            sb.Append("<p class=\"sub\">این گزارش نمای خلاصه است؛ مستند فنی کامل در فایل‌های manifest.txt و manifest.json همین پوشه ثبت شده است.</p>");
+
+            sb.Append("<h2>خلاصه اجرا</h2><table>");
+            Row(sb, "ابزار", $"Database Finder {ManifestGenerator.ToolVersion}");
+            Row(sb, "هدف اسکن", target);
+            Row(sb, "پورت‌ها", string.IsNullOrEmpty(ports) ? "پورت‌های شناخته‌شده" : ports);
+            Row(sb, "سیستم", Environment.MachineName);
+            Row(sb, "کاربر", Environment.UserName);
+            Row(sb, "زمان (UTC)", nowUtc.ToString("yyyy-MM-dd HH:mm:ss"));
+            Row(sb, "تعداد نتایج کل", summary.total.ToString());
+            Row(sb, "پورت‌های باز", summary.open.ToString());
+            Row(sb, "سیستم‌های دارای پورت باز", summary.openHosts.ToString());
+            Row(sb, "پورت‌های بسته", summary.closed.ToString());
+            Row(sb, "هش خود مانیفست", bodyHash);
+            sb.Append("</table>");
+
+            sb.Append("<h2>سیستم‌های دارای پورت باز</h2>");
+            if (openResults.Count == 0)
+            {
+                sb.Append("<p>هیچ سیستمی با پورت باز یافت نشد.</p>");
+            }
+            else
+            {
+                sb.Append("<table><tr><th>سیستم</th><th>نوع دیتابیس</th><th>پورت</th><th>نسخه / پیام</th></tr>");
+                foreach (var r in openResults)
+                {
+                    var detail = string.IsNullOrEmpty(r.Version) ? r.Message : r.Version;
+                    sb.Append("<tr><td class=\"ltr\">").Append(E(r.Host)).Append("</td><td>").Append(E(r.TypeDisplayName))
+                        .Append("</td><td class=\"ltr\">").Append(r.Port).Append("</td><td>").Append(E(detail)).Append("</td></tr>");
+                }
+                sb.Append("</table>");
+            }
+
+            sb.Append("<div class=\"sig\"><div>نام و امضای مأمور<br><br>تاریخ: ............</div>");
+            sb.Append("<div>نام و امضای نماینده مؤدی<br><br>تاریخ: ............</div></div>");
+            sb.Append("</body></html>");
+
+            var htmlPath = outputBase + ".html";
             File.WriteAllText(htmlPath, sb.ToString(), new UTF8Encoding(false));
             return htmlPath;
         }

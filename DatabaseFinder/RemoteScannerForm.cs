@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Sockets;
 
 namespace DatabaseFinder
@@ -11,11 +12,14 @@ namespace DatabaseFinder
         private readonly CheckBox _chkOpenOnly;
         private readonly Button _btnScan;
         private readonly Button _btnConnect;
+        private readonly Button _btnReport;
         private readonly Button _btnClose;
         private readonly DataGridView _dgvResults;
         private readonly Label _lblStatus;
         private readonly ProgressBar _progress;
         private List<RemoteScanResult> _results = new();
+        private string _lastTarget = "";
+        private string _lastPorts = "";
 
         public RemoteScannerForm()
         {
@@ -144,6 +148,20 @@ namespace DatabaseFinder
             _btnConnect.Click += BtnConnect_Click;
             Controls.Add(_btnConnect);
 
+            _btnReport = new Button
+            {
+                Text = L.Text("S387"),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Location = new Point(152, 445),
+                Size = new Size(130, 35),
+                Enabled = false
+            };
+            _btnReport.Click += BtnReport_Click;
+            Controls.Add(_btnReport);
+
             _btnClose = new Button
             {
                 Text = L.Text("S095"),
@@ -174,7 +192,7 @@ namespace DatabaseFinder
             };
             Controls.Add(_lblStatus);
             var fields=UiTheme.Flow(FormLayout.Field(L.Text("S316"),_txtTarget,260),FormLayout.Field(L.Text("S317"),_cmbNets,200),FormLayout.Field(L.Text("S287"),_txtPorts,300),_chkOpenOnly);
-            FormLayout.Build(this,lblTitle,fields,_dgvResults,_lblStatus,_btnScan,_btnConnect,_btnClose);
+            FormLayout.Build(this,lblTitle,fields,_dgvResults,_lblStatus,_btnScan,_btnConnect,_btnReport,_btnClose);
             _progress.Dock=DockStyle.Bottom;Controls.Add(_progress);_progress.BringToFront();
         }
 
@@ -216,11 +234,14 @@ namespace DatabaseFinder
 
             _btnScan.Enabled = false;
             _progress.Visible = true;
+            _btnReport.Enabled = false;
             _lblStatus.Text = isRange ? L.Format("S323", hosts.Count) : L.Text("S294");
 
             _results = isRange
                 ? await Task.Run(() => RemoteScanner.ScanNetwork(hosts, customPorts ?? Array.Empty<int>()))
                 : await Task.Run(() => RemoteScanner.ScanWithBrowser(hosts[0], customPorts ?? Array.Empty<int>()));
+            _lastTarget = target;
+            _lastPorts = portsStr;
 
             BindResults();
             SelectFirstOpen();
@@ -229,6 +250,7 @@ namespace DatabaseFinder
             var distinctHosts = _results.Select(r => r.Host).Distinct().Count();
             _progress.Visible = false;
             _btnScan.Enabled = true;
+            _btnReport.Enabled = _results.Any();
             _lblStatus.Text = isRange
                 ? L.Format("S324", openCount, distinctHosts)
                 : L.Format("S297", openCount, hosts[0]);
@@ -272,6 +294,32 @@ namespace DatabaseFinder
                 _dgvResults.Rows[row].Tag = r;
             }
             UpdateConnectState();
+        }
+
+        private void BtnReport_Click(object? sender, EventArgs e)
+        {
+            if (_results.Count == 0)
+            {
+                _lblStatus.Text = L.Text("S391");
+                return;
+            }
+            using var dlg = new FolderBrowserDialog { Description = L.Text("S388") };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            try
+            {
+                var outputBase = Path.Combine(dlg.SelectedPath, "remote-manifest");
+                var html = ReportGenerator.GenerateRemote(outputBase, _lastTarget, _lastPorts, _results);
+                _lblStatus.Text = L.Format("S390", html);
+                if (MessageBox.Show(L.Text("S389"), L.Text("S392"), MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo { FileName = html, UseShellExecute = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                _lblStatus.Text = L.Format("S055", ex.Message);
+            }
         }
 
         private void BtnConnect_Click(object? sender, EventArgs e)
