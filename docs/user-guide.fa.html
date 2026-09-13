@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>راهنمای کار با Database Finder</title>
+  <style>
+    :root{--navy:#14233d;--blue:#245bd6;--cyan:#0f9d8f;--ink:#26364f;--muted:#68778d;--line:#dce4ef;--soft:#f4f7fb;--warn:#fff4dc;--shadow:0 14px 36px rgba(20,35,61,.10)}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:#eef3f8;color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.95}
+    a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}.wrap{max-width:1180px;margin:auto;padding:0 24px}
+    .hero{background:linear-gradient(135deg,#12213b 0%,#245bd6 70%,#14a895 100%);color:#fff;padding:64px 0 54px}.hero h1{margin:0 0 10px;font-size:42px;line-height:1.35}.hero p{margin:6px 0;color:#eaf1ff;font-size:18px}.badge{display:inline-block;margin-top:20px;padding:4px 14px;border:1px solid rgba(255,255,255,.35);border-radius:20px;font-size:13px}
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:start;margin-top:28px}.toc{position:sticky;top:18px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}.toc strong{display:block;color:var(--navy);margin-bottom:10px}.toc a{display:block;padding:5px 0;font-size:14px}.content{min-width:0}.section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:30px 34px;margin-bottom:24px;box-shadow:var(--shadow)}h2{margin:0 0 16px;color:var(--navy);font-size:28px;border-right:5px solid var(--blue);padding-right:12px}h3{color:var(--navy);margin:26px 0 8px;font-size:20px}h4{margin:18px 0 5px;color:var(--blue)}p{margin:8px 0}ul,ol{padding-right:24px}li{margin:5px 0}.lead{font-size:18px;color:#475b77}.note,.warning,.tip{border-radius:12px;padding:14px 18px;margin:16px 0}.note{background:#edf5ff;border-right:4px solid var(--blue)}.tip{background:#eaf8f4;border-right:4px solid var(--cyan)}.warning{background:var(--warn);border-right:4px solid #e19a19}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px}.card h3{margin:0 0 5px;font-size:17px}.figure{margin:22px 0;text-align:center}.figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 22px rgba(20,35,61,.12)}.figure figcaption{color:var(--muted);font-size:13px;margin-top:6px}.steps{counter-reset:step;list-style:none;padding:0}.steps li{counter-increment:step;position:relative;padding:10px 52px 10px 10px;border-bottom:1px solid #edf1f6}.steps li:before{content:counter(step);position:absolute;right:8px;top:10px;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;text-align:center;line-height:28px;font-weight:bold}.kbd{display:inline-block;direction:ltr;font-family:Consolas,monospace;background:#eef2f7;border:1px solid #ccd6e3;border-bottom-width:2px;border-radius:5px;padding:0 7px;color:#26364f}.code{direction:ltr;text-align:left;background:#17243a;color:#e8f0ff;padding:16px;border-radius:10px;overflow:auto;font-family:Consolas,monospace;font-size:13px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid var(--line);padding:9px 11px;text-align:right;vertical-align:top}th{background:#edf3fb;color:var(--navy)}.footer{color:var(--muted);text-align:center;padding:30px 0 55px;font-size:13px}.top{font-size:13px;float:left}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.toc{position:static}.hero h1{font-size:31px}.section{padding:22px 18px}.grid{grid-template-columns:1fr}.wrap{padding:0 14px}}
+    @media print{body{background:#fff}.hero{padding:25px;color:#000;background:#fff;border-bottom:2px solid var(--navy)}.hero p,.badge{color:#333}.layout{display:block;margin-top:0}.toc{display:none}.section{box-shadow:none;border:0;border-bottom:1px solid #bbb;border-radius:0;page-break-inside:avoid}.figure img{max-height:210mm}.footer{padding-bottom:0}a{color:#000;text-decoration:none}}
+  </style>
+</head>
+<body>
+  <header class="hero"><div class="wrap">
+    <div class="badge">راهنمای رسمی کاربر · نسخه ۱.۸.۱۲</div>
+    <h1>راهنمای جامع Database Finder</h1>
+    <p>کشف، بررسی، کپی فیزیکی و بکاپ دیتابیس‌ها در سیستم‌های Windows</p>
+    <p>مناسب برای بررسی فنی، برداشت مستند و تهیهٔ صورت‌جلسهٔ قابل راستی‌آزمایی</p>
+  </div></header>
+  <main class="wrap layout">
+    <nav class="toc" aria-label="فهرست مطالب"><strong>فهرست مطالب</strong>
+      <a href="#overview">۱. معرفی برنامه</a><a href="#install">۲. نصب و اجرا</a><a href="#main">۳. صفحهٔ اصلی</a><a href="#online">۴. کشف آنلاین</a><a href="#offline">۵. اسکن آفلاین</a><a href="#network">۶. اسکن شبکه</a><a href="#query">۷. اجرای Query</a><a href="#profiles">۸. پروفایل و تنظیمات</a><a href="#copy">۹. کپی فیزیکی</a><a href="#backup">۱۰. بکاپ منطقی</a><a href="#manifest">۱۱. مانیفست و گزارش</a><a href="#services">۱۲. سرویس‌های متوقف</a><a href="#shortcuts">۱۳. میانبرها</a><a href="#troubleshoot">۱۴. عیب‌یابی</a>
+    </nav>
+    <article class="content">
+      <section class="section" id="overview"><h2>۱. معرفی برنامه</h2>
+        <p class="lead">Database Finder یک ابزار دسکتاپ Windows برای پیدا کردن دیتابیس‌های فعال، دیتابیس‌های آفلاین و فایل‌های بکاپ است. برنامه علاوه بر تشخیص، امکان اتصال، اجرای Query، کپی فیزیکی، بکاپ منطقی و تولید گزارش هش‌دار را فراهم می‌کند.</p>
+        <div class="grid"><div class="card"><h3>کشف آنلاین</h3><p>تشخیص سرویس‌های Windows، پردازش‌ها و پورت‌های باز برای دیتابیس‌هایی مانند SQL Server، MySQL، PostgreSQL، MongoDB و Redis.</p></div><div class="card"><h3>کشف آفلاین</h3><p>پیدا کردن MDF، LDF، NDF، BAK، SQLite، Access، فایل‌های حسابداری و آرشیوهای احتمالی حتی وقتی دیتابیس اجرا نمی‌شود.</p></div><div class="card"><h3>برداشت مستند</h3><p>کپی فایل‌ها و بکاپ‌ها همراه با SHA-256، زمان اجرا، وضعیت، نسخهٔ سرویس و مانیفست ساختاریافته.</p></div><div class="card"><h3>زبان و محیط</h3><p>رابط فارسی و انگلیسی، حالت تاریک اختیاری، System Tray، پشتیبانی High-DPI و نسخهٔ مستقل بدون نیاز به نصب .NET.</p></div></div>
+      </section>
+      <section class="section" id="install"><h2>۲. نصب و اجرا</h2>
+        <h3>نسخه‌ها</h3><div class="table-wrap"><table><tr><th>نسخه</th><th>کاربرد</th><th>نیازمندی</th></tr><tr><td>DatabaseFinder.exe</td><td>نسخهٔ مستقل کامل</td><td>بدون نیاز به نصب .NET Desktop Runtime</td></tr><tr><td>DatabaseFinder-Light.exe</td><td>نسخهٔ کم‌حجم</td><td>.NET 8 Desktop Runtime برای Windows x64</td></tr></table></div>
+        <ol class="steps"><li>فایل مناسب را از صفحهٔ Releases دریافت کنید.</li><li>در صورت استفاده از کپی فایل‌های قفل‌شده یا کنترل سرویس‌ها، برنامه را با Administrator اجرا کنید.</li><li>برای صحت دانلود، SHA-256 فایل را با `SHA256SUMS.txt` مقایسه کنید.</li></ol>
+        <div class="warning"><strong>نکتهٔ امنیتی:</strong> برنامه می‌تواند فایل‌های حساس دیتابیس و اطلاعات اتصال را مدیریت کند. مسیر مقصد، دسترسی کاربران و فایل‌های خروجی را کنترل کنید.</div>
+      </section>
+      <section class="section" id="main"><h2>۳. صفحهٔ اصلی</h2>
+        <p>صفحهٔ اصلی مرکز کنترل برنامه است. نوار کناری برای رفتن به بخش‌ها و نوار بالایی برای زبان، تغییر تم و اسکن استفاده می‌شود.</p>
+        <figure class="figure"><img src="user-guide-assets/main-fa.png" alt="صفحه اصلی فارسی Database Finder"><figcaption>صفحهٔ اصلی فارسی: کارت‌های خلاصه، جدول نتایج و پنل جزئیات</figcaption></figure>
+        <h3>کارت‌های خلاصه</h3><ul><li><strong>کل نتایج:</strong> مجموع ردیف‌های فعلی.</li><li><strong>آنلاین:</strong> سرویس‌ها و دیتابیس‌های در حال اجرا.</li><li><strong>فایل‌های پیدا شده:</strong> نتایج آفلاین و فایل‌های بکاپ.</li><li><strong>انتخاب‌شده:</strong> ردیف‌هایی که برای کپی یا بکاپ تیک خورده‌اند.</li></ul>
+        <h3>تغییر حالت نمایش</h3><p>دکمهٔ تم در هدر صفحهٔ اصلی بین حالت تاریک و روشن جابه‌جا می‌شود. انتخاب شما در تنظیمات ذخیره می‌شود و روی فرم‌های بعدی نیز اعمال خواهد شد.</p>
+        <h3>وضعیت ردیف</h3><p>ستون «وضعیت» با رنگ و متن مشخص می‌کند که نتیجه آنلاین، فایل آفلاین، فایل بکاپ یا سرویس متوقف است. با انتخاب ردیف، پنل جزئیات پایین جدول به‌روزرسانی می‌شود.</p>
+        <figure class="figure"><img src="user-guide-assets/details-fa.png" alt="پنل جزئیات فارسی"><figcaption>پنل جزئیات شامل وضعیت، نسخه، سرویس، آدرس و مسیر</figcaption></figure>
+      </section>
+      <section class="section" id="online"><h2>۴. کشف آنلاین</h2>
+        <p>در حالت «فقط آنلاین»، برنامه سه روش تشخیص را ترکیب می‌کند:</p><div class="grid"><div class="card"><h3>سرویس Windows</h3><p>نام سرویس و مسیر اجرایی برای شناسایی SQL Server، MySQL، PostgreSQL و سایر موتورهای شناخته‌شده بررسی می‌شود.</p></div><div class="card"><h3>پردازش</h3><p>پردازش‌هایی مانند `sqlservr.exe`، `mysqld.exe` و `postgres.exe` به همراه PID نمایش داده می‌شوند.</p></div><div class="card"><h3>پورت باز</h3><p>پورت‌های شناخته‌شده و پورت‌های سفارشی در تنظیمات بررسی می‌شوند. نسخهٔ سرویس با تست اتصال دریافت می‌شود.</p></div><div class="card"><h3>Instanceهای SQL</h3><p>Instance پیش‌فرض `MSSQLSERVER` و Instanceهای نام‌گذاری‌شده مانند `MSSQL$SEPIDAR` قابل تشخیص هستند.</p></div></div>
+        <h3>سرویس متوقف</h3><p>اگر SQL Server نصب باشد اما متوقف باشد، برنامه آن را با وضعیت «Service stopped» نمایش می‌دهد. در ورود اولیه هشدار داده می‌شود و امکان Start یا Enable and start وجود دارد.</p>
+      </section>
+      <section class="section" id="offline"><h2>۵. اسکن آفلاین هارد</h2>
+        <figure class="figure"><img src="user-guide-assets/disk-fa.png" alt="اسکن آفلاین هارد"><figcaption>انتخاب مکان‌ها، فرمت‌ها، حداقل اندازه و نمایش پیشرفت</figcaption></figure>
+        <ol class="steps"><li>از منوی کناری «جست‌وجوی فایل» را باز کنید.</li><li>در «مکان‌های جست‌وجو»، اسکن سریع، اسکن کامل یا پوشهٔ دلخواه را انتخاب کنید.</li><li>فرمت‌های موردنظر را انتخاب کنید؛ می‌توانید گروه یا پسوندهای خاص را انتخاب کنید.</li><li>حداقل اندازه را تعیین و روی «شروع اسکن» کلیک کنید.</li><li>در پایان، نتایج را تیک بزنید و برای کپی مستقیم یا افزودن به جدول اصلی اقدام کنید.</li></ol>
+        <h3>اعتبارسنجی محتوا</h3><p>تشخیص فقط بر اساس پسوند نیست. برنامه امضای محتوای فایل را نیز بررسی می‌کند تا فایل‌هایی مانند `program.exe.bak` به‌اشتباه بکاپ دیتابیس گزارش نشوند.</p>
+        <figure class="figure"><img src="user-guide-assets/formats-fa.png" alt="انتخاب فرمت‌های اسکن"><figcaption>جست‌وجو و انتخاب گروه‌ها و پسوندهای دیتابیس</figcaption></figure>
+      </section>
+      <section class="section" id="network"><h2>۶. اسکن شبکه</h2>
+        <figure class="figure"><img src="user-guide-assets/remote-fa.png" alt="اسکن سیستم راه دور"><figcaption>اسکن میزبان، بازهٔ IP، CIDR و پورت‌های شناخته‌شده</figcaption></figure>
+        <p>در منوی «اسکن راه دور» می‌توانید یک IP، بازه، شبکهٔ محلی یا CIDR وارد کنید. برنامه با هم‌زمانی محدود پورت‌ها را بررسی می‌کند و برای SQL Server از SQL Browser/SSRP نیز استفاده می‌کند.</p>
+        <ul><li>تیک «فقط پورت‌های باز» نتایج بسته را پنهان می‌کند.</li><li>پورت‌های سفارشی را با کاما یا فاصله وارد کنید.</li><li>برای بازه‌های بزرگ، زمان اسکن و ترافیک شبکه را در نظر بگیرید.</li><li>پس از اسکن می‌توانید گزارش TXT، JSON و HTML تولید کنید.</li></ul>
+      </section>
+      <section class="section" id="query"><h2>۷. اجرای Query</h2>
+        <figure class="figure"><img src="user-guide-assets/query-fa.png" alt="اجرای کوئری"><figcaption>فرم اجرای Query و اتصال به دیتابیس</figcaption></figure>
+        <p>یک ردیف را انتخاب و «اجرای کوئری» را باز کنید. نوع اتصال بر اساس موتور انتخاب می‌شود.</p>
+        <ul><li>SQL Server با احراز هویت SQL یا Windows Authentication</li><li>MySQL و MariaDB با نام کاربری و رمز</li><li>PostgreSQL با پروفایل اتصال</li><li>SQLite با مسیر فایل</li><li>Redis با اجرای دستورهای پشتیبانی‌شده</li></ul>
+        <div class="warning"><strong>احتیاط:</strong> Query مستقیماً روی دیتابیس اجرا می‌شود. برای عملیات تغییر‌دهنده یا حذف، ابتدا از دیتابیس بکاپ بگیرید.</div>
+      </section>
+      <section class="section" id="profiles"><h2>۸. پروفایل و تنظیمات</h2>
+        <figure class="figure"><img src="user-guide-assets/settings-fa.png" alt="تنظیمات برنامه"><figcaption>تنظیمات پورت‌ها، سینی سیستم، بروزرسانی و حالت تاریک</figcaption></figure>
+        <h3>پروفایل‌ها</h3><p>برای اتصال‌های تکراری، میزبان، پورت، نام کاربری، دیتابیس و رمز را ذخیره کنید. برنامه هنگام شمارش دیتابیس‌ها و عملیات اتصال از پروفایل مناسب استفاده می‌کند.</p>
+        <h3>تنظیمات</h3><ul><li>پورت سفارشی هر موتور</li><li>کوچک‌شدن به System Tray</li><li>اعلان‌ها</li><li>Refresh خودکار</li><li>حالت Dark/Light</li></ul>
+        <div class="warning"><strong>امنیت:</strong> پروفایل‌ها در فایل تنظیمات کاربر ذخیره می‌شوند. دسترسی به فایل `profiles.json` را محدود کنید.</div>
+      </section>
+      <section class="section" id="copy"><h2>۹. کپی فیزیکی فایل‌ها</h2>
+        <figure class="figure"><img src="user-guide-assets/copy-fa.png" alt="کپی فایل‌های فیزیکی"><figcaption>انتخاب فایل‌ها، مقصد و روش برخورد با فایل‌های قفل‌شده</figcaption></figure>
+        <ol class="steps"><li>ردیف‌های موردنظر را در صفحهٔ اصلی تیک بزنید.</li><li>«کپی فایل‌های دیتابیس» را باز کنید و مقصد را انتخاب کنید.</li><li>درخت دیتابیس‌ها و فایل‌ها را بررسی و موارد لازم را انتخاب کنید.</li><li>برای فایل قفل‌شده یکی از روش‌های VSS، توقف سرویس یا گزارش خطا را انتخاب کنید.</li><li>پیشرفت، تعداد موفق/ناموفق و حجم نهایی را بررسی کنید.</li></ol>
+        <h3>روش‌های فایل قفل‌شده</h3><ul><li><strong>VSS:</strong> کپی از Snapshot بدون توقف سرویس؛ روش پیشنهادی و نیازمند Administrator.</li><li><strong>Stop/Start:</strong> سرویس فقط در طول عملیات متوقف و سپس سرویس‌هایی که برنامه متوقف کرده دوباره اجرا می‌شوند.</li><li><strong>Report only:</strong> فایل قفل‌شده گزارش می‌شود و کپی نمی‌گردد.</li></ul>
+      </section>
+      <section class="section" id="backup"><h2>۱۰. بکاپ منطقی</h2>
+        <figure class="figure"><img src="user-guide-assets/backup-fa.png" alt="بکاپ دیتابیس"><figcaption>تنظیم مقصد، انتخاب دیتابیس و گزینه‌های بکاپ</figcaption></figure>
+        <p>بکاپ منطقی از ابزار بومی موتور استفاده می‌کند و خروجی قابل بازیابی تولید می‌کند.</p><div class="table-wrap"><table><tr><th>موتور</th><th>روش</th></tr><tr><td>SQL Server</td><td><code>BACKUP DATABASE</code> با فشرده‌سازی، Verify و Checksum</td></tr><tr><td>MySQL / MariaDB</td><td><code>mysqldump</code> با تراکنش، روتین و Trigger</td></tr><tr><td>PostgreSQL</td><td><code>pg_dump</code> با قالب Custom</td></tr><tr><td>Redis</td><td>اجرای SAVE و کپی dump.rdb</td></tr><tr><td>MongoDB</td><td><code>mongodump</code> در صورت نصب ابزارها</td></tr></table></div>
+        <p>پس از پایان، خلاصهٔ موفق، ناموفق و حجم خروجی نمایش داده می‌شود. اگر هیچ فایل معتبر تولید نشود، عملیات موفق اعلام نمی‌شود.</p>
+      </section>
+      <section class="section" id="manifest"><h2>۱۱. مانیفست و گزارش</h2>
+        <p>بعد از کپی یا بکاپ موفق، برنامه در مقصد پرونده فایل‌های زیر را تولید می‌کند:</p><div class="grid"><div class="card"><h3><code>manifest.txt</code></h3><p>گزارش قابل چاپ با مسیرها، اندازه، زمان، وضعیت و SHA-256.</p></div><div class="card"><h3><code>manifest.md</code></h3><p>نسخهٔ مناسب برای مشاهده در GitHub و Markdown Viewer.</p></div><div class="card"><h3><code>manifest.json</code></h3><p>اطلاعات ساختاریافته برای پردازش ماشینی، نسخهٔ سرویس و جزئیات پرونده.</p></div><div class="card"><h3>گزارش HTML</h3><p>گزارش فارسی راست‌به‌چپ برای بازکردن در Word و تبدیل به PDF.</p></div></div>
+        <div class="tip"><strong>راستی‌آزمایی:</strong> هش فایل مقصد را با مقدار ثبت‌شده در مانیفست مقایسه کنید. برای انتقال رسمی، مانیفست و فایل‌های خروجی را با هم نگهداری کنید.</div>
+      </section>
+      <section class="section" id="services"><h2>۱۲. سرویس‌های متوقف و Instanceها</h2>
+        <p>برنامه SQL Serverهای پیش‌فرض و نام‌گذاری‌شده را از Registry و سرویس‌های Windows تشخیص می‌دهد. نمونه‌های رایج:</p><div class="code">MSSQLSERVER       # Instance پیش‌فرض
+MSSQL$SEPIDAR     # Instance نام‌گذاری‌شده</div>
+        <p>اگر سرویس نصب ولی متوقف باشد، ردیف آن با وضعیت مشخص دیده می‌شود. برای سرویس Disabled، گزینهٔ Enable and start ابتدا Startup Type را به Manual تغییر می‌دهد و سپس سرویس را اجرا می‌کند.</p>
+      </section>
+      <section class="section" id="shortcuts"><h2>۱۳. میانبرها و رفتارهای سریع</h2>
+        <div class="table-wrap"><table><tr><th>میانبر</th><th>عملکرد</th></tr><tr><td><span class="kbd">F5</span></td><td>اسکن مجدد دیتابیس‌ها</td></tr><tr><td><span class="kbd">Ctrl+A</span></td><td>انتخاب همهٔ نتایج</td></tr><tr><td><span class="kbd">Ctrl+Shift+A</span></td><td>لغو انتخاب همه</td></tr><tr><td><span class="kbd">Ctrl+C</span></td><td>کپی لیست نتایج</td></tr></table></div>
+        <p>دابل‌کلیک روی ستون تعداد دیتابیس‌ها، فهرست دیتابیس‌های همان سرویس را باز می‌کند. کوچک‌کردن برنامه می‌تواند آن را به System Tray بفرستد.</p>
+      </section>
+      <section class="section" id="troubleshoot"><h2>۱۴. عیب‌یابی</h2>
+        <h3>سرویس در جدول دیده نمی‌شود</h3><p>مطمئن شوید سرویس Windows نصب است، برنامه با دسترسی مناسب اجرا شده و Scan mode روی «آنلاین» یا «هر دو» قرار دارد. برای SQL Server متوقف، بخش سرویس‌های متوقف را بررسی کنید.</p>
+        <h3>فایل قفل است</h3><p>برنامه را با Administrator اجرا و VSS را انتخاب کنید. اگر VSS در دسترس نبود، Stop/Start را با دقت و پس از تأیید وضعیت سرویس استفاده کنید.</p>
+        <h3>Query اجرا نمی‌شود</h3><p>میزبان، پورت، پروفایل و مجوز کاربر را بررسی کنید. برای SQL Server می‌توانید Windows Authentication را امتحان کنید.</p>
+        <h3>برنامه بدون خطای واضح متوقف شد</h3><p>فایل فنی خطا در مسیر زیر ذخیره می‌شود:</p><div class="code">%AppData%\DatabaseFinder\debug.log</div>
+        <h3>آپدیت انجام نمی‌شود</h3><p>اتصال اینترنت و وجود فایل متناظر نسخهٔ Light یا مستقل را بررسی کنید. برنامه قبل از جایگزینی فایل، SHA-256 آن را با `SHA256SUMS.txt` مقایسه می‌کند.</p>
+      </section>
+    </article>
+  </main>
+  <footer class="footer"><div class="wrap">Database Finder · MSAM Group · راهنمای فارسی نسخهٔ ۱.۸.۱۲</div></footer>
+</body>
+</html>

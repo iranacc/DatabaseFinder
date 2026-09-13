@@ -4,6 +4,8 @@
 
 > **English:** [Read English README](README.md)
 
+> **راهنمای کامل فارسی:** [راهنمای تصویری کار با برنامه](docs/user-guide.fa.html)
+
 قابلیت تشخیص انواع دیتابیس زیر را دارد:
 - SQL Server
 - MySQL
