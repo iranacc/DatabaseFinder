@@ -29,6 +29,7 @@ public class AppForm : Form
 
 public static class UiTheme
 {
+    public enum UiIcon { Database, Folder, Network, Profile, Settings }
     public static bool Dark { get; set; }
     public static Color Accent => Dark ? Color.FromArgb(91, 145, 255) : Color.FromArgb(36, 91, 214);
     public static Color Canvas => Dark ? Color.FromArgb(28, 33, 42) : Color.FromArgb(243, 245, 249);
@@ -50,12 +51,15 @@ public static class UiTheme
             button.Cursor = Cursors.Hand;
             button.UseVisualStyleBackColor = false;
         }
-        if (control is Label label) label.ForeColor = label.Font.Bold ? Ink : Muted;
-        if (control is GroupBox) control.ForeColor = Ink;
-        if (control is TextBoxBase box) { box.BorderStyle = BorderStyle.FixedSingle; box.BackColor = Surface; box.ForeColor = Ink; box.RightToLeft = RightToLeft.No; }
+        if (control is Label label) { label.BackColor = Surface; label.ForeColor = label.Font.Bold ? Ink : Muted; }
+        if (control is LinkLabel link) { link.BackColor = Surface; link.LinkColor = Accent; link.ActiveLinkColor = Accent; }
+        if (control is GroupBox box) { box.BackColor = Surface; box.ForeColor = Ink; }
+        if (control is TextBoxBase textBox) { textBox.BorderStyle = BorderStyle.FixedSingle; textBox.BackColor = Surface; textBox.ForeColor = Ink; textBox.RightToLeft = RightToLeft.No; }
         if (control is ComboBox combo) { combo.BackColor = Surface; combo.ForeColor = Ink; }
         if (control is CheckedListBox list) { list.BorderStyle = BorderStyle.None; list.BackColor = Surface; list.ForeColor = Ink; }
         if (control is TreeView tree) { tree.BorderStyle = BorderStyle.None; tree.BackColor = Surface; tree.ForeColor = Ink; tree.ItemHeight = 28; }
+        if (control is ListBox listBox) { listBox.BackColor = Surface; listBox.ForeColor = Ink; }
+        if (control is NumericUpDown numeric) { numeric.BackColor = Surface; numeric.ForeColor = Ink; }
         if (control is DataGridView grid)
         {
             grid.BackgroundColor = Surface;
@@ -84,5 +88,28 @@ public static class UiTheme
         var button = new Button { Text = text, AutoSize = true, MinimumSize = new Size(100, 36), Padding = new Padding(10, 5, 10, 5), Tag = primary ? "primary" : null };
         button.Click += click;
         return button;
+    }
+
+    public static Bitmap Icon(UiIcon kind)
+    {
+        var image = new Bitmap(20, 20);
+        using var g = Graphics.FromImage(image);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var pen = new Pen(Accent, 1.7F);
+        using var brush = new SolidBrush(Accent);
+        switch (kind)
+        {
+            case UiIcon.Database:
+                g.DrawEllipse(pen, 3, 2, 14, 5); g.DrawLine(pen, 3, 4, 3, 16); g.DrawLine(pen, 17, 4, 17, 16); g.DrawArc(pen, 3, 12, 14, 5, 0, 180); g.DrawArc(pen, 3, 14, 14, 5, 0, 180); break;
+            case UiIcon.Folder:
+                g.FillRectangle(brush, 2, 5, 7, 3); g.DrawRectangle(pen, 2, 5, 16, 11); g.DrawLine(pen, 2, 8, 18, 8); break;
+            case UiIcon.Network:
+                g.DrawLine(pen, 10, 5, 5, 13); g.DrawLine(pen, 10, 5, 15, 13); g.DrawLine(pen, 5, 13, 15, 13); g.FillEllipse(brush, 7, 2, 6, 6); g.FillEllipse(brush, 2, 11, 6, 6); g.FillEllipse(brush, 12, 11, 6, 6); break;
+            case UiIcon.Profile:
+                g.FillEllipse(brush, 7, 2, 6, 6); g.DrawArc(pen, 3, 9, 14, 10, 180, 180); break;
+            case UiIcon.Settings:
+                g.DrawEllipse(pen, 5, 5, 10, 10); g.FillEllipse(brush, 8, 8, 4, 4); for (var i = 0; i < 8; i++) { var a = i * Math.PI / 4; g.DrawLine(pen, 10 + (float)Math.Cos(a) * 6, 10 + (float)Math.Sin(a) * 6, 10 + (float)Math.Cos(a) * 9, 10 + (float)Math.Sin(a) * 9); } break;
+        }
+        return image;
     }
 }

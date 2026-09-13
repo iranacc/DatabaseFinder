@@ -21,6 +21,7 @@ public partial class Form1
     private Button _btnEnableService = null!;
     private Label _emptyState = null!;
     private ToolTip _toolTip = null!;
+    private Button _btnTheme = null!;
     public MainViewState CaptureView()
     {
         dgvDatabases.EndEdit();
@@ -61,18 +62,22 @@ public partial class Form1
         {
             button.AutoSize = false; button.Size = new Size(150, 44); button.Margin = new Padding(0, 4, 0, 4); nav.Controls.Add(button);
         }
-        online.Image = SystemIcons.Application.ToBitmap();
-        offline.Image = SystemIcons.Information.ToBitmap();
-        btnRemote.Image = SystemIcons.Shield.ToBitmap();
-        btnProfiles.Image = SystemIcons.Question.ToBitmap();
-        btnSettings.Image = SystemIcons.WinLogo.ToBitmap();
+        online.Image = UiTheme.Icon(UiTheme.UiIcon.Database);
+        offline.Image = UiTheme.Icon(UiTheme.UiIcon.Folder);
+        btnRemote.Image = UiTheme.Icon(UiTheme.UiIcon.Network);
+        btnProfiles.Image = UiTheme.Icon(UiTheme.UiIcon.Profile);
+        btnSettings.Image = UiTheme.Icon(UiTheme.UiIcon.Settings);
         foreach (var button in new[] { online, offline, btnRemote, btnProfiles, btnSettings })
         {
             button.ImageAlign = ContentAlignment.MiddleLeft;
             button.TextImageRelation = TextImageRelation.ImageBeforeText;
         }
         _toolTip = new ToolTip { AutoPopDelay = 5000, InitialDelay = 350, ReshowDelay = 100 };
-        foreach (var button in new[] { btnRefresh, btnCopyFiles, btnBackup, btnQuery, btnTest, btnRemote, btnProfiles, btnSettings })
+        _btnTheme = UiTheme.Button(UiTheme.Dark ? L.Text("S417") : L.Text("S415"), (_, _) => ToggleTheme());
+        _btnTheme.Image = UiTheme.Icon(UiTheme.UiIcon.Settings);
+        _btnTheme.ImageAlign = ContentAlignment.MiddleLeft;
+        _btnTheme.TextImageRelation = TextImageRelation.ImageBeforeText;
+        foreach (var button in new[] { btnRefresh, btnCopyFiles, btnBackup, btnQuery, btnTest, btnRemote, btnProfiles, btnSettings, _btnTheme })
             _toolTip.SetToolTip(button, button.Text);
         var content = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 1, RowCount = 7, RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -100,7 +105,7 @@ public partial class Form1
             Margin = new Padding(14, 0, 0, 0),
         };
         _lnkUpdate.Click += _lnkUpdate_Click;
-        content.Controls.Add(UiTheme.Flow(lblTitle, language, _lnkUpdate), 0, 0);
+        content.Controls.Add(UiTheme.Flow(lblTitle, language, _btnTheme, _lnkUpdate), 0, 0);
         btnRefresh.Tag = "primary";
         btnRefresh.AutoSize = true; btnRefresh.MinimumSize = new Size(110, 36);
         cmbScanMode.Width = 235;
@@ -135,15 +140,17 @@ public partial class Form1
             if (column == "colStatus" && e.RowIndex >= 0 && e.RowIndex < dgvDatabases.Rows.Count)
             {
                 var db = dgvDatabases.Rows[e.RowIndex].Tag as DatabaseInfo;
-                var color = db?.IsServiceStopped == true
-                    ? Color.FromArgb(255, 243, 205)
-                    : db?.IsOnline == true
-                        ? Color.FromArgb(220, 244, 231)
-                        : Color.FromArgb(255, 235, 218);
+                var color = UiTheme.Dark
+                    ? db?.IsServiceStopped == true
+                        ? Color.FromArgb(92, 76, 42)
+                        : db?.IsOnline == true ? Color.FromArgb(42, 82, 67) : Color.FromArgb(86, 61, 43)
+                    : db?.IsServiceStopped == true
+                        ? Color.FromArgb(255, 243, 205)
+                        : db?.IsOnline == true ? Color.FromArgb(220, 244, 231) : Color.FromArgb(255, 235, 218);
                 var style = e.CellStyle!;
                 style.BackColor = color;
                 style.SelectionBackColor = color;
-                style.ForeColor = Color.FromArgb(45, 55, 72);
+                style.ForeColor = UiTheme.Ink;
                 style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             }
         };
@@ -178,6 +185,7 @@ public partial class Form1
         content.Controls.Add(UiTheme.Flow(_selectionCount, _btnStartService, _btnEnableService, btnCopyFiles, btnBackup, btnTest, btnQuery, btnCopy), 0, 5);
         lblStatus.Dock = DockStyle.Fill; lblStatus.AutoSize = false; lblStatus.AutoEllipsis = true; content.Controls.Add(lblStatus, 0, 6);
         shell.Controls.Add(nav, L.IsFa ? 1 : 0, 0); shell.Controls.Add(content, L.IsFa ? 0 : 1, 0); Controls.Add(shell);
+        UiTheme.Apply(this);
         dgvDatabases.CurrentCellDirtyStateChanged += (_, _) => { if (dgvDatabases.IsCurrentCellDirty) dgvDatabases.CommitEdit(DataGridViewDataErrorContexts.Commit); };
         dgvDatabases.CellValueChanged += (_, _) => UpdateSelection();
         dgvDatabases.DataBindingComplete += (_, _) => UpdateSelection();
@@ -188,7 +196,7 @@ public partial class Form1
     {
         var panel = new Panel
         {
-            BackColor = Color.White,
+            BackColor = UiTheme.Surface,
             Size = new Size(166, 64),
             Margin = new Padding(0, 0, 10, 0),
             Padding = new Padding(12, 7, 12, 6)
@@ -252,6 +260,19 @@ public partial class Form1
         if (string.IsNullOrWhiteSpace(_pathDetail.Text) || _pathDetail.Text == "-") return;
         Clipboard.SetText(_pathDetail.Text);
         lblStatus.Text = L.Text("S411");
+    }
+    private void ToggleTheme()
+    {
+        var view = CaptureView();
+        _settings.DarkMode = !UiTheme.Dark;
+        _settings.Save();
+        UiTheme.Dark = _settings.DarkMode;
+        BuildModernShell();
+        RestoreView(view);
+    }
+    private void ShowShortcuts()
+    {
+        MessageBox.Show(this, L.Text("S419"), L.Text("S418"), MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
     private void UpdateServiceActions()
     {

@@ -314,14 +314,23 @@ namespace DatabaseFinder
                 var db = _lastResults[i];
                 var row = dgvDatabases.Rows[i];
                 row.Tag = db;
+                row.DefaultCellStyle.BackColor = UiTheme.Surface;
+                row.DefaultCellStyle.ForeColor = UiTheme.Ink;
+                row.DefaultCellStyle.SelectionBackColor = UiTheme.Dark ? Color.FromArgb(54, 78, 112) : Color.FromArgb(232, 240, 254);
+                row.DefaultCellStyle.SelectionForeColor = UiTheme.Ink;
+                row.Cells["colCheck"].Style.BackColor = UiTheme.Surface;
+                row.Cells["colCheck"].Style.SelectionBackColor = row.DefaultCellStyle.SelectionBackColor;
                 row.Cells["colDbCount"].Value = db.IsOnline && db.DatabaseCount is int cnt ? cnt.ToString() : "-";
 
                 if (!db.IsOnline)
                 {
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 244, 222);
-                    row.Cells["colCheck"].Style.BackColor = Color.FromArgb(255, 244, 222);
-                    row.Cells["colCheck"].Style.SelectionBackColor = Color.FromArgb(255, 224, 178);
-                    if (db.IsBackup) row.DefaultCellStyle.ForeColor = Color.FromArgb(27, 94, 32);
+                    var offlineBack = UiTheme.Dark ? Color.FromArgb(62, 53, 42) : Color.FromArgb(255, 244, 222);
+                    var offlineSelection = UiTheme.Dark ? Color.FromArgb(82, 68, 48) : Color.FromArgb(255, 224, 178);
+                    row.DefaultCellStyle.BackColor = offlineBack;
+                    row.DefaultCellStyle.SelectionBackColor = offlineSelection;
+                    row.Cells["colCheck"].Style.BackColor = offlineBack;
+                    row.Cells["colCheck"].Style.SelectionBackColor = offlineSelection;
+                    if (db.IsBackup) row.DefaultCellStyle.ForeColor = UiTheme.Dark ? Color.FromArgb(147, 226, 174) : Color.FromArgb(27, 94, 32);
                 }
             }
             UpdateDetails();
