@@ -44,9 +44,8 @@ public static class UpdateChecker
                         : "";
                     exeAssets.Add(new Asset(name, url));
                 }
-                chosen = exeAssets.FirstOrDefault(a => string.Equals(a.Name, runningExeName, StringComparison.OrdinalIgnoreCase))
-                    ?? exeAssets.FirstOrDefault(a => string.Equals(a.Name, "DatabaseFinder.exe", StringComparison.OrdinalIgnoreCase))
-                    ?? exeAssets.FirstOrDefault();
+                chosen = exeAssets.FirstOrDefault(a =>
+                    string.Equals(a.Name, runningExeName, StringComparison.OrdinalIgnoreCase));
             }
             if (chosen == null) return null;
             var body = root.TryGetProperty("body", out var bodyElement) ? bodyElement.GetString() ?? "" : "";

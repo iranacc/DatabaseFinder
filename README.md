@@ -15,6 +15,13 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.11
+
+- Safer self-update: the downloaded executable is SHA-256 verified before replacement, and a Light/full build can only receive its exact matching asset.
+- Safer physical copies: SQL Server `.mdf`, `_log.ldf` and numbered `.ndf` files are grouped together; stopped services are not started unless this operation stopped them.
+- Copy and backup hardening: source/destination recursion is blocked, empty backups fail, external backup arguments are safely separated, and malformed settings are normalized.
+- Multi-instance SQL Server copies now include the instance name in destination folders. Remote report hashes are labeled as content hashes excluding the hash line.
+
 ## What's new in v1.8.8
 
 - **"Choose folder manually" fix:** works even when a group node is selected or nothing is selected (auto-finds the first failed item), asks to override auto-located files, and auto-checks the database for copying.

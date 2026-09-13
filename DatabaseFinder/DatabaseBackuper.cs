@@ -44,7 +44,7 @@ namespace DatabaseFinder
                 if (!server.IsOnline)
                 {
                     items.Add(ErrorItem(server, server.Name,
-                        L.Text("S002")));
+                        server.IsServiceStopped ? L.Text("S384") : L.Text("S002")));
                     continue;
                 }
 
@@ -397,9 +397,12 @@ namespace DatabaseFinder
             var (_, user, pass) = GetMySqlCreds(item.Server, port);
 
             Directory.CreateDirectory(item.BackupDir);
-            var args = $"--host={item.Server.Host} --port={port} --user={user} " +
-                       $"--single-transaction --routines --triggers --default-character-set=utf8mb4 " +
-                       $"--result-file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
+            var args = new[]
+            {
+                $"--host={item.Server.Host}", $"--port={port}", $"--user={user}",
+                "--single-transaction", "--routines", "--triggers", "--default-character-set=utf8mb4",
+                $"--result-file={item.DestFile}", item.DatabaseName
+            };
 
             log?.Invoke(L.Format("S011", item.Server.TypeDisplayName, item.DatabaseName));
             RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["MYSQL_PWD"] = pass }, log);
@@ -494,8 +497,11 @@ namespace DatabaseFinder
             var pass = profile?.Password ?? "postgres";
 
             Directory.CreateDirectory(item.BackupDir);
-            var args = $"--host={item.Server.Host} --port={port} --username={user} " +
-                       $"--format=custom --file=\"{item.DestFile}\" \"{item.DatabaseName}\"";
+            var args = new[]
+            {
+                $"--host={item.Server.Host}", $"--port={port}", $"--username={user}",
+                "--format=custom", $"--file={item.DestFile}", item.DatabaseName
+            };
 
             log?.Invoke(L.Format("S015", item.DatabaseName));
             RunProcess(item.ToolPath, args, new Dictionary<string, string> { ["PGPASSWORD"] = pass }, log);
@@ -592,7 +598,10 @@ namespace DatabaseFinder
 
             Directory.CreateDirectory(item.BackupDir);
             var port = item.Server.Port ?? 27017;
-            var args = $"--host={item.Server.Host} --port={port} --out=\"{item.BackupDir}\"";
+            var args = new[]
+            {
+                $"--host={item.Server.Host}", $"--port={port}", $"--out={item.BackupDir}"
+            };
 
             log?.Invoke(L.Format("S021", item.BackupDir));
             RunProcess(item.ToolPath, args, null, log);
@@ -645,6 +654,9 @@ namespace DatabaseFinder
                         ? Directory.EnumerateFiles(item.BackupDir, "*", SearchOption.AllDirectories).ToList()
                         : new List<string>();
                     item.BytesProduced = item.OutputFiles.Sum(f => new FileInfo(f).Length);
+                    if (item.OutputFiles.Count == 0 || item.BytesProduced <= 0)
+                        throw new InvalidOperationException(L.Text("S394"));
+
                     item.EndedUtc = DateTime.UtcNow;
                     item.Done = true;
                     log?.Invoke(L.Format("S024", item.FolderName, DatabaseFileLocator.FormatSize(item.BytesProduced)));
@@ -668,16 +680,18 @@ namespace DatabaseFinder
             return h == "127.0.0.1" || h == "::1" || h == "[::1]" || h == "0.0.0.0";
         }
 
-        private static string RunProcess(string exe, string args, Dictionary<string, string>? env, Action<string>? log)
+        private static string RunProcess(string exe, IReadOnlyList<string> args,
+            Dictionary<string, string>? env, Action<string>? log)
         {
             var psi = new ProcessStartInfo
             {
                 FileName = exe,
-                Arguments = args,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true
             };
+            foreach (var arg in args)
+                psi.ArgumentList.Add(arg);
             if (env != null)
                 foreach (var kv in env)
                     psi.Environment[kv.Key] = kv.Value;

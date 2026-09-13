@@ -176,7 +176,7 @@ namespace DatabaseFinder
             }
             var bodyHash = ManifestGenerator.Sha256Text(string.Join("\n", body));
             body.Add("");
-            body.Add($"Manifest SHA-256 (of this file): {bodyHash}");
+            body.Add($"Report content SHA-256 (excluding this line): {bodyHash}");
             var txt = string.Join("\n", body) + "\n";
             File.WriteAllText(outputBase + ".txt", txt, new UTF8Encoding(false));
 
@@ -206,7 +206,7 @@ namespace DatabaseFinder
                     r.ServerName,
                     r.Message
                 }),
-                selfSha256 = bodyHash
+                contentSha256 = bodyHash
             };
             var jsonPath = outputBase + ".json";
             File.WriteAllText(jsonPath,

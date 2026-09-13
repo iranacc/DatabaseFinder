@@ -391,6 +391,8 @@
   "S390": "Report saved: {#}",
   "S391": "No results yet — run a scan first.",
   "S392": "Remote scan",
+  "S393": "The copy destination cannot be the source folder or one of its subfolders.",
+  "S394": "The backup did not produce a valid output file.",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

@@ -141,6 +141,11 @@ namespace DatabaseFinder
                     _lnkUpdate.Text = L.Format("S340", percent);
                 });
                 await UpdateChecker.DownloadAsync(_updateInfo.AssetUrl, destination, progress, CancellationToken.None);
+                await UpdateChecker.VerifyChecksumAsync(
+                    destination,
+                    _updateInfo.Tag,
+                    _updateInfo.AssetName,
+                    CancellationToken.None);
                 lblStatus.Text = L.Text("S343");
                 UpdateChecker.Apply(destination, Application.ExecutablePath);
                 notifyIcon.Visible = false;
@@ -488,15 +493,19 @@ namespace DatabaseFinder
                 Port = db.Port?.ToString() ?? "-",
                 ServiceName = db.ServiceName ?? (db.IsRunningAsService ? db.Name : "-"),
                 ProcessDisplay = db.ProcessId > 0 ? $"{db.ProcessName} (PID: {db.ProcessId})" : "-",
-                DetectionMethod = db.IsOnline
+                DetectionMethod = db.IsServiceStopped
+                    ? L.Text("S383")
+                    : db.IsOnline
                     ? string.Join(" + ", how)
                     : (db.IsBackup ? L.Text("S225") : L.Text("S226")),
                 Version = db.Version,
                 HostAddress = db.Host,
-                Location = db.IsOnline
+                Location = db.IsServiceStopped
+                    ? (db.ServiceName ?? "-")
+                    : db.IsOnline
                     ? (db.IsServiceStopped ? (db.ServiceName ?? "-") : (db.Host + ":" + db.Port))
                     : (db.LocalPath ?? "-"),
-                SizeInfo = db.IsOnline
+                SizeInfo = db.IsServiceStopped || db.IsOnline
                     ? ""
                     : $"{FormatFileSize(db.FileSize)} - {db.FileModified:yyyy-MM-dd HH:mm}"
             };

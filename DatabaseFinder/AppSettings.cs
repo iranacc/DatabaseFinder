@@ -20,7 +20,9 @@ namespace DatabaseFinder
                 if (File.Exists(SettingsPath))
                 {
                     var json = File.ReadAllText(SettingsPath);
-                    return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    var loaded = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    loaded.Normalize();
+                    return loaded;
                 }
             }
             catch (Exception ex) { AppLog.Write("Settings.Load", ex); }
@@ -31,6 +33,7 @@ namespace DatabaseFinder
         {
             try
             {
+                Normalize();
                 var dir = Path.GetDirectoryName(SettingsPath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                 var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
@@ -42,7 +45,13 @@ namespace DatabaseFinder
         public int GetPort(DatabaseType type, int defaultPort)
         {
             var key = type.ToString();
-            return CustomPorts.TryGetValue(key, out int p) ? p : defaultPort;
+            return CustomPorts.TryGetValue(key, out int p) && p is >= 1 and <= 65535 ? p : defaultPort;
+        }
+
+        private void Normalize()
+        {
+            CustomPorts ??= new Dictionary<string, int>();
+            AutoRefreshIntervalSec = Math.Clamp(AutoRefreshIntervalSec, 10, 600);
         }
     }
 

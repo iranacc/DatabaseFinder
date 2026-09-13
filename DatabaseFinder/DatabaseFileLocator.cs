@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using MySqlConnector;
 using Npgsql;
@@ -56,6 +57,12 @@ namespace DatabaseFinder
             foreach (var server in servers)
             {
                 log?.Invoke(L.Format("S116", server.TypeDisplayName));
+
+                if (server.IsServiceStopped && server.Type == DatabaseType.SQLServer && IsLocalHost(server))
+                {
+                    items.AddRange(EnumerateStoppedSqlServer(server, log));
+                    continue;
+                }
 
                 if (!server.IsOnline)
                 {
@@ -301,15 +308,20 @@ namespace DatabaseFinder
             var groups = files
                 .Where(f => !string.IsNullOrEmpty(Path.GetDirectoryName(f)))
                 .GroupBy(f => (Path.GetDirectoryName(f) ?? "").ToLowerInvariant() + "|" +
-                              Path.GetFileNameWithoutExtension(f).ToLowerInvariant())
+                              NormalizeSqlFileStem(Path.GetFileNameWithoutExtension(f)))
                 .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
             foreach (var g in groups)
             {
-                // فقط گروه‌هایی که mdf دارند (ldf تنها کافی نیست)
+                // نام‌گذاری رایج SQL Server: Database.mdf، Database_log.ldf و Database_1.ndf
                 if (!g.Any(f => f.EndsWith(".mdf", StringComparison.OrdinalIgnoreCase))) continue;
-                var baseName = Path.GetFileNameWithoutExtension(g.First());
-                var folder = SafeFolder($"{server.TypeDisplayName}_{baseName}");
+                var baseFile = g.First(f => f.EndsWith(".mdf", StringComparison.OrdinalIgnoreCase));
+                var baseName = Path.GetFileNameWithoutExtension(baseFile);
+                var instance = SqlInstanceLabel(server);
+                var folderPrefix = string.IsNullOrEmpty(instance)
+                    ? server.TypeDisplayName
+                    : $"{server.TypeDisplayName}_{instance}";
+                var folder = SafeFolder($"{folderPrefix}_{baseName}");
                 for (var i = 2; usedFolders.Contains(folder); i++)
                     folder = SafeFolder($"{server.TypeDisplayName}_{baseName}_{i}");
                 usedFolders.Add(folder);
@@ -343,6 +355,30 @@ namespace DatabaseFinder
             }
 
             return result;
+        }
+
+        private static string SqlInstanceLabel(DatabaseInfo server)
+        {
+            var service = server.ServiceName?.Trim() ?? "";
+            if (service.Equals("MSSQLSERVER", StringComparison.OrdinalIgnoreCase))
+                return "MSSQLSERVER";
+            if (service.StartsWith("MSSQL$", StringComparison.OrdinalIgnoreCase))
+                return service.Substring("MSSQL$".Length);
+            return service;
+        }
+
+        private static string NormalizeSqlFileStem(string stem)
+        {
+            var normalized = stem.Trim().ToLowerInvariant();
+            string previous;
+            do
+            {
+                previous = normalized;
+                normalized = Regex.Replace(normalized, @"(?:_log|_data|_\d+)$", "", RegexOptions.IgnoreCase);
+            }
+            while (!string.Equals(previous, normalized, StringComparison.Ordinal));
+
+            return normalized;
         }
 
         /// <summary>
@@ -779,8 +815,10 @@ namespace DatabaseFinder
                     if (serviceNames.Count > 0)
                     {
                         log?.Invoke(L.Text("S131"));
-                        if (!DbServiceHelper.StopServices(serviceNames.ToList(), log, out var stopErr))
+                        if (!DbServiceHelper.StopServices(serviceNames.ToList(), log,
+                                out var stoppedByOperation, out var stopErr))
                         {
+                            stoppedServices.AddRange(stoppedByOperation);
                             log?.Invoke(L.Format("S132", stopErr));
                             errorLines.Add(L.Format("S133", stopErr));
                             foreach (var item in items.Where(i => i.Server.IsOnline && IsLocalHost(i.Server)))
@@ -791,7 +829,7 @@ namespace DatabaseFinder
                             }
                             return (0, 0, failed, mismatched, string.Join(Environment.NewLine, errorLines), acquisitions);
                         }
-                        stoppedServices.AddRange(serviceNames);
+                        stoppedServices.AddRange(stoppedByOperation);
                     }
                 }
 
@@ -813,6 +851,9 @@ namespace DatabaseFinder
 
                         if (sourceRoot != null && Directory.Exists(sourceRoot))
                         {
+                            if (IsSameOrDescendantPath(sourceRoot, destDir))
+                                throw new InvalidOperationException(L.Text("S393"));
+
                             // کپی کل پوشه دستی
                             CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied, ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log);
                             continue;
@@ -1004,6 +1045,15 @@ namespace DatabaseFinder
                     failed++;
                 }
             }
+        }
+
+        private static bool IsSameOrDescendantPath(string parent, string candidate)
+        {
+            var parentFull = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var candidateFull = Path.GetFullPath(candidate).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return candidateFull.Equals(parentFull, StringComparison.OrdinalIgnoreCase) ||
+                   candidateFull.StartsWith(parentFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                   candidateFull.StartsWith(parentFull + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryCopyViaShadow(

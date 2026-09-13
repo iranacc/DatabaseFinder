@@ -222,7 +222,7 @@ namespace DatabaseFinder
                     ServiceName = svc,
                     Host = "localhost",
                     Port = null,
-                    IsOnline = true,
+                    IsOnline = false,
                     DetectedAt = DateTime.Now
                 });
             }

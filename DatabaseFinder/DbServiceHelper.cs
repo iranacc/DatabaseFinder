@@ -62,8 +62,10 @@ namespace DatabaseFinder
             return names.ToList();
         }
 
-        public static bool StopServices(List<string> serviceNames, Action<string>? log, out string? error)
+        public static bool StopServices(List<string> serviceNames, Action<string>? log,
+            out List<string> stoppedServices, out string? error)
         {
+            stoppedServices = new List<string>();
             error = null;
             foreach (var name in serviceNames)
             {
@@ -75,6 +77,7 @@ namespace DatabaseFinder
                     {
                         log?.Invoke(L.Format("S153", name));
                         sc.Stop();
+                        stoppedServices.Add(name);
                         sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
                         log?.Invoke(L.Format("S154", name));
                     }
