@@ -26,6 +26,8 @@ namespace DatabaseFinder
         private readonly RadioButton _rdoReportOnly;
         private readonly CheckBox _chkVerifyCopy;
         private List<CopyAcquisition> _lastAcquisitions = new();
+        private Control[] _planControls = Array.Empty<Control>();
+        private bool[]? _planEnabled;
         private bool _caseAsked;
         private CaseInfo? _caseInfo;
         private string _manifestPath = "";
@@ -359,6 +361,34 @@ namespace DatabaseFinder
 
             Load += DatabaseCopyForm_Load;
             OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
+
+            // حین کپی نباید چیزی از این کنترل‌ها تغییر کند: نخ کار روی همان آیتم‌ها
+            // می‌خواند و مسیر دستی/انتخاب‌ها وسط کار عوض می‌شوند
+            _planControls = new Control[]
+            {
+                btnSelectAll, btnClearAll, _btnManualPath, _btnFindPass, _btnSysadmin, _btnDeepSweep,
+                _btnLabScript, btnBrowse, _txtDest, _tree, grpLocked
+            };
+        }
+
+        /// <summary>قفل کنترل‌های برنامه‌ریزی هنگام اجرای مأموریت.</summary>
+        private void SetPlanBusy(bool busy)
+        {
+            if (busy)
+            {
+                _planEnabled ??= _planControls.Select(c => c.Enabled).ToArray();
+                foreach (var c in _planControls)
+                {
+                    if (!c.IsDisposed) c.Enabled = false;
+                }
+                return;
+            }
+            if (_planEnabled == null) return;
+            for (var i = 0; i < _planControls.Length && i < _planEnabled.Length; i++)
+            {
+                if (!_planControls[i].IsDisposed) _planControls[i].Enabled = _planEnabled[i];
+            }
+            _planEnabled = null;
         }
 
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
@@ -629,11 +659,14 @@ namespace DatabaseFinder
                 return;
             }
 
+            var target = item.Value.Item2;
+
             // اگر فایل خودکار پیدا شده، با تایید کاربر اجازه بازنویسی بده
             // (مسیر خودکار در حالت بدون لاگین ممکن است ناقص باشد).
-            if (item.Value.Item2.Files.Count > 0 && string.IsNullOrEmpty(item.Value.Item2.Error))
+            // اگر قبلاً مسیر دستی دارد، این فقط تعویض پوشه است و نباید دوباره پرسیده شود.
+            if (!target.UseManualPath && target.Files.Count > 0 && string.IsNullOrEmpty(target.Error))
             {
-                if (MessageBox.Show(L.Format("S361", item.Value.Item2.DatabaseName), L.Text("S062"),
+                if (MessageBox.Show(L.Format("S361", target.DatabaseName), L.Text("S062"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                         MessageBoxDefaultButton.Button2) != DialogResult.Yes)
                     return;
@@ -641,14 +674,21 @@ namespace DatabaseFinder
 
             using var fbd = new FolderBrowserDialog
             {
-                Description = L.Format("S082", item.Value.Item2.DatabaseName),
-                SelectedPath = item.Value.Item2.UseManualPath && Directory.Exists(item.Value.Item2.ManualPath)
-                    ? item.Value.Item2.ManualPath
-                    : _txtDest.Text
+                Description = L.Format("S082", target.DatabaseName)
             };
+            // مرورگر باید از جایی باز شود که فایل‌های دیتابیس آنجاست، نه از پوشه‌ی مقصد
+            var start = GuessManualBrowseStart(target, _txtDest.Text);
+            if (start != null) fbd.SelectedPath = start;
+
             if (fbd.ShowDialog(this) == DialogResult.OK)
             {
-                var target = item.Value.Item2;
+                // یک پوشه برای چند دیتابیس: داده دو بار کپی و دو بار در مانیفست ثبت می‌شود
+                var sharedWith = CountSharingManualPath(target, fbd.SelectedPath);
+                if (sharedWith > 0 && MessageBox.Show(L.Format("S426", sharedWith), L.Text("S062"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                    return;
+
                 target.ManualPath = fbd.SelectedPath;
                 target.UseManualPath = true;
                 target.Error = null;
@@ -659,6 +699,43 @@ namespace DatabaseFinder
                 _tree.SelectedNode = node;
                 _lblStatus.Text = L.Text("S084");
             }
+        }
+
+        /// <summary>نرمال‌سازی مسیر پوشه برای مقایسه (بدون اسلش انتهایی).</summary>
+        private static string NormalizeDir(string path) =>
+            (path ?? "").Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        /// <summary>چند دیتابیس دیگر همین پوشه را به‌عنوان مسیر دستی دارند؟</summary>
+        private int CountSharingManualPath(DatabaseCopyItem target, string path) =>
+            _items.Count(i => !ReferenceEquals(i, target) && i.UseManualPath &&
+                string.Equals(NormalizeDir(i.ManualPath), NormalizeDir(path), StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// نقطه‌ی شروع مرورگر پوشه: مسیر دستی فعلی، وگرنه پوشه‌ی فایل‌های پیدا‌شده،
+        /// وگرنه مسیر محلی فایل آفلاین، وگرنه مقصد (اگر وجود داشته باشد).
+        /// </summary>
+        private static string? GuessManualBrowseStart(DatabaseCopyItem item, string fallback)
+        {
+            if (item.UseManualPath && Directory.Exists(item.ManualPath))
+                return item.ManualPath;
+
+            var known = item.Files.FirstOrDefault(f => !string.IsNullOrEmpty(f.SourcePath))?.SourcePath;
+            if (!string.IsNullOrEmpty(known))
+            {
+                var dir = Path.GetDirectoryName(known);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+            }
+
+            if (!string.IsNullOrEmpty(item.Server.LocalPath))
+            {
+                var dir = Path.GetDirectoryName(item.Server.LocalPath);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir)) return dir;
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallback) && Directory.Exists(fallback)) return fallback;
+
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            return Directory.Exists(docs) ? docs : null;
         }
 
         /// <summary>
@@ -729,9 +806,11 @@ namespace DatabaseFinder
             }
 
             // پیش‌برآورد فضا: وسط ماموریت با خطای دیسک مواجه نشویم
+            // (برای مسیر دستی باید اندازه‌ی واقعی پوشه شمرده شود، نه Files که خالی است)
             try
             {
-                var need = items.Sum(i => i.TotalSize);
+                _lblStatus.Text = L.Text("S425");
+                var need = await Task.Run(() => DatabaseFileLocator.EstimateRequiredBytes(items));
                 var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(destRoot)) ?? destRoot);
                 if (need > 0 && drive.IsReady && need > drive.AvailableFreeSpace)
                 {
@@ -749,6 +828,7 @@ namespace DatabaseFinder
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
             _btnReport.Enabled = false;
+            SetPlanBusy(true);
             _progress.Value = 0;
             _progress.Maximum = Math.Max(1, items.Sum(i => Math.Max(1, i.Files.Count)));
             _reportPath = "";
@@ -801,6 +881,7 @@ namespace DatabaseFinder
             }
             finally
             {
+                SetPlanBusy(false);
                 _btnCopy.Enabled = true;
                 _btnCopy.Text = L.Text("S071");
                 _progress.Value = _progress.Maximum;

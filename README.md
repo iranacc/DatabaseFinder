@@ -15,6 +15,16 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.13
+
+- **Runaway manual copies stopped:** a chosen folder that contains links or junctions (a drive root, a folder with `Application Data`-style links) is no longer copied without limit. Links are skipped and each one is reported as "not copied" in the log and manifest; nesting deeper than 24 levels stops with a clear message.
+- **Locked files in a manual folder:** with the Shadow Copy option selected, locked files are now copied through VSS just like auto-located files; otherwise the "stop the service" message is shown.
+- **No more silent failures:** if the chosen folder was deleted, renamed or disconnected, an explicit error is recorded and the database is counted as failed instead of reporting success with nothing copied.
+- **Unreadable subfolders no longer abort the whole database:** the failure is recorded for that subfolder only, the rest of the database is still copied, and the message is localised.
+- **Real free-space check:** the size of manual folders is measured before the copy starts (in the background), so the "not enough space" warning can finally fire for manual paths.
+- **Locked controls during the operation:** the manual-folder action, select/clear all, password finder, admin grant, deep sweep, lab script, destination picker and results tree are disabled while copying, and each control's previous state is restored afterwards.
+- **Better manual-folder dialog:** re-picking a folder for an already-manual database no longer re-asks about replacing auto-located files, a folder already used by other databases warns about the duplicate copy, and the browser opens where the database files are instead of at the destination.
+
 ## What's new in v1.8.12
 
 - **Optional dark mode:** Settings now switches the shared theme across forms, panels, buttons, inputs, trees and grids, and applies it immediately on the main screen.

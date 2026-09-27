@@ -852,14 +852,30 @@ namespace DatabaseFinder
                             continue;
                         }
 
-                        if (sourceRoot != null && Directory.Exists(sourceRoot))
+                        if (sourceRoot != null)
                         {
+                            if (!Directory.Exists(sourceRoot))
+                            {
+                                // مسیر دستی انتخاب شده بود ولی الان در دسترس نیست: سکوت نکن
+                                var goneMsg = L.Format("S423", sourceRoot);
+                                errorLines.Add($"{item.FolderName}: {goneMsg}");
+                                failed++;
+                                log?.Invoke(goneMsg);
+                                progress?.Invoke(++completedWork, totalWork);
+                                continue;
+                            }
+
                             if (IsSameOrDescendantPath(sourceRoot, destDir))
                                 throw new InvalidOperationException(L.Text("S393"));
 
                             // کپی کل پوشه دستی
-                            CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied, ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log);
-                            progress?.Invoke(completedWork += Math.Max(1, item.Files.Count), totalWork);
+                            var before = completedWork;
+                            CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied,
+                                ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log,
+                                lockedHandling, shadowCache,
+                                () => progress?.Invoke(++completedWork, Math.Max(totalWork, completedWork + 1)));
+                            if (completedWork == before) completedWork++;
+                            progress?.Invoke(completedWork, Math.Max(totalWork, completedWork));
                             continue;
                         }
 
@@ -1030,30 +1046,194 @@ namespace DatabaseFinder
             log?.Invoke(doneMessage + (verifyHash && verified ? "  ✓" : ""));
         }
 
-        private static void CopyDirectory(string sourceRoot, string destRoot, string folderName,
-            ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
-            List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log)
+        /// <summary>سقف عمق پیمایش پوشه‌ی دستی؛ جلوی تکثیر بی‌پایان را می‌گیرد.</summary>
+        private const int MaxManualDepth = 24;
+
+        /// <summary>
+        /// پیمایش امن یک درخت پوشه: لینک‌ها/ReparsePoint دنبال نمی‌شوند (وگرنه کپی در
+        /// حلقه‌های Junction منفجر می‌شود)، عمق محدود است و خطای یک زیرپوشه فقط همان
+        /// زیرپوشه را از کار می‌اندازد، نه کل آیتم را.
+        /// </summary>
+        private static IEnumerable<(string FullPath, string Relative)> EnumerateTreeSafe(
+            string root, int maxDepth, Action<string, string> onDirError, Action<string, string> onLinkSkipped, Action<string, string>? onDepthCut)
         {
-            foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+            var stack = new Stack<(string Path, string Relative, int Depth)>();
+            stack.Push((root, "", 0));
+            while (stack.Count > 0)
             {
-                var rel = Path.GetRelativePath(sourceRoot, file);
-                var dest = Path.Combine(destRoot, rel);
+                var (dir, rel, depth) = stack.Pop();
+                string[] entries;
                 try
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destRoot);
-                    File.Copy(file, dest, overwrite: true);
-                    var destInfo = new FileInfo(dest);
-                    RecordCopy(null, Path.Combine(folderName, rel), file, dest, destInfo.Length,
-                        ref filesCopied, ref bytesCopied, ref failed, ref mismatched,
-                        acquisitions, errorLines, verifyHash, log,
-                        L.Format("S137", Path.GetFileName(destRoot), rel, FormatSize(destInfo.Length)));
+                    // آرایه‌ی کامل: استثنای احتمالی همین‌جا گرفته می‌شود، نه وسط حلقه‌ی کپی
+                    entries = Directory.GetFileSystemEntries(dir);
                 }
                 catch (Exception ex)
                 {
-                    errorLines.Add($"{Path.GetFileName(destRoot)}\\{rel}: {ex.Message}");
-                    failed++;
+                    onDirError(dir, ex.Message);
+                    continue;
+                }
+
+                foreach (var entry in entries)
+                {
+                    var name = Path.GetFileName(entry);
+                    var entryRel = rel.Length == 0 ? name : Path.Combine(rel, name);
+                    FileAttributes attr;
+                    try
+                    {
+                        attr = File.GetAttributes(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        onDirError(entry, ex.Message);
+                        continue;
+                    }
+
+                    if ((attr & FileAttributes.ReparsePoint) != 0)
+                    {
+                        onLinkSkipped(entry, entryRel);
+                        continue;
+                    }
+
+                    if ((attr & FileAttributes.Directory) != 0)
+                    {
+                        if (depth + 1 > maxDepth)
+                        {
+                            onDepthCut?.Invoke(entry, entryRel);
+                            continue;
+                        }
+                        stack.Push((entry, entryRel, depth + 1));
+                        continue;
+                    }
+
+                    yield return (entry, entryRel);
                 }
             }
+        }
+
+        /// <summary>شمارنده‌های محلی کپی پوشه‌ی دستی (برای فراخوانی‌های بسته‌شدنی).</summary>
+        private sealed class CopyCounters
+        {
+            public int Files;
+            public long Bytes;
+            public int Failed;
+            public int Mismatched;
+            public readonly List<CopyAcquisition> Acquisitions = new();
+            public readonly List<string> Errors = new();
+        }
+
+        private static void CopyDirectory(string sourceRoot, string destRoot, string folderName,
+            ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
+            List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log,
+            LockedFileHandling lockedHandling, Dictionary<string, string> shadowCache, Action? onFile)
+        {
+            var label = Path.GetFileName(destRoot);
+            var c = new CopyCounters();
+            void AddError(string rel, string message)
+            {
+                c.Errors.Add($"{label}\\{rel}: {message}");
+                c.Failed++;
+            }
+
+            foreach (var (file, rel) in EnumerateTreeSafe(sourceRoot, MaxManualDepth,
+                         (dir, msg) =>
+                         {
+                             var relDir = Path.GetRelativePath(sourceRoot, dir);
+                             AddError(relDir, L.Format("S420", dir, msg));
+                             log?.Invoke(L.Format("S420", dir, msg));
+                         },
+                         (link, linkRel) =>
+                         {
+                             AddError(linkRel, L.Format("S421", link));
+                             log?.Invoke(L.Format("S421", link));
+                         },
+                         (dir, dirRel) =>
+                         {
+                             AddError(dirRel, L.Format("S422", MaxManualDepth, dir));
+                             log?.Invoke(L.Format("S422", MaxManualDepth, dir));
+                         }))
+            {
+                var dest = Path.Combine(destRoot, rel);
+                try
+                {
+                    var dir = Path.GetDirectoryName(dest);
+                    if (dir != null) Directory.CreateDirectory(dir);
+                    var effectiveSrc = file;
+                    var doneMessage = L.Format("S137", label, rel, FormatSize(new FileInfo(file).Length));
+                    try
+                    {
+                        File.Copy(file, dest, overwrite: true);
+                    }
+                    catch (IOException)
+                    {
+                        // فایل قفل است: مثل مسیر خودکار، اول از Shadow Copy تلاش کن
+                        if (lockedHandling != LockedFileHandling.Vss)
+                        {
+                            AddError(rel, L.Text("S140"));
+                            continue;
+                        }
+                        var vol = Path.GetPathRoot(file);
+                        if (!TryCopyViaShadow(file, dest, vol, shadowCache, out var shadowErr, out var shadowSrc))
+                        {
+                            AddError(rel, L.Text("S139") + shadowErr);
+                            continue;
+                        }
+                        effectiveSrc = shadowSrc;
+                        doneMessage = L.Format("S138", label, rel, FormatSize(new FileInfo(dest).Length));
+                    }
+
+                    var destInfo = new FileInfo(dest);
+                    RecordCopy(null, Path.Combine(folderName, rel), effectiveSrc, dest, destInfo.Length,
+                        ref c.Files, ref c.Bytes, ref c.Failed, ref c.Mismatched,
+                        c.Acquisitions, c.Errors, verifyHash, log, doneMessage);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    AddError(rel, L.Format("S424", ex.Message));
+                }
+                catch (Exception ex)
+                {
+                    AddError(rel, ex.Message);
+                }
+                finally
+                {
+                    onFile?.Invoke();
+                }
+            }
+
+            filesCopied += c.Files;
+            bytesCopied += c.Bytes;
+            failed += c.Failed;
+            mismatched += c.Mismatched;
+            acquisitions.AddRange(c.Acquisitions);
+            errorLines.AddRange(c.Errors);
+        }
+
+        /// <summary>
+        /// برآورد فضای لازم پیش از شروع کپی: برای آیتم‌های با مسیر دستی، اندازه‌ی واقعی
+        /// پوشه شمرده می‌شود (_files خالی است و TotalSize صفر می‌دهد).
+        /// </summary>
+        public static long EstimateRequiredBytes(List<DatabaseCopyItem> items)
+        {
+            long total = 0;
+            foreach (var item in items)
+            {
+                if (item.UseManualPath && !string.IsNullOrEmpty(item.ManualPath))
+                {
+                    if (!Directory.Exists(item.ManualPath)) continue;
+                    foreach (var (file, _) in EnumerateTreeSafe(item.ManualPath, MaxManualDepth,
+                                 (dir, msg) => AppLog.Write("Copy.Space:" + dir, new IOException(msg)),
+                                 (link, linkRel) => { },
+                                 (dir, dirRel) => { }))
+                    {
+                        try { total += new FileInfo(file).Length; }
+                        catch { }
+                    }
+                    continue;
+                }
+                total += item.TotalSize;
+            }
+            return total;
         }
 
         private static bool IsSameOrDescendantPath(string parent, string candidate)
