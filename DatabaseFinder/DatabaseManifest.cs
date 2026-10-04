@@ -71,7 +71,7 @@ namespace DatabaseFinder
 
     public static class ManifestGenerator
     {
-        public const string ToolVersion = "1.8.12";
+        public const string ToolVersion = "1.8.14";
 
         public static string Sha256File(string path)
         {
@@ -88,7 +88,7 @@ namespace DatabaseFinder
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
 
-        public static string BuildTaxStamp181()
+        public static string BuildTaxStamp181(bool includeCaption = true)
         {
             var glyphs = new[]
             {
@@ -106,10 +106,13 @@ namespace DatabaseFinder
                 art.Add(dbl);
             }
             var logoWidth = art.Max(l => l.TrimEnd().Length);
-            var caption = "TAX 181 ARTICLE . MSAM Group";
-            var pad = Math.Max(0, (logoWidth - caption.Length) / 2);
-            art.Add("");
-            art.Add(new string(' ', pad) + caption);
+            if (includeCaption)
+            {
+                var caption = "TAX 181 ARTICLE . MSAM Group";
+                var pad = Math.Max(0, (logoWidth - caption.Length) / 2);
+                art.Add("");
+                art.Add(new string(' ', pad) + caption);
+            }
             var inner = Math.Max(logoWidth, art.Max(l => l.TrimEnd().Length));
             var sb = new StringBuilder();
             sb.Append('╔').Append('═', inner).Append('╗').Append('\n');

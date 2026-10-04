@@ -62,6 +62,8 @@ internal static class Program
             var diskGrid=Descendants(disk).OfType<DataGridView>().Single();
             typeof(DiskScanForm).GetMethod("SetResultsChecked",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk,new object[]{false});Check(!(bool)diskGrid.Rows[0].Cells[0].Value!,language+" disk clear selection");
             typeof(DiskScanForm).GetMethod("SetResultsChecked",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk,new object[]{true});Check((bool)diskGrid.Rows[0].Cells[0].Value!,language+" disk select all");
+            var diskSelCol=diskGrid.Columns.Cast<DataGridViewColumn>().First(c=>c.Name=="sel");
+            Check(diskSelCol is DataGridViewCheckBoxColumn && !diskSelCol.ReadOnly && !diskGrid.ReadOnly,language+" offline results checkbox stays editable");
             Render(disk,Path.Combine(output,"disk-"+language+".png"));
             using var picker=new FormatPickerForm(DiskFormatRegistry.All);picker.Show();Application.DoEvents();
             Check(picker.SelectedFormats.Count==14,language+" all 14 format groups available");

@@ -292,6 +292,10 @@ namespace DatabaseFinder
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S179"), Name = "backup", Width = 60, ReadOnly = true });
 
             _grid.CellMouseClick += Grid_CellMouseClick;
+            _grid.CurrentCellDirtyStateChanged += (_, _) =>
+            {
+                if (_grid.IsCurrentCellDirty) _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            };
             Controls.Add(_grid);
 
             _ctxResults = new ContextMenuStrip();

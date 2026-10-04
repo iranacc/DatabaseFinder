@@ -15,6 +15,12 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.14
+
+- **Fixed offline file-search selection:** checking the found items in the "File search" results grid previously did not stick; now a single click toggles and commits the checkbox, and "Copy files" / "Merge into main list" act on the actually-selected rows.
+- **Dropped the English line from the Persian reports:** `TAX 181 ARTICLE . MSAM Group` is no longer printed in the Persian printable reports; the 181 logo and the technical manifest stamp remain.
+- Ships the v1.8.13 manual-folder copy hardening (no runaway link traversal, VSS for locked manual-folder files, explicit error for a missing folder, real free-space estimate).
+
 ## What's new in v1.8.13
 
 - **Runaway manual copies stopped:** a chosen folder that contains links or junctions (a drive root, a folder with `Application Data`-style links) is no longer copied without limit. Links are skipped and each one is reported as "not copied" in the log and manifest; nesting deeper than 24 levels stops with a clear message.

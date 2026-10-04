@@ -38,7 +38,6 @@ namespace DatabaseFinder
             sb.Append("@media print{body{margin:10mm;}}");
             sb.Append("</style></head><body>");
 
-            sb.Append("<div class=\"stamp\">TAX 181 ARTICLE . MSAM Group</div>");
             sb.Append("<h1>صورتجلسه برداشت داده‌های مالی (ماده ۱۸۱ قانون مالیات‌های مستقیم)</h1>");
             sb.Append("<p class=\"sub\">این گزارش نمای خلاصه است؛ مستند فنی کامل در فایل‌های manifest.txt و manifest.json همین پوشه ثبت شده است.</p>");
 
@@ -142,7 +141,7 @@ namespace DatabaseFinder
             };
 
             // ---------- TXT ----------
-            var body = new List<string> { ManifestGenerator.BuildTaxStamp181(), "" };
+            var body = new List<string> { ManifestGenerator.BuildTaxStamp181(includeCaption: false), "" };
             body.Add("گزارش اسکن شبکه — ماده ۱۸۱ قانون مالیات‌های مستقیم");
             body.Add("=".PadRight(64, '='));
             body.Add($"ابزار          : Database Finder {ManifestGenerator.ToolVersion}");
@@ -231,7 +230,6 @@ namespace DatabaseFinder
             sb.Append("@media print{body{margin:10mm;}}");
             sb.Append("</style></head><body>");
 
-            sb.Append("<div class=\"stamp\">TAX 181 ARTICLE . MSAM Group</div>");
             sb.Append("<h1>گزارش اسکن شبکه — سیستم‌های دارای پورت باز (ماده ۱۸۱ قانون مالیات‌های مستقیم)</h1>");
             sb.Append("<p class=\"sub\">این گزارش نمای خلاصه است؛ مستند فنی کامل در فایل‌های manifest.txt و manifest.json همین پوشه ثبت شده است.</p>");
 
