@@ -15,6 +15,10 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.15
+
+- **Fixed the invisible selection checkbox in the offline "File search" results grid:** the checkbox in the "Select" column was not being painted, so found files could not be selected. The manually-added result rows were shorter than the theme's padded cells, making the checkbox render area empty; rows are now sized so the checkbox always draws.
+
 ## What's new in v1.8.14
 
 - **Fixed offline file-search selection:** checking the found items in the "File search" results grid previously did not stick; now a single click toggles and commits the checkbox, and "Copy files" / "Merge into main list" act on the actually-selected rows.

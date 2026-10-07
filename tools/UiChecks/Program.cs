@@ -43,6 +43,7 @@ internal static class Program
             Check(main.Text.Contains(UpdateChecker.VersionString(UpdateChecker.CurrentVersion)),language+" main title carries version");
             Check(!Descendants(main).OfType<LinkLabel>().Single().Visible,language+" update link hidden until a newer release is published");
             var mainGrid=Descendants(main).OfType<DataGridView>().First();
+            Check(mainGrid.Rows[0].Cells["colCheck"].GetContentBounds(0).Width>0,language+" main grid checkbox glyph has render bounds");
             Check(mainGrid.Rows[0].Cells["colDbCount"].Value is string s1 && s1=="-",language+" online count placeholder without live measure");
             Check(mainGrid.Rows[1].Cells["colDbCount"].Value is string s2 && s2=="-",language+" offline database shows no service count");
             results[0].DatabaseCount=5;typeof(Form1).GetMethod("MergeOfflineResults",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(main,new object[]{new List<DatabaseInfo>()});
@@ -64,6 +65,7 @@ internal static class Program
             typeof(DiskScanForm).GetMethod("SetResultsChecked",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk,new object[]{true});Check((bool)diskGrid.Rows[0].Cells[0].Value!,language+" disk select all");
             var diskSelCol=diskGrid.Columns.Cast<DataGridViewColumn>().First(c=>c.Name=="sel");
             Check(diskSelCol is DataGridViewCheckBoxColumn && !diskSelCol.ReadOnly && !diskGrid.ReadOnly,language+" offline results checkbox stays editable");
+            Check(diskGrid.Rows[0].Cells[0].GetContentBounds(0).Width>0,language+" offline checkbox glyph has render bounds");
             Render(disk,Path.Combine(output,"disk-"+language+".png"));
             using var picker=new FormatPickerForm(DiskFormatRegistry.All);picker.Show();Application.DoEvents();
             Check(picker.SelectedFormats.Count==14,language+" all 14 format groups available");

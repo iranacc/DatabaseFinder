@@ -71,6 +71,10 @@ public static class UiTheme
             grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             grid.GridColor = Line;
             grid.DefaultCellStyle = new DataGridViewCellStyle { BackColor = Surface, ForeColor = Ink, SelectionBackColor = Dark ? Color.FromArgb(54, 78, 112) : Color.FromArgb(232, 240, 254), SelectionForeColor = Ink, Padding = new Padding(5) };
+            grid.RowsAdded += (_, e) =>
+            {
+                for (var i = e.RowIndex; i < e.RowIndex + e.RowCount; i++) grid.Rows[i].Height = 38;
+            };
             grid.RowTemplate.Height = 38;
             foreach (DataGridViewRow row in grid.Rows) row.Height = 38;
             grid.DataBindingComplete += (_, _) => { foreach (DataGridViewRow row in grid.Rows) row.Height = 38; };
