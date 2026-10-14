@@ -378,18 +378,21 @@ namespace DatabaseFinder
             try
             {
                 using (var searcher = new System.Management.ManagementObjectSearcher(
-                    "SELECT * FROM Win32_Service WHERE State = 'Running'"))
+                    "SELECT Name, DisplayName FROM Win32_Service WHERE State = 'Running'"))
                 {
-                    foreach (var obj in searcher.Get())
+                    foreach (System.Management.ManagementObject obj in searcher.Get())
                     {
-                        var s = new ServiceInfo
+                        using (obj)
                         {
-                            Name = obj["Name"]?.ToString() ?? "",
-                            DisplayName = obj["DisplayName"]?.ToString() ?? ""
-                        };
+                            var s = new ServiceInfo
+                            {
+                                Name = obj["Name"]?.ToString() ?? "",
+                                DisplayName = obj["DisplayName"]?.ToString() ?? ""
+                            };
 
-                        if (IsDatabaseService(s))
-                            result.Add(s);
+                            if (IsDatabaseService(s))
+                                result.Add(s);
+                        }
                     }
                 }
             }
@@ -410,17 +413,20 @@ namespace DatabaseFinder
             {
                 foreach (var proc in System.Diagnostics.Process.GetProcesses())
                 {
-                    try
+                    using (proc)
                     {
-                        var name = proc.ProcessName.ToLowerInvariant();
-                        if (IsDatabaseProcessName(name))
+                        try
                         {
-                            result.Add(new ProcessInfo { Id = proc.Id, Name = proc.ProcessName });
+                            var name = proc.ProcessName.ToLowerInvariant();
+                            if (IsDatabaseProcessName(name))
+                            {
+                                result.Add(new ProcessInfo { Id = proc.Id, Name = proc.ProcessName });
+                            }
                         }
-                    }
-                    catch
-                    {
-                        // دسترسی به برخی پروسس‌ها ممکن نیست
+                        catch
+                        {
+                            // دسترسی به برخی پروسس‌ها ممکن نیست
+                        }
                     }
                 }
             }

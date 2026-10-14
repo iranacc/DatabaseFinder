@@ -540,9 +540,16 @@ namespace DatabaseFinder
                 };
                 using var p = Process.Start(psi);
                 if (p == null) return false;
-                var stdout = p.StandardOutput.ReadToEnd();
-                var stderr = p.StandardError.ReadToEnd();
-                p.WaitForExit(120000);
+                var stdoutTask = p.StandardOutput.ReadToEndAsync();
+                var stderrTask = p.StandardError.ReadToEndAsync();
+                if (!p.WaitForExit(120000))
+                {
+                    try { p.Kill(entireProcessTree: true); } catch { }
+                    log(L.Text("S331"));
+                    return false;
+                }
+                var stdout = stdoutTask.GetAwaiter().GetResult();
+                var stderr = stderrTask.GetAwaiter().GetResult();
                 if (!string.IsNullOrWhiteSpace(stdout)) log(stdout.Trim());
                 if (!string.IsNullOrWhiteSpace(stderr)) log(stderr.Trim());
                 return p.ExitCode == 0;

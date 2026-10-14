@@ -22,6 +22,12 @@ namespace DatabaseFinder
                 {
                     var dir = Path.GetDirectoryName(FilePath);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    if (File.Exists(FilePath) && new FileInfo(FilePath).Length > 5 * 1024 * 1024)
+                    {
+                        var old = FilePath + ".old";
+                        if (File.Exists(old)) File.Delete(old);
+                        File.Move(FilePath, old);
+                    }
                     File.AppendAllText(FilePath, line + Environment.NewLine);
                 }
             }

@@ -476,6 +476,8 @@ namespace DatabaseFinder
             return dt;
         }
 
+        private const int MaxQueryRows = 5000;
+
         private static DataTable FillData(IDbConnection conn, string query)
         {
             using var cmd = conn.CreateCommand();
@@ -484,7 +486,28 @@ namespace DatabaseFinder
 
             using var reader = cmd.ExecuteReader();
             var dt = new DataTable();
-            dt.Load(reader);
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                var name = reader.GetName(i);
+                if (string.IsNullOrWhiteSpace(name)) name = "Column" + (i + 1);
+                var colName = name;
+                int suffix = 1;
+                while (dt.Columns.Contains(colName)) colName = $"{name}_{suffix++}";
+                var type = reader.GetFieldType(i) ?? typeof(string);
+                dt.Columns.Add(colName, Nullable.GetUnderlyingType(type) ?? type);
+            }
+
+            dt.BeginLoadData();
+            var values = new object[reader.FieldCount];
+            int count = 0;
+            while (reader.Read())
+            {
+                reader.GetValues(values);
+                dt.Rows.Add(values);
+                if (++count >= MaxQueryRows)
+                    break;
+            }
+            dt.EndLoadData();
             return dt;
         }
 

@@ -13,8 +13,22 @@ namespace DatabaseFinder
         {
             var ext = Path.GetExtension(path).ToLowerInvariant();
             if (ext == ".bak")
-                return StartsWithBytes(path, Encoding.ASCII.GetBytes("MSSQLBAK"));
+                return IsSqlServerBak(path);
             return StartsWithSqlHeader(path);
+        }
+
+        /// <summary>
+        /// فایل‌های بکاپ بومی SQL Server از استاندارد Microsoft Tape Format (MTF) استفاده می‌کنند
+        /// که با شناسه DBLK 'TAPE' در آفست ۰ یا آفست ۵۱۲ شروع می‌شوند.
+        /// همچنین فایل‌های خام یا اسنپ‌شات تغییرنام‌یافته با هدر دیتابیس نیز پذیرفته می‌شوند.
+        /// </summary>
+        public static bool IsSqlServerBak(string path)
+        {
+            // MTF DBLK 'TAPE' (0x54, 0x41, 0x50, 0x45)
+            if (StartsWithBytes(path, new byte[] { 0x54, 0x41, 0x50, 0x45 })) return true;
+            if (ContainsAscii(path, "TAPE", 1024)) return true;
+            if (StartsWithSqlHeader(path)) return true;
+            return false;
         }
 
         /// <summary>

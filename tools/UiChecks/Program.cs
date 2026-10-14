@@ -119,6 +119,15 @@ internal static class Program
         Check(found.Count==1 && found[0].LocalPath==sqlite,"Selected SQLite extension found");
         selected.Extensions=new[]{".db"};
         Check(scan.Scan(new[]{fixture},new[]{selected},0,null,CancellationToken.None).Count==0,"Deselected extension excluded from scan");
+        var mtfBak = Path.Combine(fixture, "real_sql.bak");
+        var mtfBytes = new byte[1024];
+        System.Text.Encoding.ASCII.GetBytes("TAPE").CopyTo(mtfBytes, 0);
+        File.WriteAllBytes(mtfBak, mtfBytes);
+        Check(FileSignatures.IsSqlServerFile(mtfBak), "MTF TAPE .bak detected as real SQL Server backup");
+        var fakeBak = Path.Combine(fixture, "acrobat.dll.bak");
+        File.WriteAllBytes(fakeBak, new byte[] { 0x4D, 0x5A, 0x90, 0x00 });
+        Check(!FileSignatures.IsSqlServerFile(fakeBak), "Fake .bak (dll header) rejected");
+        Check(ManifestGenerator.ToolVersion == UpdateChecker.VersionString(UpdateChecker.CurrentVersion), "Manifest ToolVersion matches executing version");
         Check(JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings{Language="en"}))!.Language=="en","Language settings round trip");
         // Regression: SQL Server accepts TCP but never sends a banner. The async version probe must
         // time out instead of hanging forever (which would permanently busy-lock re-detection).

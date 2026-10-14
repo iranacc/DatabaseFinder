@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace DatabaseFinder
@@ -77,7 +79,40 @@ namespace DatabaseFinder
 
     public static class ProfileManager
     {
+        private const string DpapiPrefix = "dpapi:";
         private static string ProfilesPath => AppPaths.ProfilesPath;
+
+        private static string EncryptPassword(string plain)
+        {
+            if (string.IsNullOrEmpty(plain)) return "";
+            if (plain.StartsWith(DpapiPrefix, StringComparison.Ordinal)) return plain;
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(plain);
+                var encrypted = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+                return DpapiPrefix + Convert.ToBase64String(encrypted);
+            }
+            catch
+            {
+                return plain;
+            }
+        }
+
+        private static string DecryptPassword(string cipher)
+        {
+            if (string.IsNullOrEmpty(cipher)) return "";
+            if (!cipher.StartsWith(DpapiPrefix, StringComparison.Ordinal)) return cipher;
+            try
+            {
+                var encrypted = Convert.FromBase64String(cipher.Substring(DpapiPrefix.Length));
+                var bytes = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(bytes);
+            }
+            catch
+            {
+                return "";
+            }
+        }
 
         public static List<DatabaseProfile> Load()
         {
@@ -86,7 +121,12 @@ namespace DatabaseFinder
                 if (File.Exists(ProfilesPath))
                 {
                     var json = File.ReadAllText(ProfilesPath);
-                    return JsonSerializer.Deserialize<List<DatabaseProfile>>(json) ?? new List<DatabaseProfile>();
+                    var list = JsonSerializer.Deserialize<List<DatabaseProfile>>(json) ?? new List<DatabaseProfile>();
+                    foreach (var p in list)
+                    {
+                        p.Password = DecryptPassword(p.Password);
+                    }
+                    return list;
                 }
             }
             catch (Exception ex) { AppLog.Write("Profiles.Load", ex); }
@@ -99,7 +139,17 @@ namespace DatabaseFinder
             {
                 var dir = Path.GetDirectoryName(ProfilesPath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                var json = JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true });
+                var toSave = profiles.Select(p => new DatabaseProfile
+                {
+                    Name = p.Name,
+                    Type = p.Type,
+                    Host = p.Host,
+                    Port = p.Port,
+                    Username = p.Username,
+                    Password = EncryptPassword(p.Password),
+                    DatabaseName = p.DatabaseName
+                }).ToList();
+                var json = JsonSerializer.Serialize(toSave, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ProfilesPath, json);
             }
             catch (Exception ex) { AppLog.Write("Profiles.Save", ex); }

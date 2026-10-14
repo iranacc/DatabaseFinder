@@ -239,9 +239,10 @@ Name = L.Text("S210"),
             List<DatabaseInfo> found,
             ScanProgress p,
             Action<ScanProgress>? progress,
-            CancellationToken cancel)
+            CancellationToken cancel,
+            int depth = 0)
         {
-            if (cancel.IsCancellationRequested) return;
+            if (cancel.IsCancellationRequested || depth > 24) return;
 
             try
             {
@@ -316,7 +317,7 @@ Name = L.Text("S210"),
                     if (p.DirectoriesScanned % 50 == 0) progress?.Invoke(p);
                     if (ShouldSkip(sub)) continue;
                     dirMap.TryGetValue(Path.GetFileName(sub), out var marked);
-                    WalkDir(sub, extMap, nameRules, dirMap, marked ?? folderFormat, minSizeBytes, found, p, progress, cancel);
+                    WalkDir(sub, extMap, nameRules, dirMap, marked ?? folderFormat, minSizeBytes, found, p, progress, cancel, depth + 1);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -363,6 +364,17 @@ Name = L.Text("S210"),
 
         private static bool ShouldSkip(string dir)
         {
+            try
+            {
+                var di = new DirectoryInfo(dir);
+                if ((di.Attributes & FileAttributes.ReparsePoint) != 0)
+                    return true;
+            }
+            catch
+            {
+                return true;
+            }
+
             var lower = dir.ToLowerInvariant();
             foreach (var s in SkipDirectories)
             {

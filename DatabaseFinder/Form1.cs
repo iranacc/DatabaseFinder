@@ -638,7 +638,8 @@ namespace DatabaseFinder
                     lblStatus.Refresh();
                 }
 
-                var results = _detector.Detect();
+                var results = await Task.Run(() => _detector.Detect());
+                if (IsDisposed || !IsHandleCreated) return;
                 _lastResults = results.ToList();
                 var models = results.Select(BuildModel).ToList();
 
@@ -668,9 +669,14 @@ namespace DatabaseFinder
                         var db = withPorts[i];
                         if (db.DatabaseCount is int cnt)
                         {
-                            var idx = results.IndexOf(db);
-                            if (idx >= 0 && idx < dgvDatabases.Rows.Count)
-                                dgvDatabases.Rows[idx].Cells["colDbCount"].Value = cnt.ToString();
+                            foreach (DataGridViewRow row in dgvDatabases.Rows)
+                            {
+                                if (ReferenceEquals(row.Tag, db))
+                                {
+                                    row.Cells["colDbCount"].Value = cnt.ToString();
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -693,13 +699,17 @@ namespace DatabaseFinder
                         var db = withPorts[i];
                         db.Version = testResult.Version;
 
-                        // مدل و ردیف متناظر از روی شاخص، نه تطبیق نام+پورت (که ممکن بود ردیف اشتباه را بگیرد)
                         var idx = results.IndexOf(db);
                         if (idx >= 0 && idx < models.Count)
-                        {
                             models[idx].Version = testResult.Version;
-                            if (idx < dgvDatabases.Rows.Count)
-                                dgvDatabases.Rows[idx].Cells["colVersion"].Value = testResult.Version;
+
+                        foreach (DataGridViewRow row in dgvDatabases.Rows)
+                        {
+                            if (ReferenceEquals(row.Tag, db))
+                            {
+                                row.Cells["colVersion"].Value = testResult.Version;
+                                break;
+                            }
                         }
                     }
                 }

@@ -15,6 +15,17 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.8.16
+
+- **SQL Server .bak validation fix:** added full Microsoft Tape Format (MTF) header validation with `TAPE` signature, ensuring legitimate native SQL backups are properly discovered during disk scans while filtering out non-database files.
+- **Process Redirection Deadlock resolved:** fixed synchronous stream reading deadlock when executing emergency tools with asynchronous stdout/stderr pipeline.
+- **Non-blocking UI:** moved database detection off the UI thread to background worker, keeping the main dashboard fully responsive.
+- **Junction point protection:** skipped `ReparsePoint` directories and applied depth limits (24 levels) to disk traversal.
+- **Grid row index sync:** mapped live database counts and versions to items by reference instead of numeric row indices, preventing incorrect data mapping when columns are sorted.
+- **Secure password storage:** encrypted database credentials in `profiles.json` using Windows DPAPI.
+- **Resource safety:** capped interactive query execution at 5,000 rows to prevent `OutOfMemoryException`, and added 5 MB log rollover.
+- **Dynamic manifest version:** manifest reports now dynamically display the true running assembly version.
+
 ## What's new in v1.8.15
 
 - **Fixed the invisible selection checkbox in the offline "File search" results grid:** the checkbox in the "Select" column was not being painted, so found files could not be selected. The manually-added result rows were shorter than the theme's padded cells, making the checkbox render area empty; rows are now sized so the checkbox always draws.
