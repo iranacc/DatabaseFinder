@@ -15,6 +15,7 @@ namespace DatabaseFinder
         private readonly Button _btnFindPass;
         private readonly Button _btnSysadmin;
         private readonly Button _btnDeepSweep;
+        private readonly Button _btnSweepFolder;
         private readonly Button _btnLabScript;
         private readonly Button _btnReport;
         private readonly Button _btnManifest;
@@ -192,6 +193,19 @@ namespace DatabaseFinder
             _btnDeepSweep.Click += BtnDeepSweep_Click;
             Controls.Add(_btnDeepSweep);
 
+            _btnSweepFolder = new Button
+            {
+                Text = L.Text("S427"),
+                Location = new Point(500, 172),
+                Size = new Size(248, 30),
+                BackColor = Color.FromArgb(0, 150, 136),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            _btnSweepFolder.Click += BtnSweepFolder_Click;
+            Controls.Add(_btnSweepFolder);
+
             _btnLabScript = new Button
             {
                 Text = L.Text("S369"),
@@ -360,13 +374,13 @@ namespace DatabaseFinder
             _progress = new ProgressBar { Minimum = 0, Maximum = 1, Value = 0, Style = ProgressBarStyle.Continuous };
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnSweepFolder,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
 
             // حین کپی نباید چیزی از این کنترل‌ها تغییر کند: نخ کار روی همان آیتم‌ها
             // می‌خواند و مسیر دستی/انتخاب‌ها وسط کار عوض می‌شوند
             _planControls = new Control[]
             {
-                btnSelectAll, btnClearAll, _btnManualPath, _btnFindPass, _btnSysadmin, _btnDeepSweep,
+                btnSelectAll, btnClearAll, _btnManualPath, _btnFindPass, _btnSysadmin, _btnDeepSweep, _btnSweepFolder,
                 _btnLabScript, btnBrowse, _txtDest, _tree, grpLocked
             };
         }
@@ -535,6 +549,7 @@ namespace DatabaseFinder
             }
 
             _btnDeepSweep.Enabled = false;
+            _btnSweepFolder.Enabled = false;
             _btnCopy.Enabled = false;
             _lblStatus.Text = L.Format("S363", 0, 0);
             try
@@ -571,6 +586,76 @@ namespace DatabaseFinder
             finally
             {
                 _btnDeepSweep.Enabled = true;
+                _btnSweepFolder.Enabled = true;
+                _btnCopy.Enabled = true;
+            }
+        }
+
+        /// <summary>
+        /// جست‌وجوی دیتای SQL در یک مسیر انتخابی خاص (بدون جست‌وجوی همه درایوها).
+        /// </summary>
+        private async void BtnSweepFolder_Click(object? sender, EventArgs e)
+        {
+            var targets = _servers
+                .Where(s => s.Type == DatabaseType.SQLServer && s.IsOnline)
+                .ToList();
+            if (targets.Count == 0)
+            {
+                _lblStatus.Text = L.Text("S085");
+                return;
+            }
+
+            using var fbd = new FolderBrowserDialog
+            {
+                Description = L.Text("S428")
+            };
+            var start = GuessManualBrowseStart(_items.FirstOrDefault(i => i.Server.Type == DatabaseType.SQLServer) ?? new DatabaseCopyItem(), _txtDest.Text);
+            if (start != null && Directory.Exists(start)) fbd.SelectedPath = start;
+
+            if (fbd.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(fbd.SelectedPath) || !Directory.Exists(fbd.SelectedPath))
+                return;
+
+            var chosenPath = fbd.SelectedPath;
+
+            _btnDeepSweep.Enabled = false;
+            _btnSweepFolder.Enabled = false;
+            _btnCopy.Enabled = false;
+            _lblStatus.Text = L.Format("S363", 0, 0);
+            try
+            {
+                var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var it in _items)
+                    foreach (var f in it.Files)
+                        known.Add(f.SourcePath);
+
+                var added = 0;
+                foreach (var s in targets)
+                {
+                    var found = await Task.Run(() =>
+                        DatabaseFileLocator.SweepSqlServerFolder(s, chosenPath, m => AppendLogSafe(m)));
+                    foreach (var item in found)
+                    {
+                        item.Files.RemoveAll(f => known.Contains(f.SourcePath));
+                        if (item.Files.Count == 0) continue;
+                        foreach (var f in item.Files) known.Add(f.SourcePath);
+                        _items.Add(item);
+                        added++;
+                    }
+                }
+
+                FillTree();
+                _tree.ExpandAll();
+                _lblStatus.Text = L.Format("S077", _items.Count);
+                if (added == 0) AppendLog(L.Text("S366"));
+            }
+            catch (Exception ex)
+            {
+                AppendLog(L.Format("S055", ex.Message));
+            }
+            finally
+            {
+                _btnDeepSweep.Enabled = true;
+                _btnSweepFolder.Enabled = true;
                 _btnCopy.Enabled = true;
             }
         }

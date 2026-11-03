@@ -412,6 +412,18 @@ namespace DatabaseFinder
             return built;
         }
 
+        /// <summary>
+        /// جست‌وجوی مسیر خاص انتخابی برای فایل‌های دیتای SQL.
+        /// </summary>
+        public static List<DatabaseCopyItem> SweepSqlServerFolder(DatabaseInfo server, string folderPath, Action<string>? log)
+        {
+            var files = SqlServerPathResolver.SweepPathForDataFiles(folderPath, log);
+            var built = BuildNoAuthItems(server, files);
+            if (built.Count > 0)
+                log?.Invoke(L.Format("S353", built.Count, folderPath));
+            return built;
+        }
+
         private static List<DatabaseCopyItem> EnumerateSqlServerViaQuery(DatabaseInfo server, Action<string>? log)
         {
             var result = new List<DatabaseCopyItem>();

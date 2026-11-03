@@ -146,18 +146,44 @@ namespace DatabaseFinder
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed))
             {
                 if (DateTime.UtcNow > deadline || files.Count >= maxFiles) break;
-                SweepDir(drive.RootDirectory.FullName, files, ref dirs, deadline, maxFiles, log);
+                SweepDir(drive.RootDirectory.FullName, files, ref dirs, deadline, maxFiles, log, isRoot: true);
+            }
+            return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>
+        /// جست‌وجوی مسیر خاص انتخابی برای فایل‌های دیتای SQL.
+        /// </summary>
+        public static List<string> SweepPathForDataFiles(string path, Action<string>? log, int timeoutSeconds = 300, int maxFiles = 300)
+        {
+            var files = new List<string>();
+            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            var dirs = 0;
+            if (Directory.Exists(path))
+            {
+                SweepDir(path, files, ref dirs, deadline, maxFiles, log, isRoot: true);
             }
             return files.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         private static void SweepDir(string dir, List<string> files, ref int dirs,
-            DateTime deadline, int maxFiles, Action<string>? log)
+            DateTime deadline, int maxFiles, Action<string>? log, bool isRoot = false)
         {
             if (DateTime.UtcNow > deadline || files.Count >= maxFiles) return;
-            var lower = dir.ToLowerInvariant();
-            foreach (var s in SweepSkip)
-                if (lower.Contains(s, StringComparison.OrdinalIgnoreCase)) return;
+
+            if (!isRoot)
+            {
+                try
+                {
+                    var di = new DirectoryInfo(dir);
+                    if ((di.Attributes & FileAttributes.ReparsePoint) != 0) return;
+                }
+                catch { return; }
+
+                var lower = dir.ToLowerInvariant();
+                foreach (var s in SweepSkip)
+                    if (lower.Contains(s, StringComparison.OrdinalIgnoreCase)) return;
+            }
 
             try
             {
@@ -181,7 +207,7 @@ namespace DatabaseFinder
                 if (DateTime.UtcNow > deadline || files.Count >= maxFiles) return;
                 dirs++;
                 if (dirs % 500 == 0) log?.Invoke(L.Format("S363", dirs, files.Count));
-                SweepDir(sub, files, ref dirs, deadline, maxFiles, log);
+                SweepDir(sub, files, ref dirs, deadline, maxFiles, log, isRoot: false);
             }
         }
     }

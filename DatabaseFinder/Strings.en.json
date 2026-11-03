@@ -425,6 +425,8 @@
   "S424": "Access denied (Administrator access required): {#}",
   "S425": "Checking the free space needed on the destination...",
   "S426": "This folder is already the manual folder of {#} other database(s); their data will be copied again under a second name. Continue?",
+  "S427": "Sweep chosen folder...",
+  "S428": "Select folder to sweep for database files",
   "RunningDatabases": "Databases",
   "FileSearch": "File search",
   "MainTitle": "Database discovery",

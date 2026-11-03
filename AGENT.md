@@ -184,3 +184,14 @@ dotnet publish "d:\181 Project\Database Finder\DatabaseFinder\DatabaseFinder.csp
 - **وضعیت تست:**
   - کامپایل موفق (`0 Warning, 0 Error`).
   - تست‌های ۶۸۶ گانه `UiChecks` با موفقیت پاس شدند.
+
+### 2026-11-03 12:25 - Antigravity Agent
+- **اقدام انجام‌شده:** افزودن دکمه «جست‌وجوی پوشه انتخابی...» (`_btnSweepFolder`) در پنجره کپی فایل‌ها (`DatabaseCopyForm`) در کنار دکمه «جست‌وجوی عمیق درایوها...» (`_btnDeepSweep`). این قابلیت به کاربر اجازه می‌دهد به جای اسکن طولانی کل درایوهای ویندوز، تنها یک مسیر مشخص را انتخاب کند تا فایل‌های دیتابیس SQL Server در آن مسیر شناسایی و به ساختار درخت اضافه شوند.
+- **فایل‌های تحت تأثیر:**
+  - `DatabaseFinder/DatabaseCopyForm.cs`: افزودن دکمه `_btnSweepFolder`، هندلر `BtnSweepFolder_Click` و اتصال به `_planControls` و `OperationLayout`.
+  - `DatabaseFinder/DatabaseFileLocator.cs`: افزودن متد `SweepSqlServerFolder`.
+  - `DatabaseFinder/SqlServerNoAuth.cs`: افزودن متد `SweepPathForDataFiles` و محافظت در برابر ReparsePoint در پیمایش زیرپوشه‌ها.
+  - `DatabaseFinder/Strings.fa.json` و `DatabaseFinder/Strings.en.json`: افزودن کلیدهای `S427` و `S428`.
+- **وضعیت تست:**
+  - کامپایل موفق و انتشار باینری‌های جدید در پوشه `Release`.
+  - پاس شدن کامل تمامی ۶۸۹ تست خودکار در `UiChecks`.
