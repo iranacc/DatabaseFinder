@@ -15,6 +15,11 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.9.0
+
+- **Complete Modern UI/UX Redesign:** Native Windows Forms modernization featuring embedded **Vazirmatn** Persian typography, rounded card layouts (`ModernCard`), modern Slate/Indigo color palette, live terminal log panel with copy action, and optimized button toolbars.
+- **Target Folder Sweep:** Direct folder sweep in physical copy dialog alongside whole-drive scanning.
+- **Persian localization improvements:** corrected folder picker action label to "انتخاب مسیر...".
 ## What's new in v1.8.16
 
 - **SQL Server .bak validation fix:** added full Microsoft Tape Format (MTF) header validation with `TAPE` signature, ensuring legitimate native SQL backups are properly discovered during disk scans while filtering out non-database files.

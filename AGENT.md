@@ -195,3 +195,23 @@ dotnet publish "d:\181 Project\Database Finder\DatabaseFinder\DatabaseFinder.csp
 - **وضعیت تست:**
   - کامپایل موفق و انتشار باینری‌های جدید در پوشه `Release`.
   - پاس شدن کامل تمامی ۶۸۹ تست خودکار در `UiChecks`.
+
+### 2026-11-03 14:26 - Antigravity Agent
+- **اقدام انجام‌شده:** مدرن‌سازی کامل رابط کاربری (UI/UX) — مسیر ۱: بازطراحی نیتیو بدون کتابخانه خارجی.
+- **تغییرات کلیدی:**
+  1. **فونت وزیرمتن (Vazirmatn):** دانلود و Embed فونت فارسی `Vazirmatn-Regular.ttf` و `Vazirmatn-Bold.ttf` به عنوان Embedded Resource. ایجاد `UiFont.cs` با `PrivateFontCollection` و سیستم کش هوشمند. در زبان فارسی فونت Vazirmatn بارگذاری می‌شود و در انگلیسی `Segoe UI Variable Text` با Fallback به `Segoe UI`.
+  2. **کارت‌های گردگوشه (ModernCard):** ایجاد `ModernCard.cs` — پنل سفارشی با `GraphicsPath` و گوشه‌های گرد (CornerRadius=8)، حاشیه ظریف و DoubleBuffered.
+  3. **پالت رنگی مدرن (Slate/Indigo):** بازنویسی کامل `UiTheme` با رنگ‌های هماهنگ Tailwind CSS (Slate-50→900, Blue-500→700) به جای رنگ‌های Material قدیمی. اضافه شدن `AccentHover`, `SurfaceAlt`, `Success`, `Warning`, `Danger`.
+  4. **ترمینال لاگ تیره:** بخش لاگ در فرم‌های عملیاتی با پس‌زمینه Slate-900 تیره (`#182030`) و متن روشن، شامل دکمه «کپی لاگ» شناور.
+  5. **بازنویسی OperationLayout.cs:** چیدمان کاملاً جدید: کارت بالایی (عنوان + مسیر)، بخش میانی دوستونه (درخت + پنل ابزار)، کارت لاگ ترمینالی و کارت پایینی اکشن‌ها.
+  6. **بروزرسانی Form1.Layout.cs:** کارت‌های آماری KPI با `ModernCard` به جای `Panel` ساده. جایگزینی تمامی `Color.White` با `UiTheme.Surface`.
+  7. **جایگزینی فونت در ۱۳ فایل:** تمامی `new Font("Segoe UI", ...)` به `UiFont.Make(...)` تبدیل شد: `CaseInfoForm`, `DatabaseBackupForm`, `DatabaseCopyForm`, `DatabaseDetailForm`, `DatabaseListForm`, `DiskScanForm`, `DiskScanForm.Layout`, `FormatPickerForm`, `FormLayout`, `ProfilesForm`, `QueryRunnerForm`, `RemoteScannerForm`, `SettingsForm`.
+- **فایل‌های جدید:**
+  - `DatabaseFinder/UiFont.cs`
+  - `DatabaseFinder/ModernCard.cs`
+  - `DatabaseFinder/Resources/Fonts/Vazirmatn-Regular.ttf`
+  - `DatabaseFinder/Resources/Fonts/Vazirmatn-Bold.ttf`
+- **فایل‌های تحت تأثیر:** ۱۷ فایل (21 files changed, 782 insertions, 123 deletions)
+- **نسخه:** بامپ شده به `1.9.0`
+- **وضعیت تست:** تمامی **۶۹۱ تست خودکار `UiChecks`** با موفقیت پاس شدند.
+- **کامیت:** `910acab` — پوش شده به `origin/master`.
