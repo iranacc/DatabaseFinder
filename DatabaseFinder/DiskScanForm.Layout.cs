@@ -13,7 +13,7 @@ public partial class DiskScanForm
         var settings = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(10), BackColor = Color.White, RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No };
         settings.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         settings.RowStyles.Add(new RowStyle(SizeType.AutoSize)); settings.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); settings.RowStyles.Add(new RowStyle(SizeType.AutoSize)); settings.RowStyles.Add(new RowStyle(SizeType.AutoSize)); settings.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        settings.Controls.Add(new Label { Text = L.Text("S159"), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold), Padding = new Padding(5) }, 0, 0);
+        settings.Controls.Add(new Label { Text = L.Text("S159"), AutoSize = true, Font = UiFont.Make(12f, FontStyle.Bold), Padding = new Padding(5) }, 0, 0);
         var rootLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4 }; rootLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); rootLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); rootLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); rootLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _rbQuick.AutoSize = true; _rbFull.AutoSize = true;
         var mode = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false }; mode.Controls.Add(_rbQuick); mode.Controls.Add(_rbFull); rootLayout.Controls.Add(mode, 0, 0);
@@ -28,7 +28,7 @@ public partial class DiskScanForm
         var tip = new ToolTip(); tip.SetToolTip(_rbQuick, L.Text("S168")); tip.SetToolTip(_rbFull, L.Text("S168")); Disposed += (_, _) => tip.Dispose();
         var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(10), RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No }; content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize)); content.RowStyles.Add(new RowStyle(SizeType.AutoSize)); content.RowStyles.Add(new RowStyle(SizeType.Absolute, 7)); content.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); content.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        content.Controls.Add(new Label { Text = L.Text("S158"), AutoSize = true, Font = new Font("Segoe UI", 18, FontStyle.Bold), Padding = new Padding(5, 5, 5, 15) }, 0, 0);
+        content.Controls.Add(new Label { Text = L.Text("S158"), AutoSize = true, Font = UiFont.Make(18f, FontStyle.Bold), Padding = new Padding(5, 5, 5, 15) }, 0, 0);
         foreach (var b in new[] { _btnScan, _btnCancelScan, allResults, noResults, _btnCopy, _btnMerge, close }) { b.AutoSize = true; b.MinimumSize = new Size(90, 36); }
         _btnScan.Tag = "primary"; _btnCopy.Tag = "primary";
         content.Controls.Add(UiTheme.Flow(_btnScan, _btnCancelScan, allResults, noResults), 0, 1);

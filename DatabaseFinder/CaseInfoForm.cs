@@ -33,7 +33,7 @@ namespace DatabaseFinder
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No;
             RightToLeftLayout = L.IsFa;

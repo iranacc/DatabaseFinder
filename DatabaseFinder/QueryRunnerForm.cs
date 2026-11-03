@@ -34,7 +34,7 @@ namespace DatabaseFinder
             Text = L.Format("S263", db.TypeDisplayName);
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(760, 620);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -45,7 +45,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Format("S264", db.TypeDisplayName, db.Host),
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Font = UiFont.Make(13f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 8)
@@ -131,7 +131,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 330),
                 Size = new Size(90, 35)
             };

@@ -28,7 +28,7 @@ namespace DatabaseFinder
             Text = L.Text("S157");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(900, 700);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -38,7 +38,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Text("S158"),
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Font = UiFont.Make(13f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 8)
@@ -74,7 +74,7 @@ namespace DatabaseFinder
                 Location = new Point(6, 48),
                 Size = new Size(318, 118),
                 CheckOnClick = true,
-                Font = new Font("Segoe UI", 9F)
+                Font = UiFont.Make(9f)
             };
 
             var btnAddRoot = new Button
@@ -126,7 +126,7 @@ namespace DatabaseFinder
                 Location = new Point(6, 22),
                 Size = new Size(238, 160),
                 CheckOnClick = true,
-                Font = new Font("Segoe UI", 9F)
+                Font = UiFont.Make(9f)
             };
             foreach (var f in DiskFormatRegistry.All)
                 _lstFormats.Items.Add($"{f.Name}  (.{string.Join("/.", f.Extensions).TrimStart('.')})");
@@ -182,7 +182,7 @@ namespace DatabaseFinder
                 Location = new Point(12, 110),
                 Size = new Size(252, 100),
                 ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 8.5F)
+                Font = UiFont.Make(8.5f)
             };
 
             grpOpt.Controls.AddRange(new Control[] { lblMin, _numMinSize, lblMinUnit, lblNote });
@@ -195,7 +195,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Font = UiFont.Make(11f, FontStyle.Bold),
                 Location = new Point(12, 280),
                 Size = new Size(150, 38)
             };
@@ -323,7 +323,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(139, 195, 74),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 642),
                 Size = new Size(200, 40),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -337,7 +337,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(255, 152, 0),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(220, 642),
                 Size = new Size(220, 40),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left

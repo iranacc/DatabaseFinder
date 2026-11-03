@@ -43,7 +43,7 @@ namespace DatabaseFinder
             Text = L.Text("S059");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(760, 620);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -53,7 +53,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Text("S060"),
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Font = UiFont.Make(13f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 8)
@@ -105,7 +105,7 @@ namespace DatabaseFinder
                 CheckBoxes = true,
                 ShowNodeToolTips = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 9.5F)
+                Font = UiFont.Make(9.5f)
             };
             _tree.AfterCheck += (s, e) =>
             {
@@ -275,7 +275,7 @@ namespace DatabaseFinder
                 Location = new Point(10, 26),
                 Size = new Size(228, 34),
                 Checked = true,
-                Font = new Font("Segoe UI", 8.8F)
+                Font = UiFont.Make(8.8f)
             };
             grpLocked.Controls.Add(_rdoVss);
 
@@ -285,7 +285,7 @@ namespace DatabaseFinder
                 Location = new Point(28, 58),
                 AutoSize = true,
                 ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 7.8F)
+                Font = UiFont.Make(7.8f)
             };
             grpLocked.Controls.Add(lblVssHint);
 
@@ -294,7 +294,7 @@ namespace DatabaseFinder
                 Text = L.Text("S067"),
                 Location = new Point(10, 86),
                 Size = new Size(228, 34),
-                Font = new Font("Segoe UI", 8.8F)
+                Font = UiFont.Make(8.8f)
             };
             grpLocked.Controls.Add(_rdoStopStart);
 
@@ -304,7 +304,7 @@ namespace DatabaseFinder
                 Location = new Point(28, 118),
                 AutoSize = true,
                 ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 7.8F)
+                Font = UiFont.Make(7.8f)
             };
             grpLocked.Controls.Add(lblStopHint);
 
@@ -313,7 +313,7 @@ namespace DatabaseFinder
                 Text = L.Text("S069"),
                 Location = new Point(10, 148),
                 Size = new Size(180, 24),
-                Font = new Font("Segoe UI", 8.8F)
+                Font = UiFont.Make(8.8f)
             };
             grpLocked.Controls.Add(_rdoReportOnly);
 
@@ -323,7 +323,7 @@ namespace DatabaseFinder
                 Location = new Point(10, 178),
                 Size = new Size(228, 34),
                 Checked = true,
-                Font = new Font("Segoe UI", 8.8F)
+                Font = UiFont.Make(8.8f)
             };
             grpLocked.Controls.Add(_chkVerifyCopy);
             Controls.Add(grpLocked);
@@ -355,7 +355,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 576),
                 Size = new Size(140, 34),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left

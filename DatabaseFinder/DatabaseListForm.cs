@@ -11,7 +11,7 @@ public class DatabaseListForm : AppForm
         Text = L.Format("S330", service);
 
         var title = new Label { Text = Text, AutoSize = true };
-        var list = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false, Font = new Font("Segoe UI", 10.5F), RightToLeft = RightToLeft.No };
+        var list = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false, Font = UiFont.Make(10.5f), RightToLeft = RightToLeft.No };
         var status = new Label { Dock = DockStyle.Fill, AutoSize = false, AutoEllipsis = true, Text = "" };
 
         var names = db.DatabaseNames;

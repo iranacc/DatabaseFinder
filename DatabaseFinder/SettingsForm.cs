@@ -33,7 +33,7 @@ namespace DatabaseFinder
             Text = L.Text("S165");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(420, 520);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -44,7 +44,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Text("S299"),
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                Font = UiFont.Make(14f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 10)
@@ -86,7 +86,7 @@ namespace DatabaseFinder
             var lblGeneral = new Label
             {
                 Text = L.Text("S301"),
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Font = UiFont.Make(11f, FontStyle.Bold),
                 Location = new Point(12, 315),
                 AutoSize = true
             };
@@ -153,7 +153,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(76, 175, 80),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 450),
                 Size = new Size(120, 35)
             };

@@ -2,40 +2,350 @@ namespace DatabaseFinder;
 
 internal static class OperationLayout
 {
-    public static void Build(Form form, Label title, TextBox destination, Button browse, Label? hint, TreeView tree, Control[] selectionActions, GroupBox? locked, Label logLabel, TextBox log, Label status, ProgressBar? progress = null, params Button[] actions)
+    public static void Build(
+        Form form,
+        Label title,
+        TextBox destination,
+        Button browse,
+        Label? hint,
+        TreeView tree,
+        Control[] selectionActions,
+        GroupBox? locked,
+        Label logLabel,
+        TextBox log,
+        Label status,
+        ProgressBar? progress = null,
+        params Button[] actions)
     {
-        form.SuspendLayout(); form.Controls.Clear(); form.ClientSize = new Size(1060, 780); form.MinimumSize = new Size(980, 730); form.AutoScaleMode = AutoScaleMode.Dpi;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22), ColumnCount = 1, RowCount = 7 }; root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 30)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 130)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 35)); root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        title.Font = new Font("Segoe UI", 17, FontStyle.Bold); title.Padding = new Padding(0, 0, 0, 15); root.Controls.Add(title, 0, 0);
-        var dest = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, AutoSize = true, Padding = new Padding(8), BackColor = Color.White, RightToLeft = RightToLeft.No }; dest.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); dest.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); destination.Dock = DockStyle.Fill; destination.Margin = new Padding(5); browse.AutoSize = true; browse.MinimumSize = new Size(110, 32); dest.Controls.Add(destination, 0, 0); dest.Controls.Add(browse, 1, 0);
-        if (hint != null) { hint.AutoSize = true; hint.MaximumSize = new Size(920, 0); hint.Padding = new Padding(5); dest.Controls.Add(hint, 0, 1); dest.SetColumnSpan(hint, 2); }
-        root.Controls.Add(dest, 0, 1);
-        var middle = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(0, 14, 0, 0), RightToLeft = RightToLeft.No }; middle.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); middle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
-        tree.Dock = DockStyle.Fill; tree.Margin = new Padding(0, 0, 12, 0); tree.RightToLeft = RightToLeft.No; middle.Controls.Add(tree, 0, 0);
-        var side = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 }; side.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); side.RowStyles.Add(new RowStyle(SizeType.AutoSize)); side.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        foreach (var b in selectionActions.OfType<Button>()) { b.AutoSize = true; b.MinimumSize = new Size(125, 34); b.MaximumSize = new Size(292, 0); }
-        side.Controls.Add(UiTheme.Flow(selectionActions), 0, 0);
+        form.SuspendLayout();
+        form.Controls.Clear();
+        form.ClientSize = new Size(1100, 800);
+        form.MinimumSize = new Size(980, 740);
+        form.AutoScaleMode = AutoScaleMode.Dpi;
+        form.BackColor = UiTheme.Canvas;
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(18, 14, 18, 14),
+            ColumnCount = 1,
+            RowCount = 4,
+            BackColor = UiTheme.Canvas
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 0: Top Header & Destination Card
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));          // Row 1: Middle (Tree on Left, Actions on Right)
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 135));         // Row 2: Live Log Terminal Card
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 3: Bottom Action Card
+
+        // --- CARD 1: Top Header & Destination Card ---
+        var topCard = new ModernCard
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(14, 10, 14, 10),
+            CornerRadius = 8
+        };
+
+        title.Font = UiFont.Make(14.5f, FontStyle.Bold);
+        title.ForeColor = UiTheme.Accent;
+        title.AutoSize = true;
+        title.Margin = new Padding(0, 0, 0, 6);
+
+        var destLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 2,
+            AutoSize = true,
+            Padding = Padding.Empty,
+            RightToLeft = RightToLeft.No,
+            BackColor = UiTheme.Surface
+        };
+        destLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        destLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        destLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        destLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        destination.Dock = DockStyle.Fill;
+        destination.Margin = new Padding(4, 3, 4, 3);
+        destination.Font = UiFont.Make(9.5f);
+
+        browse.AutoSize = true;
+        browse.MinimumSize = new Size(115, 32);
+        browse.Margin = new Padding(4, 2, 4, 2);
+        browse.Font = UiFont.Make(9.5f, FontStyle.Bold);
+
+        destLayout.Controls.Add(destination, 0, 0);
+        destLayout.Controls.Add(browse, 1, 0);
+
+        if (hint != null)
+        {
+            hint.AutoSize = true;
+            hint.MaximumSize = new Size(920, 0);
+            hint.Padding = new Padding(4, 4, 4, 0);
+            hint.ForeColor = UiTheme.Muted;
+            hint.Font = UiFont.Make(8.5f);
+            destLayout.Controls.Add(hint, 0, 1);
+            destLayout.SetColumnSpan(hint, 2);
+        }
+
+        var topStack = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = UiTheme.Surface
+        };
+        topStack.Controls.Add(title);
+        topStack.Controls.Add(destLayout);
+        topCard.Controls.Add(topStack);
+        root.Controls.Add(topCard, 0, 0);
+
+        // --- ROW 1: Middle Section (Tree on Left, Actions on Right) ---
+        var middle = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0, 0, 0, 10),
+            RightToLeft = RightToLeft.No,
+            BackColor = UiTheme.Canvas
+        };
+        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 335));
+
+        // Left Card: TreeView
+        var treeCard = new ModernCard
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 10, 0),
+            Padding = new Padding(12),
+            CornerRadius = 8
+        };
+        tree.Dock = DockStyle.Fill;
+        tree.BorderStyle = BorderStyle.None;
+        tree.RightToLeft = RightToLeft.No;
+        tree.ItemHeight = 30;
+        treeCard.Controls.Add(tree);
+        middle.Controls.Add(treeCard, 0, 0);
+
+        // Right Side: Actions & Locked Options
+        var sideCard = new ModernCard
+        {
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+            Padding = new Padding(10),
+            CornerRadius = 8
+        };
+        var sideStack = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoScroll = false,
+            RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No,
+            BackColor = UiTheme.Surface
+        };
+
+        // Selection buttons (Select All / Clear All)
+        var selRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(0, 0, 0, 4),
+            BackColor = UiTheme.Surface
+        };
+        if (selectionActions.Length >= 2)
+        {
+            var bAll = selectionActions[0];
+            var bClear = selectionActions[1];
+            bAll.Size = new Size(138, 32);
+            bClear.Size = new Size(138, 32);
+            selRow.Controls.Add(bAll);
+            selRow.Controls.Add(bClear);
+            sideStack.Controls.Add(selRow);
+        }
+
+        // Diagnostic / Tool buttons
+        for (int i = 2; i < selectionActions.Length; i++)
+        {
+            var btn = selectionActions[i];
+            btn.Size = new Size(282, 32);
+            btn.Margin = new Padding(0, 2, 0, 2);
+            sideStack.Controls.Add(btn);
+        }
+
+        // Locked / Options group
         if (locked != null)
         {
-            var children = locked.Controls.Cast<Control>().OrderBy(c => c.Top).ToArray(); locked.Controls.Clear(); locked.Dock = DockStyle.Fill; locked.AutoSize = false;
-            var options = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(8), RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No };
-            foreach (var c in children) { c.Anchor = AnchorStyles.None; c.Margin = new Padding(3, 5, 3, 5); c.Font = new Font("Segoe UI", 9); if (c is Label) { c.AutoSize = true; c.MaximumSize = new Size(270, 0); } else { c.AutoSize = false; c.Size = new Size(275, 42); } options.Controls.Add(c); }
-            locked.Controls.Add(options); side.Controls.Add(locked, 0, 1);
+            locked.AutoSize = false;
+            locked.Width = 285;
+            locked.Height = 185;
+            locked.Margin = new Padding(0, 6, 0, 0);
+            locked.Font = UiFont.Make(9f, FontStyle.Bold);
+
+            foreach (Control c in locked.Controls)
+            {
+                c.Font = UiFont.Make(8.8f);
+                if (c is RadioButton or CheckBox)
+                {
+                    c.Width = 270;
+                }
+                else if (c is Label lbl)
+                {
+                    lbl.Width = 265;
+                    lbl.MaximumSize = new Size(265, 0);
+                    lbl.ForeColor = UiTheme.Muted;
+                }
+            }
+            sideStack.Controls.Add(locked);
         }
-        middle.Controls.Add(side, 1, 0); root.Controls.Add(middle, 0, 2); logLabel.Dock = DockStyle.Fill; logLabel.AutoSize = false; logLabel.Padding = new Padding(0, 5, 0, 0); root.Controls.Add(logLabel, 0, 3);
-        log.Dock = DockStyle.Fill; log.Margin = Padding.Empty; root.Controls.Add(log, 0, 4);
-        status.AutoSize = false; status.AutoEllipsis = true; status.Dock = DockStyle.Fill; status.Padding = new Padding(0, 5, 0, 0);
-        if (progress == null) root.Controls.Add(status, 0, 5);
-        else
+
+        sideCard.Controls.Add(sideStack);
+        middle.Controls.Add(sideCard, 1, 0);
+        root.Controls.Add(middle, 0, 1);
+
+        // --- ROW 2: Live Log Terminal Card ---
+        var logCard = new ModernCard
         {
-            var statusRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(0, 4, 0, 2) };
-            statusRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
-            statusRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            progress.Dock = DockStyle.Fill; progress.Margin = new Padding(0, 4, 12, 4);
-            statusRow.Controls.Add(progress, 0, 0); statusRow.Controls.Add(status, 1, 0); root.Controls.Add(statusRow, 0, 5);
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(10, 8, 10, 8),
+            CornerRadius = 8,
+            BackColor = UiTheme.Dark ? Color.FromArgb(15, 23, 42) : Color.FromArgb(24, 30, 42),
+            BorderColor = UiTheme.Dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(45, 55, 72)
+        };
+
+        var logHeader = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 26,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+            RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
+        };
+        logHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        logHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        logLabel.Dock = DockStyle.Fill;
+        logLabel.Font = UiFont.Make(8.5f, FontStyle.Bold);
+        logLabel.ForeColor = Color.FromArgb(148, 163, 184);
+        logLabel.BackColor = Color.Transparent;
+        logHeader.Controls.Add(logLabel, 0, 0);
+
+        var btnCopyLog = new Button
+        {
+            Text = L.IsFa ? "کپی لاگ" : "Copy Log",
+            AutoSize = true,
+            Height = 24,
+            FlatStyle = FlatStyle.Flat,
+            ForeColor = Color.FromArgb(148, 163, 184),
+            BackColor = Color.Transparent,
+            Font = UiFont.Make(8f),
+            Cursor = Cursors.Hand
+        };
+        btnCopyLog.FlatAppearance.BorderSize = 0;
+        btnCopyLog.Click += (_, _) =>
+        {
+            if (!string.IsNullOrEmpty(log.Text))
+            {
+                Clipboard.SetText(log.Text);
+                btnCopyLog.Text = L.IsFa ? "کپی شد ✓" : "Copied ✓";
+                Task.Delay(1500).ContinueWith(_ =>
+                {
+                    if (!btnCopyLog.IsDisposed)
+                        btnCopyLog.Invoke(() => btnCopyLog.Text = L.IsFa ? "کپی لاگ" : "Copy Log");
+                });
+            }
+        };
+        logHeader.Controls.Add(btnCopyLog, 1, 0);
+
+        log.Dock = DockStyle.Fill;
+        log.BorderStyle = BorderStyle.None;
+        log.BackColor = UiTheme.Dark ? Color.FromArgb(15, 23, 42) : Color.FromArgb(24, 30, 42);
+        log.ForeColor = Color.FromArgb(226, 232, 240);
+        log.Font = new Font("Consolas", 9f);
+
+        logCard.Controls.Add(log);
+        logCard.Controls.Add(logHeader);
+        root.Controls.Add(logCard, 0, 2);
+
+        // --- ROW 3: Bottom Action Card ---
+        var actionCard = new ModernCard
+        {
+            Dock = DockStyle.Fill,
+            Margin = Padding.Empty,
+            Padding = new Padding(12, 10, 12, 10),
+            CornerRadius = 8
+        };
+        var bottomGrid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            AutoSize = true,
+            BackColor = UiTheme.Surface,
+            RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
+        };
+        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+
+        // Status & Progress (Left)
+        var statusPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = UiTheme.Surface
+        };
+        if (progress != null)
+        {
+            progress.Height = 14;
+            progress.Width = 260;
+            progress.Margin = new Padding(0, 0, 0, 4);
+            statusPanel.Controls.Add(progress);
         }
-        foreach (var b in actions) { b.AutoSize = true; b.MinimumSize = new Size(120, 38); }
-        actions[0].Tag = "primary"; root.Controls.Add(UiTheme.Flow(actions), 0, 6); form.Controls.Add(root); form.ResumeLayout(true);
+        status.AutoSize = true;
+        status.Font = UiFont.Make(9f);
+        status.ForeColor = UiTheme.Muted;
+        status.BackColor = UiTheme.Surface;
+        statusPanel.Controls.Add(status);
+        bottomGrid.Controls.Add(statusPanel, 0, 0);
+
+        // Action Buttons (Right)
+        var actionFlow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = UiTheme.Surface
+        };
+        foreach (var b in actions)
+        {
+            b.AutoSize = true;
+            b.MinimumSize = new Size(115, 38);
+            b.Font = UiFont.Make(9.5f);
+            actionFlow.Controls.Add(b);
+        }
+        if (actions.Length > 0)
+        {
+            actions[0].Tag = "primary";
+            actions[0].MinimumSize = new Size(135, 38);
+            actions[0].Font = UiFont.Make(10f, FontStyle.Bold);
+        }
+
+        bottomGrid.Controls.Add(actionFlow, 1, 0);
+        actionCard.Controls.Add(bottomGrid);
+        root.Controls.Add(actionCard, 0, 3);
+
+        form.Controls.Add(root);
+        UiTheme.Apply(form);
+        form.ResumeLayout(true);
     }
 }

@@ -34,7 +34,7 @@ namespace DatabaseFinder
             Text = L.Text("S028");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(780, 660);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -44,7 +44,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Text("S029"),
-                Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                Font = UiFont.Make(13f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 8)
@@ -84,7 +84,7 @@ namespace DatabaseFinder
                 Location = new Point(12, 56),
                 AutoSize = true,
                 ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 8.5F)
+                Font = UiFont.Make(8.5f)
             };
             grpDest.Controls.Add(lblHint);
             Controls.Add(grpDest);
@@ -103,7 +103,7 @@ namespace DatabaseFinder
                 Size = new Size(500, 310),
                 CheckBoxes = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 9.5F)
+                Font = UiFont.Make(9.5f)
             };
             _tree.AfterCheck += (s, e) =>
             {
@@ -205,7 +205,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 614),
                 Size = new Size(150, 36),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -271,7 +271,7 @@ namespace DatabaseFinder
                 Location = new Point(520, 232),
                 Size = new Size(248, 140),
                 ForeColor = Color.FromArgb(66, 66, 66),
-                Font = new Font("Segoe UI", 9F)
+                Font = UiFont.Make(9f)
             };
             _chkCompress = new CheckBox
             {

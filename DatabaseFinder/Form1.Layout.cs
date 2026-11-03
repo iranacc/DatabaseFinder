@@ -54,8 +54,8 @@ public partial class Form1
         var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, RightToLeft = RightToLeft.No };
         shell.ColumnStyles.Add(new ColumnStyle(L.IsFa ? SizeType.Percent : SizeType.Absolute, L.IsFa ? 100 : 190));
         shell.ColumnStyles.Add(new ColumnStyle(L.IsFa ? SizeType.Absolute : SizeType.Percent, L.IsFa ? 190 : 100));
-        var nav = new FlowLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.White, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(12, 24, 12, 12), RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No };
-        nav.Controls.Add(new Label { Text = "Database Finder\nMSAM GROUP", Font = new Font("Segoe UI", 12, FontStyle.Bold), Size = new Size(162, 86), ForeColor = UiTheme.Accent });
+        var nav = new FlowLayoutPanel { Dock = DockStyle.Fill, BackColor = UiTheme.Surface, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(12, 24, 12, 12), RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No };
+        nav.Controls.Add(new Label { Text = "Database Finder\nMSAM GROUP", Font = UiFont.Make(12, FontStyle.Bold), Size = new Size(162, 86), ForeColor = UiTheme.Accent });
         var online = UiTheme.Button(L.Text("RunningDatabases"), (_, _) => { cmbScanMode.SelectedIndex = 0; btnRefresh.PerformClick(); }, true);
         var offline = UiTheme.Button(L.Text("FileSearch"), (_, _) => RunOfflineScan());
         foreach (var button in new[] { online, offline, btnRemote, btnProfiles, btnSettings })
@@ -89,7 +89,7 @@ public partial class Form1
         content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
         lblTitle.Text = L.Text("MainTitle");
-        lblTitle.Font = new Font("Segoe UI", 18, FontStyle.Bold); lblTitle.Margin = new Padding(5, 8, 16, 8);
+        lblTitle.Font = UiFont.Make(17, FontStyle.Bold); lblTitle.Margin = new Padding(5, 8, 16, 8);
         var language = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 132, AccessibleName = "Language / زبان", RightToLeft = RightToLeft.No };
         language.Items.AddRange(new object[] { "فارسی", "English" }); language.SelectedIndex = L.IsFa ? 0 : 1;
         language.SelectedIndexChanged += (_, _) => LanguageRequested?.Invoke(language.SelectedIndex == 0 ? "fa" : "en");
@@ -97,7 +97,7 @@ public partial class Form1
         {
             AutoSize = true,
             Visible = false,
-            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            Font = UiFont.Make(9f, FontStyle.Bold),
             LinkColor = UiTheme.Accent,
             ActiveLinkColor = UiTheme.Accent,
             LinkBehavior = LinkBehavior.HoverUnderline,
@@ -151,7 +151,7 @@ public partial class Form1
                 style.BackColor = color;
                 style.SelectionBackColor = color;
                 style.ForeColor = UiTheme.Ink;
-                style.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                style.Font = UiFont.Make(9f, FontStyle.Bold);
             }
         };
         _emptyState = new Label
@@ -161,19 +161,19 @@ public partial class Form1
             TextAlign = ContentAlignment.MiddleCenter,
             ForeColor = UiTheme.Muted,
             BackColor = UiTheme.Surface,
-            Font = new Font("Segoe UI", 11F),
+            Font = UiFont.Make(11f),
             Visible = false
         };
         var gridHost = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Surface };
         gridHost.Controls.Add(dgvDatabases); gridHost.Controls.Add(_emptyState);
         content.Controls.Add(gridHost, 0, 3);
-        _detailTitle = new Label { Dock = DockStyle.Top, Height = 25, Padding = new Padding(8, 3, 8, 0), Text = L.Text("SelectDetails"), Font = new Font("Segoe UI", 10.5F, FontStyle.Bold) };
+        _detailTitle = new Label { Dock = DockStyle.Top, Height = 25, Padding = new Padding(8, 3, 8, 0), Text = L.Text("SelectDetails"), Font = UiFont.Make(10.5f, FontStyle.Bold) };
         _detailInfo = new Label { Dock = DockStyle.Top, Height = 23, Padding = new Padding(8, 1, 8, 0), AutoEllipsis = true };
-        _pathDetail = new TextBox { ReadOnly = true, BorderStyle = BorderStyle.None, Width = 700, Height = 26, BackColor = Color.White, RightToLeft = RightToLeft.No };
+        _pathDetail = new TextBox { ReadOnly = true, BorderStyle = BorderStyle.None, Width = 700, Height = 26, BackColor = UiTheme.Surface, RightToLeft = RightToLeft.No };
         _btnCopyPath = UiTheme.Button(L.Text("S410"), (_, _) => CopySelectedPath());
         _btnCopyPath.MinimumSize = new Size(105, 28); _btnCopyPath.Enabled = false;
         var pathRow = UiTheme.Flow(_pathDetail, _btnCopyPath); pathRow.Dock = DockStyle.Bottom; pathRow.Height = 32; pathRow.Padding = new Padding(4, 0, 4, 0);
-        var detail = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(9) };
+        var detail = new Panel { Dock = DockStyle.Fill, BackColor = UiTheme.Surface, Padding = new Padding(9) };
         detail.Controls.Add(pathRow); detail.Controls.Add(_detailInfo); detail.Controls.Add(_detailTitle); content.Controls.Add(detail, 0, 4);
         _selectionCount = new Label { AutoSize = true, Padding = new Padding(4, 9, 4, 0) };
         _btnStartService = UiTheme.Button(L.Text("S399"), async (_, _) => await StartSelectedServiceAsync(false));
@@ -202,8 +202,8 @@ public partial class Form1
             Padding = new Padding(12, 7, 12, 6)
         };
         var stripe = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = accent };
-        var caption = new Label { Text = title, Dock = DockStyle.Top, Height = 20, ForeColor = UiTheme.Muted, Font = new Font("Segoe UI", 8.5F), AutoEllipsis = true };
-        value = new Label { Text = "0", Dock = DockStyle.Fill, ForeColor = UiTheme.Ink, Font = new Font("Segoe UI", 17F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft };
+        var caption = new Label { Text = title, Dock = DockStyle.Top, Height = 20, ForeColor = UiTheme.Muted, Font = UiFont.Make(8.5f), AutoEllipsis = true };
+        value = new Label { Text = "0", Dock = DockStyle.Fill, ForeColor = UiTheme.Ink, Font = UiFont.Make(17f, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft };
         panel.Controls.Add(value); panel.Controls.Add(caption); panel.Controls.Add(stripe);
         return panel;
     }

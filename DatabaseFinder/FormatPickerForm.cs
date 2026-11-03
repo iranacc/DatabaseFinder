@@ -14,7 +14,7 @@ public class FormatPickerForm : AppForm
     private static string Key(int index, string extension) => index + ":" + extension;
     public FormatPickerForm(List<DiskFormat> selection)
     {
-        Text = L.Text("S164"); ClientSize = new Size(660, 640); MinimumSize = new Size(540, 480); StartPosition = FormStartPosition.CenterParent; Font = new Font("Segoe UI", 10);
+        Text = L.Text("S164"); ClientSize = new Size(660, 640); MinimumSize = new Size(540, 480); StartPosition = FormStartPosition.CenterParent; Font = UiFont.Make(10f);
         for (var i = 0; i < _formats.Count; i++) foreach (var ext in _formats[i].Extensions) if (selection.Any(s => s.Name == _formats[i].Name && s.Extensions.Contains(ext))) _checked.Add(Key(i, ext));
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 5 };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));

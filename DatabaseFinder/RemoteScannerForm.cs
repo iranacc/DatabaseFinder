@@ -26,7 +26,7 @@ namespace DatabaseFinder
             Text = L.Text("S284");
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(700, 500);
-            Font = new Font("Segoe UI", 10F);
+            Font = UiFont.Make(10f);
             BackColor = Color.White;
             RightToLeft = RightToLeft.Yes;
             RightToLeftLayout = true;
@@ -37,7 +37,7 @@ namespace DatabaseFinder
             var lblTitle = new Label
             {
                 Text = L.Text("S285"),
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                Font = UiFont.Make(14f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(33, 150, 243),
                 AutoSize = true,
                 Location = new Point(12, 10)
@@ -97,7 +97,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(33, 150, 243),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(390, 48),
                 Size = new Size(90, 30)
             };
@@ -140,7 +140,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(0, 188, 212),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(12, 445),
                 Size = new Size(130, 35),
                 Enabled = false
@@ -154,7 +154,7 @@ namespace DatabaseFinder
                 BackColor = Color.FromArgb(0, 150, 136),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = UiFont.Make(10f, FontStyle.Bold),
                 Location = new Point(152, 445),
                 Size = new Size(130, 35),
                 Enabled = false

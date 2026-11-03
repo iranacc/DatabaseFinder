@@ -13,7 +13,7 @@ internal static class FormLayout
         form.Controls.Clear(); form.ClientSize = new Size(920, 680); form.MinimumSize = new Size(780, 600); form.FormBorderStyle = FormBorderStyle.Sizable; form.AutoScaleMode = AutoScaleMode.Dpi;
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22), ColumnCount = 1, RowCount = 5 }; root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-        title.Font = new Font("Segoe UI", 17, FontStyle.Bold); title.Padding = new Padding(0, 0, 0, 14); root.Controls.Add(title, 0, 0);
+        title.Font = UiFont.Make(17f, FontStyle.Bold); title.Padding = new Padding(0, 0, 0, 14); root.Controls.Add(title, 0, 0);
         if (inputs != null) { inputs.Dock = DockStyle.Fill; root.Controls.Add(inputs, 0, 1); }
         main.Dock = DockStyle.Fill; root.Controls.Add(main, 0, 2);
         foreach (var b in actions) { b.AutoSize = true; b.MinimumSize = new Size(110, 38); }
