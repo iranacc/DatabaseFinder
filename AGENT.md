@@ -175,3 +175,12 @@ dotnet publish "d:\181 Project\Database Finder\DatabaseFinder\DatabaseFinder.csp
 - **وضعیت تست:**
   - بیلد کامپایل با موفقیت و بدون هیچ‌گونه خطا یا وارنینگ (`0 Warning, 0 Error`).
   - تمام **۶۸۶ تست خودکار `UiChecks`** با موفقیت پاس شدند (`PASS: 686 checks`).
+
+### 2026-11-03 11:42 - Antigravity Agent
+- **اقدام انجام‌شده:** اصلاح متن دکمه انتخاب مسیر فایل‌های مقصد (Browse) در زبان فارسی (`S031`). ترجمه نادرست «بگرد...» به عبارت استاندارد و گویای «انتخاب مسیر...» اصلاح شد تا از سردرگمی کاربر جلوگیری شود.
+- **فایل‌های تحت تأثیر:**
+  - `DatabaseFinder/Strings.fa.json`
+  - `tools/Localize/fa-inventory.json`
+- **وضعیت تست:**
+  - کامپایل موفق (`0 Warning, 0 Error`).
+  - تست‌های ۶۸۶ گانه `UiChecks` با موفقیت پاس شدند.
