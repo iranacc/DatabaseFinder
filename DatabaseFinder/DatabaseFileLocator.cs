@@ -802,7 +802,7 @@ namespace DatabaseFinder
         // ---------- اجرای کپی ----------
         public static (int FilesCopied, long BytesCopied, int Failed, int Mismatched, string Errors, List<CopyAcquisition> Acquisitions) ExecuteCopy(
             List<DatabaseCopyItem> items, string destRoot, LockedFileHandling lockedHandling,
-            Action<string>? log = null, bool verifyHash = true, Action<int, int>? progress = null)
+            Action<string>? log = null, bool verifyHash = true, Action<int, int>? progress = null, Action<string, long, long>? fileProgress = null)
         {
             var filesCopied = 0;
             long bytesCopied = 0;
@@ -884,8 +884,7 @@ namespace DatabaseFinder
                             var before = completedWork;
                             CopyDirectory(sourceRoot, destDir, item.FolderName, ref filesCopied, ref bytesCopied,
                                 ref failed, ref mismatched, acquisitions, errorLines, verifyHash, log,
-                                lockedHandling, shadowCache,
-                                () => progress?.Invoke(++completedWork, Math.Max(totalWork, completedWork + 1)));
+                                lockedHandling, shadowCache, () => progress?.Invoke(++completedWork, Math.Max(totalWork, completedWork + 1)), fileProgress);
                             if (completedWork == before) completedWork++;
                             progress?.Invoke(completedWork, Math.Max(totalWork, completedWork));
                             continue;
@@ -912,7 +911,7 @@ namespace DatabaseFinder
                                 bool viaShadow = false;
                                 try
                                 {
-                                    File.Copy(src, dest, overwrite: true);
+                                    CopyFileWithProgress(src, dest, (cBytes, tBytes) => fileProgress?.Invoke(relToRoot, cBytes, tBytes));
                                 }
                                 catch (IOException ex)
                                 {
@@ -926,7 +925,7 @@ namespace DatabaseFinder
                                         continue;
                                     }
                                     var vol = Path.GetPathRoot(file.SourcePath);
-                                    if (!TryCopyViaShadow(file.SourcePath, dest, vol, shadowCache, out var shadowErr, out var shadowSrc))
+                                    if (!TryCopyViaShadow(file.SourcePath, dest, vol, shadowCache, out var shadowErr, out var shadowSrc, (cBytes, tBytes) => fileProgress?.Invoke(relToRoot, cBytes, tBytes)))
                                     {
                                         file.Error = L.Text("S139") + shadowErr;
                                         errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {file.Error}");
@@ -943,8 +942,7 @@ namespace DatabaseFinder
                                 RecordCopy(file, relToRoot, effectiveSrc, dest, destInfo.Length,
                                     ref filesCopied, ref bytesCopied, ref failed, ref mismatched,
                                     acquisitions, errorLines, verifyHash, log,
-                                    viaShadow ? L.Format("S138", item.FolderName, file.DisplayName, FormatSize(destInfo.Length))
-                                              : L.Format("S137", item.FolderName, file.DisplayName, FormatSize(destInfo.Length)));
+                                    viaShadow ? L.Format("S138", item.FolderName, file.DisplayName, FormatSize(destInfo.Length)) : L.Format("S137", item.FolderName, file.DisplayName, FormatSize(destInfo.Length)), fileProgress);
                             }
                             catch (UnauthorizedAccessException ex)
                             {
@@ -1013,12 +1011,13 @@ namespace DatabaseFinder
         private static void RecordCopy(FileCopyItem? file, string relToRoot, string effectiveSrc, string dest,
             long bytes, ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
             List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log,
-            string doneMessage)
+            string doneMessage, Action<string, long, long>? fileProgress = null)
         {
             string? srcHash = null, dstHash = null;
             var verified = false;
             if (verifyHash)
             {
+                fileProgress?.Invoke(relToRoot + " [" + L.Text("S430") + "]", bytes, bytes);
                 srcHash = TryHashFile(effectiveSrc);
                 dstHash = TryHashFile(dest);
                 verified = srcHash != null && dstHash != null && srcHash == dstHash;
@@ -1137,7 +1136,8 @@ namespace DatabaseFinder
         private static void CopyDirectory(string sourceRoot, string destRoot, string folderName,
             ref int filesCopied, ref long bytesCopied, ref int failed, ref int mismatched,
             List<CopyAcquisition> acquisitions, List<string> errorLines, bool verifyHash, Action<string>? log,
-            LockedFileHandling lockedHandling, Dictionary<string, string> shadowCache, Action? onFile)
+            LockedFileHandling lockedHandling, Dictionary<string, string> shadowCache, Action? onFile,
+            Action<string, long, long>? fileProgress = null)
         {
             var label = Path.GetFileName(destRoot);
             var c = new CopyCounters();
@@ -1172,9 +1172,10 @@ namespace DatabaseFinder
                     if (dir != null) Directory.CreateDirectory(dir);
                     var effectiveSrc = file;
                     var doneMessage = L.Format("S137", label, rel, FormatSize(new FileInfo(file).Length));
+                    var relPath = Path.Combine(folderName, rel);
                     try
                     {
-                        File.Copy(file, dest, overwrite: true);
+                        CopyFileWithProgress(file, dest, (cBytes, tBytes) => fileProgress?.Invoke(relPath, cBytes, tBytes));
                     }
                     catch (IOException)
                     {
@@ -1185,7 +1186,7 @@ namespace DatabaseFinder
                             continue;
                         }
                         var vol = Path.GetPathRoot(file);
-                        if (!TryCopyViaShadow(file, dest, vol, shadowCache, out var shadowErr, out var shadowSrc))
+                        if (!TryCopyViaShadow(file, dest, vol, shadowCache, out var shadowErr, out var shadowSrc, (cBytes, tBytes) => fileProgress?.Invoke(relPath, cBytes, tBytes)))
                         {
                             AddError(rel, L.Text("S139") + shadowErr);
                             continue;
@@ -1197,7 +1198,7 @@ namespace DatabaseFinder
                     var destInfo = new FileInfo(dest);
                     RecordCopy(null, Path.Combine(folderName, rel), effectiveSrc, dest, destInfo.Length,
                         ref c.Files, ref c.Bytes, ref c.Failed, ref c.Mismatched,
-                        c.Acquisitions, c.Errors, verifyHash, log, doneMessage);
+                        c.Acquisitions, c.Errors, verifyHash, log, doneMessage, fileProgress);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
@@ -1257,9 +1258,68 @@ namespace DatabaseFinder
                    candidateFull.StartsWith(parentFull + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
         }
 
+                /// <summary>
+        /// کپی استریمی فایل با بافر ۱ مگابایتی و گزارش پیشرفت بایت‌های کپی‌شده برای فایل‌های حجیم دیتابیس.
+        /// </summary>
+        public static void CopyFileWithProgress(
+            string src, string dest,
+            Action<long, long>? onProgress = null,
+            CancellationToken cancellationToken = default)
+        {
+            var fileInfo = new FileInfo(src);
+            if (!fileInfo.Exists)
+                throw new FileNotFoundException("Source file not found", src);
+
+            var totalBytes = fileInfo.Length;
+            var destDir = Path.GetDirectoryName(dest);
+            if (!string.IsNullOrEmpty(destDir))
+                Directory.CreateDirectory(destDir);
+
+            if (totalBytes == 0)
+            {
+                using (File.Create(dest)) { }
+                onProgress?.Invoke(0, 0);
+                return;
+            }
+
+            const int BufferSize = 1024 * 1024; // 1 MB buffer for high throughput on large database files
+            using (var inStream = new FileStream(src, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, BufferSize, FileOptions.SequentialScan))
+            using (var outStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.SequentialScan))
+            {
+                var buffer = new byte[BufferSize];
+                long totalCopied = 0;
+                int read;
+
+                onProgress?.Invoke(0, totalBytes);
+                var lastReport = Stopwatch.GetTimestamp();
+                var reportIntervalTicks = Stopwatch.Frequency / 5; // Report every ~200ms
+
+                while ((read = inStream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    outStream.Write(buffer, 0, read);
+                    totalCopied += read;
+
+                    var now = Stopwatch.GetTimestamp();
+                    if (totalCopied >= totalBytes || (now - lastReport) >= reportIntervalTicks)
+                    {
+                        lastReport = now;
+                        onProgress?.Invoke(totalCopied, totalBytes);
+                    }
+                }
+            }
+
+            try
+            {
+                File.SetLastWriteTimeUtc(dest, fileInfo.LastWriteTimeUtc);
+            }
+            catch { }
+        }
+
         private static bool TryCopyViaShadow(
             string src, string dest, string? volumeRoot,
-            Dictionary<string, string> shadowCache, out string? error, out string shadowSrc)
+            Dictionary<string, string> shadowCache, out string? error, out string shadowSrc,
+            Action<long, long>? onProgress = null)
         {
             error = null;
             shadowSrc = src;
@@ -1288,7 +1348,7 @@ namespace DatabaseFinder
                     error = L.Text("S148");
                     return false;
                 }
-                File.Copy(shadowSrc, dest, overwrite: true);
+                CopyFileWithProgress(shadowSrc, dest, onProgress);
                 return true;
             }
             catch (Exception ex)

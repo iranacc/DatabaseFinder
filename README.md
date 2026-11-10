@@ -15,6 +15,9 @@ Windows utility to detect databases currently running on your system.
 - Elasticsearch
 - CouchDB
 
+## What's new in v1.9.1
+
+- **Live progress percentage in file copy:** Replaced blocking `File.Copy` with streaming `CopyFileWithProgress` (1 MB sequential buffer) providing real-time percentage and byte throughput in the live copy log and status bar for large database files and VSS shadow copies.
 ## What's new in v1.9.0
 
 - **Complete Modern UI/UX Redesign:** Native Windows Forms modernization featuring embedded **Vazirmatn** Persian typography, rounded card layouts (`ModernCard`), modern Slate/Indigo color palette, live terminal log panel with copy action, and optimized button toolbars.

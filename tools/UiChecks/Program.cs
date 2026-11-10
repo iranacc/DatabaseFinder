@@ -129,6 +129,14 @@ internal static class Program
         Check(!FileSignatures.IsSqlServerFile(fakeBak), "Fake .bak (dll header) rejected");
         Check(ManifestGenerator.ToolVersion == UpdateChecker.VersionString(UpdateChecker.CurrentVersion), "Manifest ToolVersion matches executing version");
         Check(JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings{Language="en"}))!.Language=="en","Language settings round trip");
+        var copySrc = Path.Combine(fixture, "test_large.dat");
+        var copyDst = Path.Combine(fixture, "test_large_dest.dat");
+        var dummyData = new byte[1024 * 1024];
+        using (var fs = File.OpenWrite(copySrc)) { for (int i = 0; i < 4; i++) fs.Write(dummyData, 0, dummyData.Length); }
+        var copyReports = new List<int>();
+        DatabaseFileLocator.CopyFileWithProgress(copySrc, copyDst, (copied, total) => copyReports.Add((int)((copied * 100) / total)));
+        Check(copyReports.Count > 0 && copyReports.Last() == 100 && new FileInfo(copyDst).Length == new FileInfo(copySrc).Length, "CopyFileWithProgress streams progress and matches source bytes");
+        File.Delete(copyDst);
         // Regression: SQL Server accepts TCP but never sends a banner. The async version probe must
         // time out instead of hanging forever (which would permanently busy-lock re-detection).
         var silentListener=new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback,0);silentListener.Start();

@@ -33,6 +33,9 @@ namespace DatabaseFinder
         private CaseInfo? _caseInfo;
         private string _manifestPath = "";
         private string _reportPath = "";
+        private int _activeProgressLineStart = -1;
+        private int _currentCompletedWork = 0;
+        private int _currentTotalWork = 0;
 
         private CaseInfo? AskCaseInfo() => CaseInfoForm.AskOnce(this, ref _caseAsked, ref _caseInfo);
 
@@ -679,7 +682,60 @@ namespace DatabaseFinder
         private void AppendLog(string message)
         {
             if (_txtLog.IsDisposed) return;
-            _txtLog.AppendText(message + Environment.NewLine);
+            if (_activeProgressLineStart >= 0 && _activeProgressLineStart <= _txtLog.TextLength)
+            {
+                _txtLog.Select(_activeProgressLineStart, _txtLog.TextLength - _activeProgressLineStart);
+                _txtLog.SelectedText = message + Environment.NewLine;
+                _activeProgressLineStart = -1;
+            }
+            else
+            {
+                _activeProgressLineStart = -1;
+                _txtLog.AppendText(message + Environment.NewLine);
+            }
+            _txtLog.SelectionStart = _txtLog.TextLength;
+            _txtLog.ScrollToCaret();
+        }
+
+        private void ReportFileProgress(string fileLabel, long copied, long total)
+        {
+            try
+            {
+                if (_txtLog.IsDisposed) return;
+                if (_txtLog.InvokeRequired)
+                {
+                    _txtLog.BeginInvoke(new Action(() => ReportFileProgress(fileLabel, copied, total)));
+                    return;
+                }
+
+                var pct = total > 0 ? (int)Math.Min(100, (copied * 100) / total) : (copied > 0 ? 100 : 0);
+                var sizeStr = $"{DatabaseFileLocator.FormatSize(copied)} / {DatabaseFileLocator.FormatSize(total)}";
+                var progressText = L.Format("S429", fileLabel, pct, sizeStr);
+
+                UpdateActiveLogLine(progressText);
+
+                if (_currentTotalWork > 0)
+                {
+                    _lblStatus.Text = $"{L.Format("S412", Math.Min(_currentTotalWork, _currentCompletedWork + 1), _currentTotalWork)} ({pct}%)";
+                }
+            }
+            catch { }
+        }
+
+        private void UpdateActiveLogLine(string text)
+        {
+            if (_activeProgressLineStart < 0 || _activeProgressLineStart > _txtLog.TextLength)
+            {
+                _activeProgressLineStart = _txtLog.TextLength;
+                _txtLog.AppendText(text);
+            }
+            else
+            {
+                _txtLog.Select(_activeProgressLineStart, _txtLog.TextLength - _activeProgressLineStart);
+                _txtLog.SelectedText = text;
+            }
+            _txtLog.SelectionStart = _txtLog.TextLength;
+            _txtLog.ScrollToCaret();
         }
 
         private void AppendLogSafe(string message)
@@ -917,6 +973,9 @@ namespace DatabaseFinder
             _progress.Value = 0;
             _progress.Maximum = Math.Max(1, items.Sum(i => Math.Max(1, i.Files.Count)));
             _reportPath = "";
+            _activeProgressLineStart = -1;
+            _currentCompletedWork = 0;
+            _currentTotalWork = _progress.Maximum;
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
             AppendLog(L.Format("S049", items.Count));
@@ -930,8 +989,7 @@ namespace DatabaseFinder
             {
                 var verify = _chkVerifyCopy.Checked;
                 var result = await Task.Run(() =>
-                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message), verify,
-                        (done, total) => ReportProgress(done, total)));
+                    DatabaseFileLocator.ExecuteCopy(items, destRoot, lockedHandling, message => AppendLogSafe(message), verify, (done, total) => ReportProgress(done, total), (fileLabel, copied, total) => ReportFileProgress(fileLabel, copied, total)));
 
                 AppendLog("");
                 AppendLog("--------------------------");
@@ -967,6 +1025,7 @@ namespace DatabaseFinder
             finally
             {
                 SetPlanBusy(false);
+                _activeProgressLineStart = -1;
                 _btnCopy.Enabled = true;
                 _btnCopy.Text = L.Text("S071");
                 _progress.Value = _progress.Maximum;
@@ -979,6 +1038,8 @@ namespace DatabaseFinder
             {
                 if (_progress.IsDisposed) return;
                 if (_progress.InvokeRequired) { _progress.BeginInvoke(new Action(() => ReportProgress(done, total))); return; }
+                _currentCompletedWork = done;
+                _currentTotalWork = total;
                 _progress.Maximum = Math.Max(1, total);
                 _progress.Value = Math.Min(Math.Max(0, done), _progress.Maximum);
                 _lblStatus.Text = L.Format("S412", done, total);
