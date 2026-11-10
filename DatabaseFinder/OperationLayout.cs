@@ -115,7 +115,7 @@ internal static class OperationLayout
             BackColor = UiTheme.Canvas
         };
         middle.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 335));
+        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 365));
 
         // Left Card: TreeView
         var treeCard = new ModernCard
@@ -172,8 +172,8 @@ internal static class OperationLayout
         {
             var bAll = selectionActions[0];
             var bClear = selectionActions[1];
-            bAll.Size = new Size(134, 30);
-            bClear.Size = new Size(134, 30);
+            bAll.Size = new Size(150, 30);
+            bClear.Size = new Size(150, 30);
             selRow.Controls.Add(bAll);
             selRow.Controls.Add(bClear);
             sideStack.Controls.Add(selRow);
@@ -183,7 +183,7 @@ internal static class OperationLayout
         for (int i = 2; i < selectionActions.Length; i++)
         {
             var btn = selectionActions[i];
-            btn.Size = new Size(275, 30);
+            btn.Size = new Size(310, 30);
             btn.Margin = new Padding(0, 1, 0, 1);
             sideStack.Controls.Add(btn);
         }
@@ -192,7 +192,7 @@ internal static class OperationLayout
         if (locked != null)
         {
             locked.AutoSize = false;
-            locked.Width = 295;
+            locked.Width = 330;
             int maxY = 0;
             foreach (Control c in locked.Controls)
             {
@@ -204,15 +204,15 @@ internal static class OperationLayout
 
             foreach (Control c in locked.Controls)
             {
-                c.Font = UiFont.Make(8.5f);
+                c.Font = UiFont.Make(8.2f);
                 if (c is RadioButton or CheckBox)
                 {
-                    c.Width = 280;
+                    c.Width = 315;
                 }
                 else if (c is Label lbl)
                 {
-                    lbl.Width = 275;
-                    lbl.MaximumSize = new Size(275, 0);
+                    lbl.Width = 310;
+                    lbl.MaximumSize = new Size(310, 0);
                     lbl.ForeColor = UiTheme.Muted;
                 }
             }
@@ -341,7 +341,7 @@ internal static class OperationLayout
         {
             Dock = DockStyle.Fill,
             FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
-            WrapContents = true,
+            WrapContents = false,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = UiTheme.Surface
