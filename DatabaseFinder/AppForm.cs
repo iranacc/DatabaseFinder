@@ -64,6 +64,7 @@ public static class UiTheme
 
         if (control is Button button)
         {
+            if (Equals(button.Tag, "terminal-btn")) return;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 1;
             button.Font = UiFont.Make(button.Font.Size > 0 ? button.Font.Size : 9.5f, Equals(button.Tag, "primary") || button.Font.Bold ? FontStyle.Bold : FontStyle.Regular);

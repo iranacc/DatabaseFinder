@@ -301,12 +301,26 @@ internal static class OperationLayout
             BorderColor = UiTheme.Dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(45, 55, 72)
         };
 
+        var logLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
+        };
+        logLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        logLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28)); // Row 0: Header bar
+        logLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // Row 1: TextBox strictly below header
+
         var logHeader = new TableLayoutPanel
         {
-            Dock = DockStyle.Top,
+            Dock = DockStyle.Fill,
             Height = 26,
             ColumnCount = 2,
             RowCount = 1,
+            Margin = Padding.Empty,
             BackColor = Color.Transparent,
             RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
         };
@@ -314,23 +328,27 @@ internal static class OperationLayout
         logHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         logLabel.Dock = DockStyle.Fill;
-        logLabel.Font = UiFont.Make(8.5f, FontStyle.Bold);
+        logLabel.Font = UiFont.Make(8.8f, FontStyle.Bold);
         logLabel.ForeColor = Color.FromArgb(148, 163, 184);
         logLabel.BackColor = Color.Transparent;
         logHeader.Controls.Add(logLabel, 0, 0);
 
         var btnCopyLog = new Button
         {
+            Tag = "terminal-btn",
             Text = L.IsFa ? "کپی لاگ" : "Copy Log",
             AutoSize = true,
             Height = 24,
             FlatStyle = FlatStyle.Flat,
-            ForeColor = Color.FromArgb(148, 163, 184),
-            BackColor = Color.Transparent,
-            Font = UiFont.Make(8f),
-            Cursor = Cursors.Hand
+            ForeColor = Color.FromArgb(226, 232, 240),
+            BackColor = Color.FromArgb(45, 55, 72),
+            Font = UiFont.Make(8f, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            Margin = L.IsFa ? new Padding(10, 1, 0, 3) : new Padding(0, 1, 10, 3)
         };
-        btnCopyLog.FlatAppearance.BorderSize = 0;
+        btnCopyLog.FlatAppearance.BorderSize = 1;
+        btnCopyLog.FlatAppearance.BorderColor = Color.FromArgb(71, 85, 105);
+        btnCopyLog.FlatAppearance.MouseOverBackColor = Color.FromArgb(71, 85, 105);
         btnCopyLog.Click += (_, _) =>
         {
             if (!string.IsNullOrEmpty(log.Text))
@@ -352,8 +370,9 @@ internal static class OperationLayout
         log.ForeColor = Color.FromArgb(226, 232, 240);
         log.Font = new Font("Consolas", 9f);
 
-        logCard.Controls.Add(log);
-        logCard.Controls.Add(logHeader);
+        logLayout.Controls.Add(logHeader, 0, 0);
+        logLayout.Controls.Add(log, 0, 1);
+        logCard.Controls.Add(logLayout);
         contentSplitter.Panel2.Controls.Add(logCard);
         root.Controls.Add(contentSplitter, 0, 1);
 
