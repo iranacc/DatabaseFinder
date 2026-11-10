@@ -20,15 +20,15 @@ internal static class OperationLayout
     {
         form.SuspendLayout();
         form.Controls.Clear();
-        form.ClientSize = new Size(1100, 800);
-        form.MinimumSize = new Size(980, 740);
+        form.ClientSize = new Size(1020, 680);
+        form.MinimumSize = new Size(840, 580);
         form.AutoScaleMode = AutoScaleMode.Dpi;
         form.BackColor = UiTheme.Canvas;
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(18, 14, 18, 14),
+            Padding = new Padding(12, 10, 12, 10),
             ColumnCount = 1,
             RowCount = 4,
             BackColor = UiTheme.Canvas
@@ -36,7 +36,7 @@ internal static class OperationLayout
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 0: Top Header & Destination Card
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));          // Row 1: Middle (Tree on Left, Actions on Right)
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 135));         // Row 2: Live Log Terminal Card
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 115));         // Row 2: Live Log Terminal Card
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 3: Bottom Action Card
 
         // --- CARD 1: Top Header & Destination Card ---
@@ -154,7 +154,7 @@ internal static class OperationLayout
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            AutoScroll = false,
+            AutoScroll = true,
             RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No,
             BackColor = UiTheme.Surface
         };
@@ -172,8 +172,8 @@ internal static class OperationLayout
         {
             var bAll = selectionActions[0];
             var bClear = selectionActions[1];
-            bAll.Size = new Size(138, 32);
-            bClear.Size = new Size(138, 32);
+            bAll.Size = new Size(134, 30);
+            bClear.Size = new Size(134, 30);
             selRow.Controls.Add(bAll);
             selRow.Controls.Add(bClear);
             sideStack.Controls.Add(selRow);
@@ -183,8 +183,8 @@ internal static class OperationLayout
         for (int i = 2; i < selectionActions.Length; i++)
         {
             var btn = selectionActions[i];
-            btn.Size = new Size(282, 32);
-            btn.Margin = new Padding(0, 2, 0, 2);
+            btn.Size = new Size(275, 30);
+            btn.Margin = new Padding(0, 1, 0, 1);
             sideStack.Controls.Add(btn);
         }
 
@@ -192,22 +192,27 @@ internal static class OperationLayout
         if (locked != null)
         {
             locked.AutoSize = false;
-            locked.Width = 285;
-            locked.Height = 185;
+            locked.Width = 295;
+            int maxY = 0;
+            foreach (Control c in locked.Controls)
+            {
+                if (c.Bottom > maxY) maxY = c.Bottom;
+            }
+            locked.Height = Math.Max(115, maxY + 14);
             locked.Margin = new Padding(0, 6, 0, 0);
             locked.Font = UiFont.Make(9f, FontStyle.Bold);
 
             foreach (Control c in locked.Controls)
             {
-                c.Font = UiFont.Make(8.8f);
+                c.Font = UiFont.Make(8.5f);
                 if (c is RadioButton or CheckBox)
                 {
-                    c.Width = 270;
+                    c.Width = 280;
                 }
                 else if (c is Label lbl)
                 {
-                    lbl.Width = 265;
-                    lbl.MaximumSize = new Size(265, 0);
+                    lbl.Width = 275;
+                    lbl.MaximumSize = new Size(275, 0);
                     lbl.ForeColor = UiTheme.Muted;
                 }
             }
@@ -289,8 +294,10 @@ internal static class OperationLayout
         {
             Dock = DockStyle.Fill,
             Margin = Padding.Empty,
-            Padding = new Padding(12, 10, 12, 10),
-            CornerRadius = 8
+            Padding = new Padding(10, 8, 10, 8),
+            CornerRadius = 8,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
         var bottomGrid = new TableLayoutPanel
         {
@@ -298,56 +305,62 @@ internal static class OperationLayout
             ColumnCount = 2,
             RowCount = 1,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = UiTheme.Surface,
             RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
         };
-        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
-        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        bottomGrid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-        // Status & Progress (Left)
+        // Status & Progress (Leading edge: Left in LTR, Right in RTL)
         var statusPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoSize = true,
-            BackColor = UiTheme.Surface
+            BackColor = UiTheme.Surface,
+            Margin = new Padding(0, 0, 10, 0)
         };
         if (progress != null)
         {
-            progress.Height = 14;
-            progress.Width = 260;
-            progress.Margin = new Padding(0, 0, 0, 4);
+            progress.Height = 12;
+            progress.Width = 240;
+            progress.Margin = new Padding(0, 0, 0, 3);
             statusPanel.Controls.Add(progress);
         }
         status.AutoSize = true;
-        status.Font = UiFont.Make(9f);
+        status.Font = UiFont.Make(8.8f);
         status.ForeColor = UiTheme.Muted;
         status.BackColor = UiTheme.Surface;
         statusPanel.Controls.Add(status);
         bottomGrid.Controls.Add(statusPanel, 0, 0);
 
-        // Action Buttons (Right)
+        // Action Buttons (Trailing edge: Right in LTR, Left in RTL)
         var actionFlow = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BackColor = UiTheme.Surface
         };
         foreach (var b in actions)
         {
             b.AutoSize = true;
-            b.MinimumSize = new Size(115, 38);
-            b.Font = UiFont.Make(9.5f);
+            b.MinimumSize = new Size(95, 34);
+            b.Height = 34;
+            b.Padding = new Padding(8, 0, 8, 0);
+            b.Margin = new Padding(3, 2, 3, 2);
+            b.Font = UiFont.Make(9f);
             actionFlow.Controls.Add(b);
         }
         if (actions.Length > 0)
         {
             actions[0].Tag = "primary";
-            actions[0].MinimumSize = new Size(135, 38);
-            actions[0].Font = UiFont.Make(10f, FontStyle.Bold);
+            actions[0].MinimumSize = new Size(115, 34);
+            actions[0].Font = UiFont.Make(9.5f, FontStyle.Bold);
         }
 
         bottomGrid.Controls.Add(actionFlow, 1, 0);

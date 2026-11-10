@@ -219,7 +219,7 @@ namespace DatabaseFinder
 
             _btnManifest = new Button
             {
-                Text = L.Text("S039"),
+                Text = L.Text("S063"),
                 BackColor = Color.FromArgb(255, 152, 0),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -281,7 +281,7 @@ namespace DatabaseFinder
             {
                 Text = L.Text("S333"),
                 Checked = true,
-                Location = new Point(14, 28),
+                Location = new Point(10, 24),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(66, 66, 66)
             };
@@ -289,7 +289,7 @@ namespace DatabaseFinder
             {
                 Text = L.Text("S334"),
                 Checked = true,
-                Location = new Point(14, 58),
+                Location = new Point(10, 52),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(66, 66, 66)
             };
@@ -297,7 +297,7 @@ namespace DatabaseFinder
             {
                 Text = L.Text("S335"),
                 Checked = false,
-                Location = new Point(14, 88),
+                Location = new Point(10, 80),
                 AutoSize = true,
                 ForeColor = Color.FromArgb(66, 66, 66)
             };
