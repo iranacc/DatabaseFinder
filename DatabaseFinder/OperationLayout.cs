@@ -30,14 +30,13 @@ internal static class OperationLayout
             Dock = DockStyle.Fill,
             Padding = new Padding(12, 10, 12, 10),
             ColumnCount = 1,
-            RowCount = 4,
+            RowCount = 3,
             BackColor = UiTheme.Canvas
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 0: Top Header & Destination Card
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));          // Row 1: Middle (Tree on Left, Actions on Right)
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 115));         // Row 2: Live Log Terminal Card
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 3: Bottom Action Card
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));          // Row 1: Content Splitter (Tree/Side + Log)
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));             // Row 2: Bottom Action Card
 
         // --- CARD 1: Top Header & Destination Card ---
         var topCard = new ModernCard
@@ -104,24 +103,62 @@ internal static class OperationLayout
         topCard.Controls.Add(topStack);
         root.Controls.Add(topCard, 0, 0);
 
-        // --- ROW 1: Middle Section (Tree on Left, Actions on Right) ---
-        var middle = new TableLayoutPanel
+        // --- SPLITTERS: Draggable Middle (Tree vs Sidebar) and Content (Workspace vs Log) ---
+        var contentSplitter = new SplitContainer
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            Margin = new Padding(0, 0, 0, 10),
-            RightToLeft = RightToLeft.No,
+            Orientation = Orientation.Horizontal,
+            SplitterWidth = 8,
+            Panel1MinSize = 50,
+            Panel2MinSize = 50,
+            FixedPanel = FixedPanel.Panel2,
+            Margin = new Padding(0, 0, 0, 8),
             BackColor = UiTheme.Canvas
         };
-        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        middle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 365));
+
+        var middleSplitter = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical,
+            SplitterWidth = 8,
+            Panel1MinSize = 50,
+            Panel2MinSize = 50,
+            FixedPanel = FixedPanel.Panel2,
+            Margin = Padding.Empty,
+            RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No,
+            BackColor = UiTheme.Canvas
+        };
+
+        // Custom paint for sleek splitter grip handles
+        middleSplitter.Paint += (_, e) =>
+        {
+            var r = middleSplitter.SplitterRectangle;
+            if (r.Width <= 0 || r.Height <= 0) return;
+            using var bg = new SolidBrush(UiTheme.Canvas);
+            e.Graphics.FillRectangle(bg, r);
+            int cx = r.X + r.Width / 2;
+            int cy = r.Y + r.Height / 2;
+            using var pen = new Pen(UiTheme.Line, 2);
+            e.Graphics.DrawLine(pen, cx, cy - 14, cx, cy + 14);
+        };
+
+        contentSplitter.Paint += (_, e) =>
+        {
+            var r = contentSplitter.SplitterRectangle;
+            if (r.Width <= 0 || r.Height <= 0) return;
+            using var bg = new SolidBrush(UiTheme.Canvas);
+            e.Graphics.FillRectangle(bg, r);
+            int cx = r.X + r.Width / 2;
+            int cy = r.Y + r.Height / 2;
+            using var pen = new Pen(UiTheme.Line, 2);
+            e.Graphics.DrawLine(pen, cx - 14, cy, cx + 14, cy);
+        };
 
         // Left Card: TreeView
         var treeCard = new ModernCard
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 10, 0),
+            Margin = Padding.Empty,
             Padding = new Padding(12),
             CornerRadius = 8
         };
@@ -139,7 +176,7 @@ internal static class OperationLayout
         {
             treeToolbar.BringToFront();
         }
-        middle.Controls.Add(treeCard, 0, 0);
+        middleSplitter.Panel1.Controls.Add(treeCard);
 
         // Right Side: Actions & Locked Options
         var sideCard = new ModernCard
@@ -219,15 +256,45 @@ internal static class OperationLayout
             sideStack.Controls.Add(locked);
         }
 
-        sideCard.Controls.Add(sideStack);
-        middle.Controls.Add(sideCard, 1, 0);
-        root.Controls.Add(middle, 0, 1);
+        void UpdateSideWidth()
+        {
+            int w = Math.Max(220, sideCard.ClientSize.Width - 20);
+            int halfW = Math.Max(90, (w - 6) / 2);
+            if (selectionActions.Length >= 2)
+            {
+                selectionActions[0].Width = halfW;
+                selectionActions[1].Width = halfW;
+            }
+            for (int i = 2; i < selectionActions.Length; i++)
+            {
+                selectionActions[i].Width = w;
+            }
+            if (locked != null)
+            {
+                locked.Width = w;
+                foreach (Control c in locked.Controls)
+                {
+                    if (c is RadioButton or CheckBox)
+                        c.Width = Math.Max(180, w - 16);
+                    else if (c is Label lbl)
+                    {
+                        lbl.Width = Math.Max(180, w - 20);
+                        lbl.MaximumSize = new Size(Math.Max(180, w - 20), 0);
+                    }
+                }
+            }
+        }
+        sideCard.Resize += (_, _) => UpdateSideWidth();
 
-        // --- ROW 2: Live Log Terminal Card ---
+        sideCard.Controls.Add(sideStack);
+        middleSplitter.Panel2.Controls.Add(sideCard);
+        contentSplitter.Panel1.Controls.Add(middleSplitter);
+
+        // --- Live Log Terminal Card ---
         var logCard = new ModernCard
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, 10),
+            Margin = Padding.Empty,
             Padding = new Padding(10, 8, 10, 8),
             CornerRadius = 8,
             BackColor = UiTheme.Dark ? Color.FromArgb(15, 23, 42) : Color.FromArgb(24, 30, 42),
@@ -287,7 +354,35 @@ internal static class OperationLayout
 
         logCard.Controls.Add(log);
         logCard.Controls.Add(logHeader);
-        root.Controls.Add(logCard, 0, 2);
+        contentSplitter.Panel2.Controls.Add(logCard);
+        root.Controls.Add(contentSplitter, 0, 1);
+
+        void ApplySplitterDistances()
+        {
+            try
+            {
+                int maxH = contentSplitter.Height - contentSplitter.Panel2MinSize - contentSplitter.SplitterWidth;
+                int targetH = contentSplitter.Height - 125 - contentSplitter.SplitterWidth;
+                if (maxH > contentSplitter.Panel1MinSize && targetH >= contentSplitter.Panel1MinSize)
+                {
+                    contentSplitter.SplitterDistance = Math.Clamp(targetH, contentSplitter.Panel1MinSize, maxH);
+                }
+
+                int maxW = middleSplitter.Width - middleSplitter.Panel2MinSize - middleSplitter.SplitterWidth;
+                int targetW = middleSplitter.Width - 355 - middleSplitter.SplitterWidth;
+                if (maxW > middleSplitter.Panel1MinSize && targetW >= middleSplitter.Panel1MinSize)
+                {
+                    middleSplitter.SplitterDistance = Math.Clamp(targetW, middleSplitter.Panel1MinSize, maxW);
+                }
+            }
+            catch
+            {
+            }
+            UpdateSideWidth();
+        }
+
+        form.Load += (_, _) => ApplySplitterDistances();
+        form.Shown += (_, _) => ApplySplitterDistances();
 
         // --- ROW 3: Bottom Action Card ---
         var actionCard = new ModernCard
@@ -365,7 +460,7 @@ internal static class OperationLayout
 
         bottomGrid.Controls.Add(actionFlow, 1, 0);
         actionCard.Controls.Add(bottomGrid);
-        root.Controls.Add(actionCard, 0, 3);
+        root.Controls.Add(actionCard, 0, 2);
 
         form.Controls.Add(root);
         UiTheme.Apply(form);
