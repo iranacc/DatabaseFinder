@@ -469,5 +469,15 @@
   "S457": "Group: by Backup Method",
   "S458": "Online & ready only",
   "S459": "Showing {#} of {#} databases • {#} selected",
-  "S460": "Status (Healthy first)"
+  "S460": "Status (Healthy first)",
+  "S461": "Primary Data",
+  "S462": "Secondary Data",
+  "S463": "Transaction Log",
+  "S464": "Database File",
+  "S465": "Insufficient disk space on drive '{#}'. Required: {#}, Available: {#}. Do you want to continue anyway?",
+  "S466": "Disk Space Warning",
+  "S467": "Warning: Destination drive '{#}' uses FAT32, which cannot store files larger than 4 GB! File '{#}' is {#}. Continue anyway?",
+  "S468": "{#}: {#}% ({#}) • {#} • ETA: {#}",
+  "S469": "Total elapsed time: {#} • Average speed: {#}",
+  "S470": "{#} remaining"
 }

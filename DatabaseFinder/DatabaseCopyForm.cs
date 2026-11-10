@@ -35,6 +35,11 @@ namespace DatabaseFinder
         private string _reportPath = "";
         private int _activeProgressLineStart = -1;
         private int _currentCompletedWork = 0;
+        private System.Diagnostics.Stopwatch? _copyStopwatch;
+        private long _grandTotalBytes;
+        private long _previouslyCompletedBytes;
+        private string _currentFileLabel = "";
+        private long _lastFileTotalBytes;
         private int _currentTotalWork = 0;
         private readonly HashSet<DatabaseCopyItem> _checkedItems = new();
         private bool _updatingTreeChecks;
@@ -577,6 +582,9 @@ namespace DatabaseFinder
                     if (e.Node.Checked) _checkedItems.Add(item);
                     else _checkedItems.Remove(item);
 
+                    foreach (TreeNode fn in e.Node.Nodes)
+                        fn.Checked = e.Node.Checked;
+
                     if (e.Node.Parent != null)
                     {
                         bool all = true;
@@ -587,11 +595,34 @@ namespace DatabaseFinder
                         e.Node.Parent.Checked = all;
                     }
                 }
+                else if (e.Node.Tag is FileCopyItem && e.Node.Parent?.Tag is DatabaseCopyItem parentItem)
+                {
+                    bool anyChecked = false;
+                    foreach (TreeNode fn in e.Node.Parent.Nodes)
+                    {
+                        if (fn.Checked) { anyChecked = true; break; }
+                    }
+                    e.Node.Parent.Checked = anyChecked;
+                    if (anyChecked) _checkedItems.Add(parentItem);
+                    else _checkedItems.Remove(parentItem);
+
+                    if (e.Node.Parent.Parent != null)
+                    {
+                        bool groupAll = true;
+                        foreach (TreeNode sibling in e.Node.Parent.Parent.Nodes)
+                        {
+                            if (!sibling.Checked) { groupAll = false; break; }
+                        }
+                        e.Node.Parent.Parent.Checked = groupAll;
+                    }
+                }
                 else
                 {
+                    // Group node
                     foreach (TreeNode child in e.Node.Nodes)
                     {
                         child.Checked = e.Node.Checked;
+                        foreach (TreeNode fn in child.Nodes) fn.Checked = e.Node.Checked;
                         if (child.Tag is DatabaseCopyItem childItem)
                         {
                             if (e.Node.Checked) _checkedItems.Add(childItem);
@@ -718,7 +749,10 @@ namespace DatabaseFinder
                 _updatingTreeChecks = false;
             }
 
-            _tree.ExpandAll();
+            foreach (TreeNode group in _tree.Nodes)
+            {
+                group.Expand();
+            }
             UpdateFilterSummary(filteredList.Count, _items.Count, filteredList.Sum(i => i.TotalSize), _checkedItems.Count);
         }
 
@@ -772,6 +806,26 @@ namespace DatabaseFinder
                 node.ToolTipText = string.Join("\n", item.Files.Select(f =>
                     $"{f.DisplayName}  •  {f.Modified:yyyy-MM-dd HH:mm}  •  " +
                     (f.IsInUse ? "🔒 " + (f.InUseBy ?? L.Text("S367")) : L.Text("S368"))));
+
+                foreach (var file in item.Files)
+                {
+                    var ext = System.IO.Path.GetExtension(file.SourcePath ?? file.DisplayName).ToLowerInvariant();
+                    var role = ext switch
+                    {
+                        ".mdf" => L.Text("S461"),
+                        ".ndf" => L.Text("S462"),
+                        ".ldf" => L.Text("S463"),
+                        _ => L.Text("S464")
+                    };
+                    var lockBadge = file.IsInUse ? "  🔒" : "";
+                    var fileNodeText = $"{file.DisplayName}  ({DatabaseFileLocator.FormatSize(file.Size)})  [{role}]{lockBadge}";
+                    var fileNode = new TreeNode(fileNodeText)
+                    {
+                        Tag = file,
+                        ToolTipText = file.SourcePath ?? file.DisplayName
+                    };
+                    node.Nodes.Add(fileNode);
+                }
             }
             if (!string.IsNullOrEmpty(item.Error))
             {
@@ -1012,15 +1066,69 @@ namespace DatabaseFinder
                     return;
                 }
 
+                if (!string.Equals(fileLabel, _currentFileLabel, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_lastFileTotalBytes > 0)
+                        _previouslyCompletedBytes += _lastFileTotalBytes;
+                    _currentFileLabel = fileLabel;
+                    _lastFileTotalBytes = total;
+                }
+
                 var pct = total > 0 ? (int)Math.Min(100, (copied * 100) / total) : (copied > 0 ? 100 : 0);
                 var sizeStr = $"{DatabaseFileLocator.FormatSize(copied)} / {DatabaseFileLocator.FormatSize(total)}";
-                var progressText = L.Format("S429", fileLabel, pct, sizeStr);
+
+                string speedStr = "";
+                string etaStr = "";
+                if (_copyStopwatch != null && _copyStopwatch.Elapsed.TotalSeconds > 0.5)
+                {
+                    long totalCopied = Math.Max(0, _previouslyCompletedBytes + copied);
+                    double sec = _copyStopwatch.Elapsed.TotalSeconds;
+                    double speed = totalCopied / sec;
+                    if (speed > 1024)
+                    {
+                        speedStr = DatabaseFileLocator.FormatSize((long)speed) + "/s";
+                        if (_grandTotalBytes > totalCopied)
+                        {
+                            double remainSec = (_grandTotalBytes - totalCopied) / speed;
+                            if (remainSec > 0 && remainSec < 86400)
+                            {
+                                var ts = TimeSpan.FromSeconds(remainSec);
+                                var formattedTs = ts.TotalHours >= 1
+                                    ? $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+                                    : $"{ts.Minutes:D2}:{ts.Seconds:D2}";
+                                etaStr = L.Format("S470", formattedTs);
+                            }
+                        }
+                    }
+                }
+
+                string progressText;
+                if (!string.IsNullOrEmpty(speedStr) && !string.IsNullOrEmpty(etaStr))
+                {
+                    progressText = L.Format("S468", fileLabel, pct, sizeStr, speedStr, etaStr);
+                }
+                else
+                {
+                    progressText = L.Format("S429", fileLabel, pct, sizeStr);
+                }
 
                 UpdateActiveLogLine(progressText);
 
                 if (_currentTotalWork > 0)
                 {
-                    _lblStatus.Text = $"{L.Format("S412", Math.Min(_currentTotalWork, _currentCompletedWork + 1), _currentTotalWork)} ({pct}%)";
+                    string statusExtra = !string.IsNullOrEmpty(speedStr) ? $" • {speedStr}" : "";
+                    if (!string.IsNullOrEmpty(etaStr)) statusExtra += $" • {etaStr}";
+                    _lblStatus.Text = $"{L.Format("S412", Math.Min(_currentTotalWork, _currentCompletedWork + 1), _currentTotalWork)} ({pct}%){statusExtra}";
+                }
+
+                if (_grandTotalBytes > 0)
+                {
+                    ulong currentBytes = (ulong)Math.Min(_grandTotalBytes, _previouslyCompletedBytes + copied);
+                    TaskbarProgress.SetValue(this.Handle, currentBytes, (ulong)_grandTotalBytes);
+                }
+                else
+                {
+                    TaskbarProgress.SetValue(this.Handle, (ulong)Math.Min(_currentTotalWork, _currentCompletedWork), (ulong)Math.Max(1, _currentTotalWork));
                 }
             }
             catch { }
@@ -1070,6 +1178,7 @@ namespace DatabaseFinder
                     foreach (TreeNode child in node.Nodes)
                     {
                         child.Checked = check;
+                        foreach (TreeNode fn in child.Nodes) fn.Checked = check;
                         if (child.Tag is DatabaseCopyItem item)
                         {
                             if (check) _checkedItems.Add(item);
@@ -1087,7 +1196,41 @@ namespace DatabaseFinder
 
         private List<DatabaseCopyItem> GetCheckedItems()
         {
-            return _items.Where(i => _checkedItems.Contains(i)).ToList();
+            var list = new List<DatabaseCopyItem>();
+            foreach (TreeNode group in _tree.Nodes)
+            {
+                foreach (TreeNode dbNode in group.Nodes)
+                {
+                    if (dbNode.Tag is DatabaseCopyItem item && _checkedItems.Contains(item))
+                    {
+                        var checkedFiles = new List<FileCopyItem>();
+                        foreach (TreeNode fn in dbNode.Nodes)
+                        {
+                            if (fn.Tag is FileCopyItem fi && fn.Checked)
+                                checkedFiles.Add(fi);
+                        }
+                        if (checkedFiles.Count > 0 && checkedFiles.Count < item.Files.Count)
+                        {
+                            var clone = new DatabaseCopyItem
+                            {
+                                Server = item.Server,
+                                DatabaseName = item.DatabaseName,
+                                FolderName = item.FolderName,
+                                Files = checkedFiles,
+                                UseManualPath = item.UseManualPath,
+                                ManualPath = item.ManualPath,
+                                Error = item.Error
+                            };
+                            list.Add(clone);
+                        }
+                        else
+                        {
+                            list.Add(item);
+                        }
+                    }
+                }
+            }
+            return list.Count > 0 ? list : _items.Where(i => _checkedItems.Contains(i)).ToList();
         }
 
         private void BtnBrowse_Click(object? sender, EventArgs e)
@@ -1276,6 +1419,25 @@ namespace DatabaseFinder
             }
             catch { }
 
+            // FAT32 4GB limit pre-flight check
+            try
+            {
+                var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(destRoot)) ?? destRoot);
+                if (drive.IsReady && drive.DriveFormat.Equals("FAT32", StringComparison.OrdinalIgnoreCase))
+                {
+                    var over4Gb = items.SelectMany(i => i.Files).FirstOrDefault(f => f.Size > 4294967295L);
+                    if (over4Gb != null)
+                    {
+                        var msg = L.Format("S467", drive.Name, over4Gb.DisplayName, DatabaseFileLocator.FormatSize(over4Gb.Size));
+                        if (MessageBox.Show(this, msg, L.Text("S466"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+            catch { }
+
             _btnCopy.Enabled = false;
             _btnCopy.Text = L.Text("S086");
             _btnManifest.Enabled = false;
@@ -1288,6 +1450,13 @@ namespace DatabaseFinder
             _activeProgressLineStart = -1;
             _currentCompletedWork = 0;
             _currentTotalWork = _progress.Maximum;
+            _grandTotalBytes = items.Sum(i => i.TotalSize);
+            _previouslyCompletedBytes = 0;
+            _lastFileTotalBytes = 0;
+            _currentFileLabel = "";
+            _copyStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            TaskbarProgress.SetState(this.Handle, TaskbarProgressState.Normal);
+            TaskbarProgress.SetValue(this.Handle, 0, (ulong)Math.Max(1, _currentTotalWork));
             _txtLog.Clear();
             AppendLog(L.Format("S048", destRoot));
             AppendLog(L.Format("S049", items.Count));
@@ -1306,6 +1475,16 @@ namespace DatabaseFinder
                 AppendLog("");
                 AppendLog("--------------------------");
                 AppendLog(L.Format("S088", result.FilesCopied, DatabaseFileLocator.FormatSize(result.BytesCopied), result.Failed));
+                if (_copyStopwatch != null)
+                {
+                    _copyStopwatch.Stop();
+                    var ts = _copyStopwatch.Elapsed;
+                    var timeStr = ts.TotalHours >= 1
+                        ? $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+                        : $"{ts.Minutes:D2}:{ts.Seconds:D2}";
+                    double avgSpeed = ts.TotalSeconds > 0 ? result.BytesCopied / ts.TotalSeconds : 0;
+                    AppendLog(L.Format("S469", timeStr, DatabaseFileLocator.FormatSize((long)avgSpeed) + "/s"));
+                }
                 if (result.Mismatched > 0)
                     AppendLog(L.Format("S375", result.Mismatched));
 
@@ -1341,6 +1520,7 @@ namespace DatabaseFinder
                 _btnCopy.Enabled = true;
                 _btnCopy.Text = L.Text("S071");
                 _progress.Value = _progress.Maximum;
+                TaskbarProgress.SetState(this.Handle, TaskbarProgressState.NoProgress);
             }
         }
 

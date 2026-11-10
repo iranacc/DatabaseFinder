@@ -770,7 +770,21 @@ namespace DatabaseFinder
                 return;
             }
 
+            try
+            {
+                var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(destRoot)) ?? destRoot);
+                if (drive.IsReady && drive.AvailableFreeSpace < 100L * 1024 * 1024)
+                {
+                    _lblStatus.Text = L.Format("S374", drive.Name, "100 MB", DatabaseFileLocator.FormatSize(drive.AvailableFreeSpace));
+                    _lblStatus.ForeColor = Color.FromArgb(211, 47, 47);
+                    return;
+                }
+            }
+            catch { }
+
             _btnStart.Enabled = false;
+            TaskbarProgress.SetState(this.Handle, TaskbarProgressState.Normal);
+            TaskbarProgress.SetValue(this.Handle, 0, (ulong)Math.Max(1, items.Count));
             _btnStart.Text = L.Text("S047");
             _btnManifest.Enabled = false;
             _btnOpen.Enabled = false;
@@ -825,6 +839,7 @@ namespace DatabaseFinder
                 _btnStart.Enabled = true;
                 _btnStart.Text = L.Text("S038");
                 _progress.Value = _progress.Maximum;
+                TaskbarProgress.SetState(this.Handle, TaskbarProgressState.NoProgress);
             }
         }
 
@@ -837,6 +852,7 @@ namespace DatabaseFinder
                 _progress.Maximum = Math.Max(1, total);
                 _progress.Value = Math.Min(Math.Max(0, done), _progress.Maximum);
                 _lblStatus.Text = L.Format("S412", done, total);
+                TaskbarProgress.SetValue(this.Handle, (ulong)Math.Min(total, done), (ulong)Math.Max(1, total));
             }
             catch { }
         }
