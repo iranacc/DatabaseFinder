@@ -292,6 +292,7 @@ namespace DatabaseFinder
             _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = L.Text("S179"), Name = "backup", Width = 60, ReadOnly = true });
 
             _grid.CellMouseClick += Grid_CellMouseClick;
+            _grid.SortCompare += Grid_SortCompare;
             _grid.CurrentCellDirtyStateChanged += (_, _) =>
             {
                 if (_grid.IsCurrentCellDirty) _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
@@ -541,6 +542,46 @@ namespace DatabaseFinder
             foreach (DataGridViewRow row in _grid.Rows)
             {
                 row.Cells[0].Value = check;
+            }
+        }
+
+        private void Grid_SortCompare(object? sender, DataGridViewSortCompareEventArgs e)
+        {
+            var r1 = _grid.Rows[e.RowIndex1].Tag as DatabaseInfo;
+            var r2 = _grid.Rows[e.RowIndex2].Tag as DatabaseInfo;
+
+            if (e.Column.Name == "size")
+            {
+                long s1 = r1?.FileSize ?? 0;
+                long s2 = r2?.FileSize ?? 0;
+                e.SortResult = s1.CompareTo(s2);
+                e.Handled = true;
+            }
+            else if (e.Column.Name == "date")
+            {
+                DateTime d1 = r1?.FileModified ?? DateTime.MinValue;
+                DateTime d2 = r2?.FileModified ?? DateTime.MinValue;
+                e.SortResult = d1.CompareTo(d2);
+                e.Handled = true;
+            }
+            else if (e.Column.Name == "backup")
+            {
+                bool b1 = r1?.IsBackup ?? false;
+                bool b2 = r2?.IsBackup ?? false;
+                e.SortResult = b1.CompareTo(b2);
+                e.Handled = true;
+            }
+            else
+            {
+                string str1 = e.CellValue1?.ToString() ?? "";
+                string str2 = e.CellValue2?.ToString() ?? "";
+                e.SortResult = string.Compare(str1, str2, StringComparison.CurrentCultureIgnoreCase);
+                e.Handled = true;
+            }
+
+            if (e.SortResult == 0 && r1 != null && r2 != null)
+            {
+                e.SortResult = string.Compare(r1.LocalPath ?? "", r2.LocalPath ?? "", StringComparison.CurrentCultureIgnoreCase);
             }
         }
 

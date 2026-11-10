@@ -66,6 +66,16 @@ internal static class Program
             var diskSelCol=diskGrid.Columns.Cast<DataGridViewColumn>().First(c=>c.Name=="sel");
             Check(diskSelCol is DataGridViewCheckBoxColumn && !diskSelCol.ReadOnly && !diskGrid.ReadOnly,language+" offline results checkbox stays editable");
             Check(diskGrid.Rows[0].Cells[0].GetContentBounds(0).Width>0,language+" offline checkbox glyph has render bounds");
+            var testItems=new List<DatabaseInfo>{new(){Name="Big",FileSize=1288490188L,LocalPath="C:\\a.bak"},new(){Name="Small",FileSize=10590617L,LocalPath="C:\\b.bak"},new(){Name="Medium",FileSize=112302489L,LocalPath="C:\\c.bak"}};
+            typeof(DiskScanForm).GetMethod("FillGrid",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk,new object[]{testItems});
+            diskGrid.Sort(diskGrid.Columns["size"],System.ComponentModel.ListSortDirection.Ascending);
+            Check(((DatabaseInfo)diskGrid.Rows[0].Tag!).Name=="Small",language+" disk sort size asc 1st is Small");
+            Check(((DatabaseInfo)diskGrid.Rows[1].Tag!).Name=="Medium",language+" disk sort size asc 2nd is Medium");
+            Check(((DatabaseInfo)diskGrid.Rows[2].Tag!).Name=="Big",language+" disk sort size asc 3rd is Big");
+            diskGrid.Sort(diskGrid.Columns["size"],System.ComponentModel.ListSortDirection.Descending);
+            Check(((DatabaseInfo)diskGrid.Rows[0].Tag!).Name=="Big",language+" disk sort size desc 1st is Big");
+            Check(((DatabaseInfo)diskGrid.Rows[1].Tag!).Name=="Medium",language+" disk sort size desc 2nd is Medium");
+            Check(((DatabaseInfo)diskGrid.Rows[2].Tag!).Name=="Small",language+" disk sort size desc 3rd is Small");
             Render(disk,Path.Combine(output,"disk-"+language+".png"));
             using var picker=new FormatPickerForm(DiskFormatRegistry.All);picker.Show();Application.DoEvents();
             Check(picker.SelectedFormats.Count==14,language+" all 14 format groups available");
