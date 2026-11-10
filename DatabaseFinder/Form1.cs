@@ -303,15 +303,35 @@ namespace DatabaseFinder
             RebindGrid(models);
         }
 
+        private void FilterMainGrid()
+        {
+            var term = _txtSearch?.Text?.Trim() ?? "";
+            var models = _lastResults.Select(BuildModel).ToList();
+            if (!string.IsNullOrEmpty(term))
+            {
+                models = models.Where(m =>
+                    (m.TypeDisplayName != null && m.TypeDisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.DisplayName != null && m.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.ServiceName != null && m.ServiceName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.Status != null && m.Status.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.DetectionMethod != null && m.DetectionMethod.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.Location != null && m.Location.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.Port != null && m.Port.Contains(term))
+                ).ToList();
+            }
+            RebindGrid(models);
+        }
+
         private void RebindGrid(List<DatabaseDisplayModel> models)
         {
             dgvDatabases.DataSource = null;
             dgvDatabases.DataSource = models;
             if (_emptyState != null) _emptyState.Visible = models.Count == 0;
 
-            for (int i = 0; i < dgvDatabases.Rows.Count && i < _lastResults.Count; i++)
+            for (int i = 0; i < dgvDatabases.Rows.Count && i < models.Count; i++)
             {
-                var db = _lastResults[i];
+                var db = models[i].SourceDb ?? _lastResults.ElementAtOrDefault(i);
+                if (db == null) continue;
                 var row = dgvDatabases.Rows[i];
                 row.Tag = db;
                 row.DefaultCellStyle.BackColor = UiTheme.Surface;
@@ -606,7 +626,8 @@ namespace DatabaseFinder
                     : (db.LocalPath ?? "-"),
                 SizeInfo = db.IsServiceStopped || db.IsOnline
                     ? ""
-                    : $"{FormatFileSize(db.FileSize)} - {db.FileModified:yyyy-MM-dd HH:mm}"
+                    : $"{FormatFileSize(db.FileSize)} - {db.FileModified:yyyy-MM-dd HH:mm}",
+                SourceDb = db
             };
         }
 
@@ -641,9 +662,7 @@ namespace DatabaseFinder
                 var results = await Task.Run(() => _detector.Detect());
                 if (IsDisposed || !IsHandleCreated) return;
                 _lastResults = results.ToList();
-                var models = results.Select(BuildModel).ToList();
-
-                RebindGrid(models);
+                FilterMainGrid();
                 lblStatus.Text = L.Format("S228", results.Count);
                 var stoppedSql = results.FirstOrDefault(d => d.IsServiceStopped &&
                     d.Type == DatabaseType.SQLServer && !string.IsNullOrWhiteSpace(d.ServiceName));
@@ -700,8 +719,8 @@ namespace DatabaseFinder
                         db.Version = testResult.Version;
 
                         var idx = results.IndexOf(db);
-                        if (idx >= 0 && idx < models.Count)
-                            models[idx].Version = testResult.Version;
+                        if (dgvDatabases.DataSource is List<DatabaseDisplayModel> currentModels && idx >= 0 && idx < currentModels.Count)
+                            currentModels[idx].Version = testResult.Version;
 
                         foreach (DataGridViewRow row in dgvDatabases.Rows)
                         {

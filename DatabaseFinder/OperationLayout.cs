@@ -9,6 +9,7 @@ internal static class OperationLayout
         Button browse,
         Label? hint,
         TreeView tree,
+        Control? treeToolbar,
         Control[] selectionActions,
         GroupBox? locked,
         Label logLabel,
@@ -124,11 +125,20 @@ internal static class OperationLayout
             Padding = new Padding(12),
             CornerRadius = 8
         };
+        if (treeToolbar != null)
+        {
+            treeToolbar.Dock = DockStyle.Top;
+            treeCard.Controls.Add(treeToolbar);
+        }
         tree.Dock = DockStyle.Fill;
         tree.BorderStyle = BorderStyle.None;
         tree.RightToLeft = RightToLeft.No;
         tree.ItemHeight = 30;
         treeCard.Controls.Add(tree);
+        if (treeToolbar != null)
+        {
+            treeToolbar.BringToFront();
+        }
         middle.Controls.Add(treeCard, 0, 0);
 
         // Right Side: Actions & Locked Options

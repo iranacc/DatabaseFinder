@@ -18,5 +18,6 @@ namespace DatabaseFinder
         public string DisplayName { get; set; } = "";
         public string Location { get; set; } = "";
         public string SizeInfo { get; set; } = "";
+        public DatabaseInfo? SourceDb { get; set; }
     }
 }

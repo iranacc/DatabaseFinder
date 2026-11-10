@@ -22,6 +22,7 @@ public partial class Form1
     private Label _emptyState = null!;
     private ToolTip _toolTip = null!;
     private Button _btnTheme = null!;
+    private TextBox _txtSearch = null!;
     public MainViewState CaptureView()
     {
         dgvDatabases.EndEdit();
@@ -111,7 +112,15 @@ public partial class Form1
         cmbScanMode.Width = 235;
         var all = UiTheme.Button(L.Text("S034"), (_, _) => CheckAll(true));
         var none = UiTheme.Button(L.Text("S163"), (_, _) => CheckAll(false));
-        content.Controls.Add(UiTheme.Flow(cmbScanMode, btnRefresh, all, none), 0, 1);
+        _txtSearch = new TextBox
+        {
+            Width = 190,
+            Font = UiFont.Make(9f),
+            AccessibleName = "Search / فیلتر",
+            PlaceholderText = L.Text("S455")
+        };
+        _txtSearch.TextChanged += (_, _) => FilterMainGrid();
+        content.Controls.Add(UiTheme.Flow(cmbScanMode, _txtSearch, btnRefresh, all, none), 0, 1);
         var metrics = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,

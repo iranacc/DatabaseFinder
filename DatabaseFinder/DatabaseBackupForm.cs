@@ -303,7 +303,7 @@ namespace DatabaseFinder
             Controls.Add(grpOptions);
 
             Load += DatabaseBackupForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_progress,_btnStart,_btnManifest,_btnOpen,_btnReport);
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,lblHint,_tree,null,new Control[]{btnSelectAll,btnClearAll,btnExpand,_btnFindPass,_btnSysadmin},grpOptions,lblLog,_txtLog,_lblStatus,_progress,_btnStart,_btnManifest,_btnOpen,_btnReport);
         }
 
         private async void DatabaseBackupForm_Load(object? sender, EventArgs e)

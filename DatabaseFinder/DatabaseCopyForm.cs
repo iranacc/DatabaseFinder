@@ -36,6 +36,15 @@ namespace DatabaseFinder
         private int _activeProgressLineStart = -1;
         private int _currentCompletedWork = 0;
         private int _currentTotalWork = 0;
+        private readonly HashSet<DatabaseCopyItem> _checkedItems = new();
+        private bool _updatingTreeChecks;
+        private TextBox _txtSearch = null!;
+        private Button _btnClearSearch = null!;
+        private ComboBox _cmbSort = null!;
+        private ComboBox _cmbGroup = null!;
+        private ComboBox _cmbFilter = null!;
+        private Label _lblFilterSummary = null!;
+        private Panel _treeToolbar = null!;
 
         private CaseInfo? AskCaseInfo() => CaseInfoForm.AskOnce(this, ref _caseAsked, ref _caseInfo);
 
@@ -110,12 +119,7 @@ namespace DatabaseFinder
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Font = UiFont.Make(9.5f)
             };
-            _tree.AfterCheck += (s, e) =>
-            {
-                var node = e.Node;
-                if (node != null && node.Nodes != null)
-                    foreach (TreeNode child in node.Nodes) child.Checked = node.Checked;
-            };
+            _tree.AfterCheck += Tree_AfterCheck;
             Controls.Add(_tree);
 
             var btnSelectAll = new Button
@@ -377,14 +381,15 @@ namespace DatabaseFinder
             _progress = new ProgressBar { Minimum = 0, Maximum = 1, Value = 0, Style = ProgressBarStyle.Continuous };
 
             Load += DatabaseCopyForm_Load;
-            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnSweepFolder,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
+            _treeToolbar = BuildTreeToolbar();
+            OperationLayout.Build(this,lblTitle,_txtDest,btnBrowse,null,_tree,_treeToolbar,new Control[]{btnSelectAll,btnClearAll,_btnManualPath,_btnFindPass,_btnSysadmin,_btnDeepSweep,_btnSweepFolder,_btnLabScript},grpLocked,lblLog,_txtLog,_lblStatus,_progress,_btnCopy,_btnManifest,_btnOpen,_btnReport);
 
             // حین کپی نباید چیزی از این کنترل‌ها تغییر کند: نخ کار روی همان آیتم‌ها
             // می‌خواند و مسیر دستی/انتخاب‌ها وسط کار عوض می‌شوند
             _planControls = new Control[]
             {
                 btnSelectAll, btnClearAll, _btnManualPath, _btnFindPass, _btnSysadmin, _btnDeepSweep, _btnSweepFolder,
-                _btnLabScript, btnBrowse, _txtDest, _tree, grpLocked
+                _btnLabScript, btnBrowse, _txtDest, _tree, grpLocked, _txtSearch, _btnClearSearch, _cmbSort, _cmbGroup, _cmbFilter
             };
         }
 
@@ -408,6 +413,200 @@ namespace DatabaseFinder
             _planEnabled = null;
         }
 
+        private Panel BuildTreeToolbar()
+        {
+            var panel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 68,
+                Margin = Padding.Empty,
+                Padding = new Padding(0, 0, 0, 6),
+                BackColor = Color.Transparent
+            };
+
+            var rootLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                BackColor = Color.Transparent
+            };
+            rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+
+            // Row 1: Search and Live Summary
+            var row1 = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+                WrapContents = false,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                BackColor = Color.Transparent,
+                RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
+            };
+
+            _txtSearch = new TextBox
+            {
+                Width = 240,
+                Font = UiFont.Make(9f),
+                PlaceholderText = L.Text("S447"),
+                Margin = new Padding(0, 1, 4, 1)
+            };
+            _txtSearch.TextChanged += (_, _) =>
+            {
+                _btnClearSearch.Visible = !string.IsNullOrEmpty(_txtSearch.Text);
+                FillTree();
+            };
+
+            _btnClearSearch = new Button
+            {
+                Text = "✕",
+                Width = 26,
+                Height = 26,
+                FlatStyle = FlatStyle.Flat,
+                Font = UiFont.Make(8.5f, FontStyle.Bold),
+                ForeColor = UiTheme.Muted,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Visible = false,
+                Margin = new Padding(0, 2, 6, 0)
+            };
+            _btnClearSearch.FlatAppearance.BorderSize = 0;
+            _btnClearSearch.Click += (_, _) => _txtSearch.Clear();
+
+            _lblFilterSummary = new Label
+            {
+                AutoSize = true,
+                Font = UiFont.Make(8.5f),
+                ForeColor = UiTheme.Muted,
+                Margin = new Padding(6, 6, 6, 0),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            row1.Controls.Add(_txtSearch);
+            row1.Controls.Add(_btnClearSearch);
+            row1.Controls.Add(_lblFilterSummary);
+
+            // Row 2: Sort, Group, Filter dropdowns
+            var row2 = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = L.IsFa ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+                WrapContents = false,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                BackColor = Color.Transparent,
+                RightToLeft = L.IsFa ? RightToLeft.Yes : RightToLeft.No
+            };
+
+            _cmbSort = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 195,
+                Font = UiFont.Make(8.8f),
+                Margin = new Padding(0, 1, 6, 1)
+            };
+            _cmbSort.Items.AddRange(new object[]
+            {
+                L.Text("S432"), // حجم (بیشترین اول)
+                L.Text("S433"), // حجم (کمترین اول)
+                L.Text("S434"), // نام (الف تا ی)
+                L.Text("S435"), // نام (ی تا الف)
+                L.Text("S436"), // تاریخ تغییر (جدیدترین)
+                L.Text("S437")  // وضعیت (در حال استفاده اول)
+            });
+            _cmbSort.SelectedIndex = 0;
+            _cmbSort.SelectedIndexChanged += (_, _) => FillTree();
+
+            _cmbGroup = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 175,
+                Font = UiFont.Make(8.8f),
+                Margin = new Padding(0, 1, 6, 1)
+            };
+            _cmbGroup.Items.AddRange(new object[]
+            {
+                L.Text("S438"), // دسته‌بندی: سرور
+                L.Text("S439"), // دسته‌بندی: حجم
+                L.Text("S440"), // دسته‌بندی: وضعیت
+                L.Text("S441")  // بدون دسته‌بندی (یکپارچه)
+            });
+            _cmbGroup.SelectedIndex = 0;
+            _cmbGroup.SelectedIndexChanged += (_, _) => FillTree();
+
+            _cmbFilter = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 160,
+                Font = UiFont.Make(8.8f),
+                Margin = new Padding(0, 1, 6, 1)
+            };
+            _cmbFilter.Items.AddRange(new object[]
+            {
+                L.Text("S442"), // همه دیتابیس‌ها
+                L.Text("S443"), // فقط در حال استفاده 🔒
+                L.Text("S444"), // فقط آزاد و آماده کپی
+                L.Text("S445"), // فقط حجیم (> ۱ گیگابایت)
+                L.Text("S446")  // فقط دارای خطا ⚠
+            });
+            _cmbFilter.SelectedIndex = 0;
+            _cmbFilter.SelectedIndexChanged += (_, _) => FillTree();
+
+            row2.Controls.Add(_cmbSort);
+            row2.Controls.Add(_cmbGroup);
+            row2.Controls.Add(_cmbFilter);
+
+            rootLayout.Controls.Add(row1, 0, 0);
+            rootLayout.Controls.Add(row2, 0, 1);
+            panel.Controls.Add(rootLayout);
+            return panel;
+        }
+
+        private void Tree_AfterCheck(object? sender, TreeViewEventArgs e)
+        {
+            if (_updatingTreeChecks || e.Node == null) return;
+            try
+            {
+                _updatingTreeChecks = true;
+                if (e.Node.Tag is DatabaseCopyItem item)
+                {
+                    if (e.Node.Checked) _checkedItems.Add(item);
+                    else _checkedItems.Remove(item);
+
+                    if (e.Node.Parent != null)
+                    {
+                        bool all = true;
+                        foreach (TreeNode sibling in e.Node.Parent.Nodes)
+                        {
+                            if (!sibling.Checked) { all = false; break; }
+                        }
+                        e.Node.Parent.Checked = all;
+                    }
+                }
+                else
+                {
+                    foreach (TreeNode child in e.Node.Nodes)
+                    {
+                        child.Checked = e.Node.Checked;
+                        if (child.Tag is DatabaseCopyItem childItem)
+                        {
+                            if (e.Node.Checked) _checkedItems.Add(childItem);
+                            else _checkedItems.Remove(childItem);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _updatingTreeChecks = false;
+                UpdateFilterSummary();
+            }
+        }
+
         private async void DatabaseCopyForm_Load(object? sender, EventArgs e)
         {
             _btnCopy.Enabled = false;
@@ -418,9 +617,11 @@ namespace DatabaseFinder
                 DatabaseFileLocator.BuildPlan(_servers, message => AppendLogSafe(message)));
 
             _items = result;
+            _checkedItems.Clear();
+            foreach (var it in _items) _checkedItems.Add(it);
+
             FillTree();
 
-            _tree.ExpandAll();
             _btnCopy.Enabled = true;
             _lblStatus.Text = L.Format("S077", _items.Count);
 
@@ -430,59 +631,159 @@ namespace DatabaseFinder
         private void FillTree()
         {
             _tree.Nodes.Clear();
-
-            foreach (var group in _items.GroupBy(i =>
-                i.Server.IsOnline
-                    ? $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"
-                    : L.Format("S074", i.Server.FormatName)))
+            if (_items.Count == 0)
             {
-                var serverNode = new TreeNode(group.Key)
-                {
-                    Checked = true
-                };
-                foreach (var item in group
-                    .OrderByDescending(i => i.Files.Any(f => f.IsInUse))
-                    .ThenByDescending(i => i.Files.Select(f => f.Modified).DefaultIfEmpty().Max()))
-                {
-                    var sizeText = item.Files.Count > 0
-                        ? L.Format("S075", item.Files.Count, DatabaseFileLocator.FormatSize(item.TotalSize))
-                        : "";
-                    var locationText = !item.Server.IsOnline && item.Server.LocalPath != null
-                        ? "  [" + System.IO.Path.GetDirectoryName(item.Server.LocalPath) + "]"
-                        : "";
-                    var node = new TreeNode($"{item.DatabaseName}{sizeText}{locationText}")
-                    {
-                        Tag = item,
-                        Checked = true
-                    };
-                    if (item.Files.Count > 0)
-                    {
-                        var liveBy = item.Files.Where(f => f.IsInUse)
-                            .Select(f => f.InUseBy).Distinct().ToList();
-                        if (liveBy.Count > 0)
-                            node.Text += "  🔒 " + (liveBy.Count == 1 && !string.IsNullOrEmpty(liveBy[0])
-                                ? liveBy[0] : L.Text("S367"));
-                        var newest = item.Files.Select(f => f.Modified).Max();
-                        if (newest != default)
-                            node.Text += "  •  " + newest.ToString("yyyy-MM-dd HH:mm");
-                        node.ToolTipText = string.Join("\n", item.Files.Select(f =>
-                            $"{f.DisplayName}  •  {f.Modified:yyyy-MM-dd HH:mm}  •  " +
-                            (f.IsInUse ? "🔒 " + (f.InUseBy ?? L.Text("S367")) : L.Text("S368"))));
-                    }
-                    if (!string.IsNullOrEmpty(item.Error))
-                    {
-                        node.Text += "  ⚠ " + ShortError(item.Error);
-                        node.ForeColor = Color.FromArgb(211, 47, 47);
-                    }
-                    else if (item.UseManualPath)
-                    {
-                        node.Text += L.Text("S076");
-                        node.ForeColor = Color.FromArgb(255, 152, 0);
-                    }
-                    serverNode.Nodes.Add(node);
-                }
-                _tree.Nodes.Add(serverNode);
+                UpdateFilterSummary(0, 0, 0, 0);
+                return;
             }
+
+            var query = _items.AsEnumerable();
+
+            // 1. فیلتر متنی نام دیتابیس
+            var term = _txtSearch?.Text?.Trim() ?? "";
+            if (!string.IsNullOrEmpty(term))
+            {
+                query = query.Where(i =>
+                    i.DatabaseName.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    (i.Server.TypeDisplayName != null && i.Server.TypeDisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (i.FolderName != null && i.FolderName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    i.Files.Any(f => f.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            // 2. فیلتر وضعیت یا حجم
+            var filterIndex = _cmbFilter?.SelectedIndex ?? 0;
+            query = filterIndex switch
+            {
+                1 => query.Where(i => i.Files.Any(f => f.IsInUse)),
+                2 => query.Where(i => !i.Files.Any(f => f.IsInUse)),
+                3 => query.Where(i => i.TotalSize >= 1024L * 1024 * 1024),
+                4 => query.Where(i => !string.IsNullOrEmpty(i.Error)),
+                _ => query
+            };
+
+            var filteredList = query.ToList();
+
+            // 3. مرتب‌سازی (SORT BY)
+            var sortIndex = _cmbSort?.SelectedIndex ?? 0;
+            IOrderedEnumerable<DatabaseCopyItem> sorted = sortIndex switch
+            {
+                0 => filteredList.OrderByDescending(i => i.TotalSize).ThenBy(i => i.DatabaseName),
+                1 => filteredList.OrderBy(i => i.TotalSize).ThenBy(i => i.DatabaseName),
+                2 => filteredList.OrderBy(i => i.DatabaseName, StringComparer.OrdinalIgnoreCase),
+                3 => filteredList.OrderByDescending(i => i.DatabaseName, StringComparer.OrdinalIgnoreCase),
+                4 => filteredList.OrderByDescending(i => i.Files.Select(f => f.Modified).DefaultIfEmpty().Max()),
+                5 => filteredList.OrderByDescending(i => i.Files.Any(f => f.IsInUse)).ThenByDescending(i => i.TotalSize),
+                _ => filteredList.OrderByDescending(i => i.TotalSize)
+            };
+
+            var orderedItems = sorted.ToList();
+
+            // 4. دسته‌بندی (GROUP BY)
+            var groupIndex = _cmbGroup?.SelectedIndex ?? 0;
+            var groups = groupIndex switch
+            {
+                1 => orderedItems.GroupBy(i =>
+                    i.TotalSize >= 1024L * 1024 * 1024 ? L.Text("S449") :
+                    i.TotalSize >= 100L * 1024 * 1024 ? L.Text("S450") : L.Text("S451")),
+                2 => orderedItems.GroupBy(i =>
+                    !string.IsNullOrEmpty(i.Error) ? L.Text("S454") :
+                    i.Files.Any(f => f.IsInUse) ? L.Text("S452") : L.Text("S453")),
+                3 => orderedItems.GroupBy(_ => L.Text("S442")),
+                _ => orderedItems.GroupBy(i => i.Server.IsOnline
+                    ? $"{i.Server.TypeDisplayName}@{i.Server.Host}:{i.Server.Port}"
+                    : L.Format("S074", i.Server.FormatName))
+            };
+
+            _updatingTreeChecks = true;
+            try
+            {
+                foreach (var group in groups)
+                {
+                    var groupNode = new TreeNode(group.Key);
+                    bool allChecked = group.Any();
+                    foreach (var item in group)
+                    {
+                        var node = CreateDatabaseNode(item);
+                        var isChecked = _checkedItems.Contains(item);
+                        node.Checked = isChecked;
+                        if (!isChecked) allChecked = false;
+                        groupNode.Nodes.Add(node);
+                    }
+                    groupNode.Checked = allChecked;
+                    _tree.Nodes.Add(groupNode);
+                }
+            }
+            finally
+            {
+                _updatingTreeChecks = false;
+            }
+
+            _tree.ExpandAll();
+            UpdateFilterSummary(filteredList.Count, _items.Count, filteredList.Sum(i => i.TotalSize), _checkedItems.Count);
+        }
+
+        private void UpdateFilterSummary(int visibleCount, int totalCount, long visibleBytes, int selectedCount)
+        {
+            if (_lblFilterSummary == null || _lblFilterSummary.IsDisposed) return;
+            _lblFilterSummary.Text = L.Format("S448", visibleCount, totalCount, DatabaseFileLocator.FormatSize(visibleBytes), selectedCount);
+        }
+
+        private void UpdateFilterSummary()
+        {
+            var visibleItems = GetVisibleItems();
+            UpdateFilterSummary(visibleItems.Count, _items.Count, visibleItems.Sum(i => i.TotalSize), _checkedItems.Count);
+        }
+
+        private List<DatabaseCopyItem> GetVisibleItems()
+        {
+            var list = new List<DatabaseCopyItem>();
+            foreach (TreeNode group in _tree.Nodes)
+            {
+                foreach (TreeNode child in group.Nodes)
+                {
+                    if (child.Tag is DatabaseCopyItem item) list.Add(item);
+                }
+            }
+            return list;
+        }
+
+        private TreeNode CreateDatabaseNode(DatabaseCopyItem item)
+        {
+            var sizeText = item.Files.Count > 0
+                ? L.Format("S075", item.Files.Count, DatabaseFileLocator.FormatSize(item.TotalSize))
+                : "";
+            var locationText = !item.Server.IsOnline && item.Server.LocalPath != null
+                ? "  [" + System.IO.Path.GetDirectoryName(item.Server.LocalPath) + "]"
+                : "";
+            var node = new TreeNode($"{item.DatabaseName}{sizeText}{locationText}")
+            {
+                Tag = item
+            };
+            if (item.Files.Count > 0)
+            {
+                var liveBy = item.Files.Where(f => f.IsInUse)
+                    .Select(f => f.InUseBy).Distinct().ToList();
+                if (liveBy.Count > 0)
+                    node.Text += "  🔒 " + (liveBy.Count == 1 && !string.IsNullOrEmpty(liveBy[0])
+                        ? liveBy[0] : L.Text("S367"));
+                var newest = item.Files.Select(f => f.Modified).Max();
+                if (newest != default)
+                    node.Text += "  •  " + newest.ToString("yyyy-MM-dd HH:mm");
+                node.ToolTipText = string.Join("\n", item.Files.Select(f =>
+                    $"{f.DisplayName}  •  {f.Modified:yyyy-MM-dd HH:mm}  •  " +
+                    (f.IsInUse ? "🔒 " + (f.InUseBy ?? L.Text("S367")) : L.Text("S368"))));
+            }
+            if (!string.IsNullOrEmpty(item.Error))
+            {
+                node.Text += "  ⚠ " + ShortError(item.Error);
+                node.ForeColor = Color.FromArgb(211, 47, 47);
+            }
+            else if (item.UseManualPath)
+            {
+                node.Text += L.Text("S076");
+                node.ForeColor = Color.FromArgb(255, 152, 0);
+            }
+            return node;
         }
 
         /// <summary>
@@ -519,6 +820,7 @@ namespace DatabaseFinder
                         && (i.Server.Port ?? 0) == (s.Port ?? 0)
                         && i.Files.Count == 0);
                     _items.AddRange(found);
+                    foreach (var it in found) _checkedItems.Add(it);
                 }
 
                 FillTree();
@@ -573,6 +875,7 @@ namespace DatabaseFinder
                         if (item.Files.Count == 0) continue;
                         foreach (var f in item.Files) known.Add(f.SourcePath);
                         _items.Add(item);
+                        _checkedItems.Add(item);
                         added++;
                     }
                 }
@@ -642,6 +945,7 @@ namespace DatabaseFinder
                         if (item.Files.Count == 0) continue;
                         foreach (var f in item.Files) known.Add(f.SourcePath);
                         _items.Add(item);
+                        _checkedItems.Add(item);
                         added++;
                     }
                 }
@@ -757,25 +1061,33 @@ namespace DatabaseFinder
 
         private void SetAllChecked(bool check)
         {
-            foreach (TreeNode node in _tree.Nodes)
+            _updatingTreeChecks = true;
+            try
             {
-                node.Checked = check;
-                foreach (TreeNode child in node.Nodes) child.Checked = check;
+                foreach (TreeNode node in _tree.Nodes)
+                {
+                    node.Checked = check;
+                    foreach (TreeNode child in node.Nodes)
+                    {
+                        child.Checked = check;
+                        if (child.Tag is DatabaseCopyItem item)
+                        {
+                            if (check) _checkedItems.Add(item);
+                            else _checkedItems.Remove(item);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _updatingTreeChecks = false;
+                UpdateFilterSummary();
             }
         }
 
         private List<DatabaseCopyItem> GetCheckedItems()
         {
-            var selected = new List<DatabaseCopyItem>();
-            foreach (TreeNode node in _tree.Nodes)
-            {
-                foreach (TreeNode child in node.Nodes)
-                {
-                    if (child.Checked && child.Tag is DatabaseCopyItem item)
-                        selected.Add(item);
-                }
-            }
-            return selected;
+            return _items.Where(i => _checkedItems.Contains(i)).ToList();
         }
 
         private void BtnBrowse_Click(object? sender, EventArgs e)

@@ -137,6 +137,27 @@ internal static class Program
         DatabaseFileLocator.CopyFileWithProgress(copySrc, copyDst, (copied, total) => copyReports.Add((int)((copied * 100) / total)));
         Check(copyReports.Count > 0 && copyReports.Last() == 100 && new FileInfo(copyDst).Length == new FileInfo(copySrc).Length, "CopyFileWithProgress streams progress and matches source bytes");
         File.Delete(copyDst);
+        var sampleItems = new List<DatabaseCopyItem>
+        {
+            new() { DatabaseName = "Erfan_sg3", Files = new() { new() { DisplayName = "Erfan_sg3.mdf", Size = 12L * 1024 * 1024 * 1024, IsInUse = true } } },
+            new() { DatabaseName = "tax", Files = new() { new() { DisplayName = "tax.mdf", Size = 720L * 1024 * 1024, IsInUse = false } } },
+            new() { DatabaseName = "Tadbir_Test", Files = new() { new() { DisplayName = "Tadbir_Test.mdf", Size = 57L * 1024 * 1024, IsInUse = true } } },
+            new() { DatabaseName = "Argess_Config", Files = new() { new() { DisplayName = "Argess_Config.mdf", Size = 172L * 1024 * 1024, IsInUse = false } }, Error = "Access error" }
+        };
+        var bySizeDesc = sampleItems.OrderByDescending(i => i.TotalSize).ToList();
+        Check(bySizeDesc[0].DatabaseName == "Erfan_sg3" && bySizeDesc.Last().DatabaseName == "Tadbir_Test", "Sort by size descending puts 12GB first and 57MB last");
+        var bySizeAsc = sampleItems.OrderBy(i => i.TotalSize).ToList();
+        Check(bySizeAsc[0].DatabaseName == "Tadbir_Test" && bySizeAsc.Last().DatabaseName == "Erfan_sg3", "Sort by size ascending puts 57MB first and 12GB last");
+        var byNameAsc = sampleItems.OrderBy(i => i.DatabaseName, StringComparer.OrdinalIgnoreCase).ToList();
+        Check(byNameAsc[0].DatabaseName == "Argess_Config" && byNameAsc.Last().DatabaseName == "tax", "Sort by name A-Z orders correctly");
+        var filterSearch = sampleItems.Where(i => i.DatabaseName.Contains("erfan", StringComparison.OrdinalIgnoreCase)).ToList();
+        Check(filterSearch.Count == 1 && filterSearch[0].DatabaseName == "Erfan_sg3", "Text search filter correctly matches case-insensitively");
+        var filterLarge = sampleItems.Where(i => i.TotalSize >= 1024L * 1024 * 1024).ToList();
+        Check(filterLarge.Count == 1 && filterLarge[0].DatabaseName == "Erfan_sg3", "Filter large databases (>1GB) isolates multi-gigabyte databases");
+        var filterInUse = sampleItems.Where(i => i.Files.Any(f => f.IsInUse)).ToList();
+        Check(filterInUse.Count == 2 && filterInUse.All(i => i.Files.Any(f => f.IsInUse)), "Filter in-use databases returns only locked files");
+        var groupSize = sampleItems.GroupBy(i => i.TotalSize >= 1024L * 1024 * 1024 ? "Large" : i.TotalSize >= 100L * 1024 * 1024 ? "Medium" : "Small").ToDictionary(g => g.Key, g => g.Count());
+        Check(groupSize["Large"] == 1 && groupSize["Medium"] == 2 && groupSize["Small"] == 1, "Categorize by size distributes into Large, Medium and Small groups");
         // Regression: SQL Server accepts TCP but never sends a banner. The async version probe must
         // time out instead of hanging forever (which would permanently busy-lock re-detection).
         var silentListener=new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback,0);silentListener.Start();
