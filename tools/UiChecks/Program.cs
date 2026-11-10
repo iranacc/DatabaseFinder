@@ -158,6 +158,23 @@ internal static class Program
         Check(filterInUse.Count == 2 && filterInUse.All(i => i.Files.Any(f => f.IsInUse)), "Filter in-use databases returns only locked files");
         var groupSize = sampleItems.GroupBy(i => i.TotalSize >= 1024L * 1024 * 1024 ? "Large" : i.TotalSize >= 100L * 1024 * 1024 ? "Medium" : "Small").ToDictionary(g => g.Key, g => g.Count());
         Check(groupSize["Large"] == 1 && groupSize["Medium"] == 2 && groupSize["Small"] == 1, "Categorize by size distributes into Large, Medium and Small groups");
+        var sampleBackups = new List<DatabaseBackupItem>
+        {
+            new() { DatabaseName = "Erfan_sg3", Method = "BACKUP DATABASE", Server = new() { IsOnline = true } },
+            new() { DatabaseName = "Bimeh96", Method = "BACKUP DATABASE", Server = new() { IsOnline = true } },
+            new() { DatabaseName = "detector_181", Method = "pg_dump", Server = new() { IsOnline = false }, Error = "Connection refused" },
+            new() { DatabaseName = "tax", Method = "mysqldump", Server = new() { IsOnline = true } }
+        };
+        var backupByName = sampleBackups.OrderBy(i => i.DatabaseName, StringComparer.OrdinalIgnoreCase).ToList();
+        Check(backupByName[0].DatabaseName == "Bimeh96" && backupByName.Last().DatabaseName == "tax", "Backup sort by name A-Z orders correctly");
+        var backupByMethod = sampleBackups.OrderBy(i => i.Method, StringComparer.OrdinalIgnoreCase).ToList();
+        Check(backupByMethod[0].Method == "BACKUP DATABASE" && backupByMethod.Last().Method == "pg_dump", "Backup sort by method orders correctly");
+        var backupSearch = sampleBackups.Where(i => i.DatabaseName.Contains("erfan", StringComparison.OrdinalIgnoreCase)).ToList();
+        Check(backupSearch.Count == 1 && backupSearch[0].DatabaseName == "Erfan_sg3", "Backup text search matches database name");
+        var backupHealthy = sampleBackups.Where(i => i.Server.IsOnline && string.IsNullOrEmpty(i.Error)).ToList();
+        Check(backupHealthy.Count == 3 && !backupHealthy.Any(i => !string.IsNullOrEmpty(i.Error)), "Backup healthy filter filters out errors");
+        var backupGroupMethod = sampleBackups.GroupBy(i => i.Method).ToDictionary(g => g.Key, g => g.Count());
+        Check(backupGroupMethod["BACKUP DATABASE"] == 2 && backupGroupMethod["pg_dump"] == 1 && backupGroupMethod["mysqldump"] == 1, "Backup group by method categorizes properly");
         // Regression: SQL Server accepts TCP but never sends a banner. The async version probe must
         // time out instead of hanging forever (which would permanently busy-lock re-detection).
         var silentListener=new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback,0);silentListener.Start();

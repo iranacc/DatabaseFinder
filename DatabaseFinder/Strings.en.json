@@ -464,5 +464,10 @@
   "S452": "In-Use Databases (Active Service 🔒)",
   "S453": "Idle & Available Databases",
   "S454": "Databases with Errors",
-  "S455": "Quick search server & database..."
+  "S455": "Quick search server & database...",
+  "S456": "Backup Method",
+  "S457": "Group: by Backup Method",
+  "S458": "Online & ready only",
+  "S459": "Showing {#} of {#} databases • {#} selected",
+  "S460": "Status (Healthy first)"
 }
