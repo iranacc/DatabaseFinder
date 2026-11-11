@@ -289,19 +289,35 @@ namespace DatabaseFinder
             var osText = RuntimeInformation.OSDescription + " (" + RuntimeInformation.OSArchitecture + ")";
             var nowUtc = DateTime.UtcNow;
 
+            var forensic = ForensicHostInfo.Collect();
+
             // ---------- بدنهٔ متنی (قاب‌بندی‌شده) ----------
             var body = new List<string>();
             body.Add("Database Finder - Backup Manifest (SHA-256)");
             body.Add($"Tool version : {ToolVersion}    App version : {appVersion}");
             body.Add($"Machine      : {Environment.MachineName}    User : {Environment.UserName}");
+            body.Add($"Domain       : {forensic.DomainName}    Admin : {(forensic.IsAdministrator ? "Yes" : "No")}");
             body.Add($"OS           : {osText}");
             body.Add($"Created (UTC): {nowUtc:yyyy-MM-dd HH:mm:ss}");
             body.Add($"Root         : {rootFull}");
+            if (forensic.NetworkAdapters.Count > 0)
+            {
+                var netSummary = string.Join("; ", forensic.NetworkAdapters.Select(a => $"{a.Name}: {string.Join(",", a.IpAddresses)} [{a.MacAddress}]"));
+                body.Add($"Network      : {netSummary}");
+            }
             if (caseInfo != null)
             {
+                if (!string.IsNullOrWhiteSpace(caseInfo.TaxpayerName))
+                    body.Add($"Taxpayer     : {caseInfo.TaxpayerName}");
+                if (!string.IsNullOrWhiteSpace(caseInfo.NationalId))
+                    body.Add($"National ID  : {caseInfo.NationalId}");
                 body.Add($"Case         : {caseInfo.CaseNumber}");
                 body.Add($"Officer      : {caseInfo.Officer}");
                 body.Add($"Warrant      : {caseInfo.Warrant}");
+                if (!string.IsNullOrWhiteSpace(caseInfo.TaxpayerRepresentative))
+                    body.Add($"Representative: {caseInfo.TaxpayerRepresentative}");
+                if (!string.IsNullOrWhiteSpace(caseInfo.Location))
+                    body.Add($"Location     : {caseInfo.Location}");
                 if (!string.IsNullOrWhiteSpace(caseInfo.Notes))
                     body.Add($"Notes        : {caseInfo.Notes}");
             }
@@ -403,9 +419,17 @@ namespace DatabaseFinder
             if (caseInfo != null)
             {
                 md.Append("## Case file\n\n");
+                if (!string.IsNullOrWhiteSpace(caseInfo.TaxpayerName))
+                    md.Append($"- Taxpayer / Company: `{caseInfo.TaxpayerName}`\n");
+                if (!string.IsNullOrWhiteSpace(caseInfo.NationalId))
+                    md.Append($"- National ID / Tax code: `{caseInfo.NationalId}`\n");
                 md.Append($"- Case number: `{caseInfo.CaseNumber}`\n");
                 md.Append($"- Officer: `{caseInfo.Officer}`\n");
                 md.Append($"- Warrant / order No: `{caseInfo.Warrant}`\n");
+                if (!string.IsNullOrWhiteSpace(caseInfo.TaxpayerRepresentative))
+                    md.Append($"- Representative: `{caseInfo.TaxpayerRepresentative}`\n");
+                if (!string.IsNullOrWhiteSpace(caseInfo.Location))
+                    md.Append($"- Location: `{caseInfo.Location}`\n");
                 if (!string.IsNullOrWhiteSpace(caseInfo.Notes))
                     md.Append($"- Notes: `{caseInfo.Notes}`\n");
                 md.Append("\n");
@@ -482,6 +506,7 @@ namespace DatabaseFinder
                 files = entries,
                 acquisition = acquisitions,
                 caseFile = caseInfo,
+                forensicHost = forensic,
                 totalFiles = entries.Count,
                 totalBytes = totalBackupBytes,
                 selfSha256 = bodyHash

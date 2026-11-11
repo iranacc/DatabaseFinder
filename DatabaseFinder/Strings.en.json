@@ -384,7 +384,7 @@
   "S383": "Service stopped",
   "S384": "The SQL Server service is stopped. Start it for a native backup, or use file copy instead.",
   "S385": "SQLite journal files attached: {#}",
-  "S386": "Persian report",
+  "S386": "Official Minute (Article 181)",
   "S387": "Create report",
   "S388": "Choose a folder to save the remote scan report",
   "S389": "Open the report now?",
@@ -479,5 +479,15 @@
   "S467": "Warning: Destination drive '{#}' uses FAT32, which cannot store files larger than 4 GB! File '{#}' is {#}. Continue anyway?",
   "S468": "{#}: {#}% ({#}) • {#} • ETA: {#}",
   "S469": "Total elapsed time: {#} • Average speed: {#}",
-  "S470": "{#} remaining"
+  "S470": "{#} remaining",
+  "S471": "Taxpayer / Company name:",
+  "S472": "National ID / Tax code:",
+  "S473": "Taxpayer representative on site:",
+  "S474": "Inspection location / Address:",
+  "S475": "Official Tax Audit Minute (Article 181)",
+  "S476": "Article 181 Taxpayer & Audit Details",
+  "S477": "Official minute (PDF & HTML) generated: {#}",
+  "S478": "100% Digital Evidence Match (Original)",
+  "S479": "Evidence Hash Mismatch",
+  "S480": "Unverified"
 }

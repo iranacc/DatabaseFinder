@@ -259,6 +259,83 @@ internal static class Program
             Check(saved==lang && L.Language==lang,"Language choice persisted");
         }
         ((Form1)session.MainForm!).CloseForLanguageChange();
+
+        // ---------- Formal Reporting & Tax Audit Checks (Section 4) ----------
+        Check(JalaliDateHelper.GetMonthName(1) == "فروردین", "Jalali month 1 is Farvardin");
+        Check(JalaliDateHelper.GetMonthName(12) == "اسفند", "Jalali month 12 is Esfand");
+        Check(JalaliDateHelper.FormatShort(new DateTime(2026, 3, 21)) == "1405/01/01", "Gregorian 2026-03-21 converts to 1405/01/01");
+        Check(JalaliDateHelper.ToPersianDigits("12345") == "۱۲۳۴۵", "ToPersianDigits converts ASCII digits to Persian Unicode");
+
+        var forensic = ForensicHostInfo.Collect();
+        Check(!string.IsNullOrWhiteSpace(forensic.MachineName), "Forensic host collector retrieves MachineName");
+        Check(!string.IsNullOrWhiteSpace(forensic.OsDescription), "Forensic host collector retrieves OsDescription");
+
+        var testCase = new CaseInfo
+        {
+            TaxpayerName = "شرکت آزمایشی تجارت نوین",
+            NationalId = "10103456789",
+            CaseNumber = "TAX-181-405",
+            Warrant = "W-9901",
+            Officer = "سهراب سپهری",
+            TaxpayerRepresentative = "نیما یوشیج",
+            Location = "تهران",
+            Notes = "تست ممیزی"
+        };
+        Check(!testCase.IsEmpty && testCase.TaxpayerName == "شرکت آزمایشی تجارت نوین", "CaseInfo retains taxpayer and audit particulars");
+
+        var repTestDir = Path.Combine(output, "report_test");
+        if (Directory.Exists(repTestDir)) Directory.Delete(repTestDir, true);
+        Directory.CreateDirectory(repTestDir);
+        var testManifestJson = Path.Combine(repTestDir, "manifest.json");
+        var testJsonContent = """
+        {
+          "taxNotice": "TAX 181 ARTICLE . MSAM Group",
+          "tool": "Database Finder",
+          "version": "1.11.0",
+          "machine": "AUDIT-SRV01",
+          "user": "AuditorUser",
+          "os": "Microsoft Windows 11 Pro 64-bit",
+          "root": "D:\\181_Evidence\\Case_9901",
+          "createdUtc": "2026-11-10T20:17:01Z",
+          "caseFile": {
+            "TaxpayerName": "شرکت صنایع پارس نوین",
+            "NationalId": "14009876543",
+            "Warrant": "181/1405/8821",
+            "CaseNumber": "TAX-1405-9982",
+            "Officer": "محسن حسینی",
+            "TaxpayerRepresentative": "علی رضایی",
+            "Location": "تهران، شهرک صنعتی شمس آباد",
+            "Notes": "استخراج کامل دیتابیس‌های مالیاتی بدون وقفه در کارخانه"
+          },
+          "summary": { "databases": 2, "succeeded": 2, "failed": 0, "files": 2, "totalBytes": 10485760 },
+          "databases": [
+            { "Name": "Holoo_DB", "Engine": "SQL Server", "ServerVersion": "15.0.2000", "Method": "VSS Shadow Copy", "Bytes": 5242880, "Status": "ok" },
+            { "Name": "Tadbir_Main", "Engine": "SQL Server", "ServerVersion": "15.0.2000", "Method": "VSS Shadow Copy", "Bytes": 5242880, "Status": "ok" }
+          ],
+          "acquisition": [
+            { "RelPath": "Holoo_DB\\Holoo.mdf", "SourceHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "DestHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "Verified": true, "Bytes": 5242880, "Match": "MATCH" }
+          ],
+          "selfSha256": "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a"
+        }
+        """;
+        File.WriteAllText(testManifestJson, testJsonContent);
+        var genResult = ReportGenerator.GenerateFromManifest(testManifestJson);
+        Check(File.Exists(genResult), "ReportGenerator produces valid output file");
+        Check(File.Exists(ReportGenerator.LastGeneratedHtmlPath!), "ReportGenerator produces HTML report");
+        var htmlContent = File.ReadAllText(ReportGenerator.LastGeneratedHtmlPath!);
+        Check(htmlContent.Contains("صورت‌جلسه بازرسی و برداشت اطلاعات سامانه‌های رایانه‌ای"), "HTML minute contains Article 181 heading");
+        Check(htmlContent.Contains("شرکت صنایع پارس نوین"), "HTML minute contains taxpayer company name");
+        Check(htmlContent.Contains("14009876543"), "HTML minute contains national ID");
+        Check(htmlContent.Contains("عین اصل (MATCH)"), "HTML minute contains 100% cryptographic match badge");
+        Check(htmlContent.Contains("ساعت"), "HTML minute contains Jalali formal time");
+        Check(htmlContent.Contains("AUDIT-SRV01"), "HTML minute contains host forensic name");
+
+        if (PdfExporter.IsPdfSupported)
+        {
+            Check(!string.IsNullOrEmpty(ReportGenerator.LastGeneratedPdfPath) && File.Exists(ReportGenerator.LastGeneratedPdfPath), "Headless PDF generation creates valid PDF file");
+            Check(new FileInfo(ReportGenerator.LastGeneratedPdfPath!).Length > 1000, "Generated PDF minute has non-trivial file size");
+            Check(genResult.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase), "ReportGenerator returns PDF path when PDF engine is available");
+        }
         Console.WriteLine($"PASS: {checks} checks. Renders: {output}");
     }
     static IEnumerable<Control> Descendants(Control control){foreach(Control child in control.Controls){yield return child;foreach(var descendant in Descendants(child))yield return descendant;}}

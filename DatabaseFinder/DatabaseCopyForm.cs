@@ -1497,7 +1497,7 @@ namespace DatabaseFinder
                     AppendLog(L.Format("S052", _manifestPath));
                     _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
                         Path.ChangeExtension(_manifestPath, ".json")));
-                    AppendLog(L.Format("S052", _reportPath));
+                    AppendLog(L.Format("S477", _reportPath));
                     _btnManifest.Enabled = true;
                     _btnOpen.Enabled = true;
                     _btnReport.Enabled = true;
@@ -1660,7 +1660,7 @@ namespace DatabaseFinder
                 AppendLog(L.Format("S052", _manifestPath));
                 _reportPath = await Task.Run(() => ReportGenerator.GenerateFromManifest(
                     Path.ChangeExtension(_manifestPath, ".json")));
-                AppendLog(L.Format("S052", _reportPath));
+                AppendLog(L.Format("S477", _reportPath));
                 _btnReport.Enabled = true;
                 _lblStatus.Text = L.Text("S057");
             }
