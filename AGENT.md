@@ -392,6 +392,9 @@ dotnet publish "d:\181 Project\Database Finder\DatabaseFinder\DatabaseFinder.csp
   - `DatabaseFinder/Strings.en.json`
   - `tools/UiChecks/Program.cs`
 - **وضعیت تست:** تمام **۷۹۰ تست خودکار `UiChecks`** با موفقیت ۱۰۰٪ پاس شدند (`PASS: 790 checks`).
+- **نسخه و بیلد انتشار:** نسخه `1.12.0` بیلد کامل (Release) و سبک در پوشه `Release\` آماده شد.
+  - `DatabaseFinder.exe`: `29709c9c8fc3ffef0cbf1eb9966117f237bff62909d75c01532c83d2397b5dd3`
+  - `DatabaseFinder-Light.exe`: `e79ca549c234d70bf4d9da6ad03a8eb4d00a4a518fdb75c908b7c35047e63be9`
 
 ### بخش ۵: پایش بلادرنگ هارددیسک (Anti-Tamper & Live Watcher)
 1. **دیده‌بان بلادرنگ فایل‌های دیتابیس حین مأموریت:**
