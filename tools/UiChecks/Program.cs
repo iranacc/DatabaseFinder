@@ -326,7 +326,7 @@ internal static class Program
         Check(htmlContent.Contains("صورت‌جلسه بازرسی و برداشت اطلاعات سامانه‌های رایانه‌ای"), "HTML minute contains Article 181 heading");
         Check(htmlContent.Contains("شرکت صنایع پارس نوین"), "HTML minute contains taxpayer company name");
         Check(htmlContent.Contains("14009876543"), "HTML minute contains national ID");
-        Check(htmlContent.Contains("عین اصل (MATCH)"), "HTML minute contains 100% cryptographic match badge");
+        Check(htmlContent.Contains("تطابق کامل (MATCH)"), "HTML minute contains 100% cryptographic match badge");
         Check(htmlContent.Contains("ساعت"), "HTML minute contains Jalali formal time");
         Check(htmlContent.Contains("AUDIT-SRV01"), "HTML minute contains host forensic name");
 

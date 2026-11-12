@@ -55,7 +55,7 @@ namespace DatabaseFinder
 
     /// <summary>
     /// رکورد برداشت یک فایل: هش مبدأ (از همان بایت‌های کپی‌شده) در برابر هش مقصد.
-    /// MATCH یعنی برداشت عین اصل است؛ DIFF یعنی مغایرت؛ unverified یعنی هش گرفته نشد.
+    /// MATCH یعنی تطابق کامل است؛ DIFF یعنی مغایرت؛ unverified یعنی هش گرفته نشد.
     /// </summary>
     public class CopyAcquisition
     {

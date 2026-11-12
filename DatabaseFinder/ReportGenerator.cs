@@ -206,13 +206,9 @@ namespace DatabaseFinder
                 if (!string.IsNullOrEmpty(cn))
                     sb.Append("<div><strong>شماره پرونده:</strong> ").Append(E(cn)).Append("</div>");
             }
-            sb.Append("<div><strong>طبقه‌بندی:</strong> محرمانه (مالیاتی)</div>");
             sb.Append("</div>");
 
             sb.Append("<div class=\"header-center\">");
-            // آیکون رسمی الله و نماد جمهوری اسلامی ایران
-            sb.Append("<div class=\"state-title\">جمهوری اسلامی ایران</div>");
-            sb.Append("<div class=\"ministry-title\">وزارت امور اقتصادی و دارایی</div>");
             sb.Append("<div class=\"tax-title\">سازمان امور مالیاتی کشور</div>");
             sb.Append("<div class=\"doc-main-title\">صورت‌جلسه بازرسی و برداشت اطلاعات سامانه‌های رایانه‌ای</div>");
             sb.Append("<div class=\"doc-sub-title\">(موضوع ماده ۱۸۱ قانون مالیات‌های مستقیم مصوب ۱۳۶۶ و اصلاحات بعدی)</div>");
@@ -403,7 +399,7 @@ namespace DatabaseFinder
                     var m = G(x, "Match");
                     var isMatch = m == "MATCH";
                     var badge = isMatch
-                        ? "<span class=\"badge-match\">عین اصل (MATCH) ✓</span>"
+                        ? "<span class=\"badge-match\">تطابق کامل (MATCH) ✓</span>"
                         : "<span class=\"badge-diff\">مغایرت (DIFF) ⚠</span>";
 
                     sb.Append("<tr><td style=\"text-align:center;\">").Append(fIdx++)
@@ -654,12 +650,10 @@ namespace DatabaseFinder
             sb.Append("<div class=\"header-side\">");
             sb.Append("<div><strong>تاریخ اسکن:</strong> ").Append(E(jalaliShort)).Append("</div>");
             sb.Append("<div><strong>زمان تنظیم:</strong> ").Append(E(nowLocal.ToString("HH:mm:ss"))).Append("</div>");
-            sb.Append("<div><strong>طبقه‌بندی:</strong> محرمانه</div>");
             sb.Append("</div>");
 
             sb.Append("<div class=\"header-center\">");
-            sb.Append("<div style=\"font-size:12px; font-weight:bold;\">جمهوری اسلامی ایران</div>");
-            sb.Append("<div style=\"font-size:11px; color:#334155;\">سازمان امور مالیاتی کشور</div>");
+            sb.Append("<div style=\"font-size:12px; font-weight:bold; color:#0284c7;\">سازمان امور مالیاتی کشور</div>");
             sb.Append("<div class=\"title-main\">گزارش اسکن و بازرسی شبکه سامانه‌های اطلاعاتی</div>");
             sb.Append("<div class=\"title-sub\">موضوع ماده ۱۸۱ قانون مالیات‌های مستقیم</div>");
             sb.Append("</div>");
