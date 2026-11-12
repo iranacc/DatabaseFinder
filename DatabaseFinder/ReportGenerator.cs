@@ -38,17 +38,47 @@ namespace DatabaseFinder
             sb.Append("<title>صورت‌جلسه بازرسی و برداشت اطلاعات سامانه‌های رایانه‌ای (ماده ۱۸۱ ق.م.م)</title>");
             sb.Append("<style>");
             sb.Append(@"
-                @page { size: A4 portrait; margin: 12mm 12mm 14mm 12mm; }
+                @page { size: A4 portrait; margin: 12mm 12mm 24mm 12mm; }
                 * { box-sizing: border-box; }
                 body {
                     font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
                     margin: 0;
                     padding: 24px;
+                    padding-bottom: 75px;
                     color: #1e293b;
                     background-color: #ffffff;
                     font-size: 11.5px;
                     line-height: 1.6;
                     direction: rtl;
+                }
+                .page-footer-sig {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 9.5px;
+                    background: #ffffff;
+                    border-top: 1.5px solid #0f172a;
+                    padding: 6px 24px;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+                    z-index: 9999;
+                }
+                .box-taxpayer {
+                    border: 1.5px solid #0f172a;
+                    background: #f8fafc;
+                    padding: 4px 12px;
+                    font-weight: bold;
+                    color: #0f172a;
+                    border-radius: 4px;
+                }
+                .box-officer {
+                    border: 1px dashed #64748b;
+                    padding: 4px 10px;
+                    color: #334155;
+                    border-radius: 4px;
                 }
                 .gov-card {
                     border: 2px solid #0f172a;
@@ -181,11 +211,19 @@ namespace DatabaseFinder
                     color: #64748b;
                 }
                 @media print {
-                    body { padding: 0; font-size: 10.5px; }
+                    body { padding: 0; padding-bottom: 0; font-size: 10.5px; }
                     .gov-card { border: 1.5px solid #000; padding: 12px; }
                     table.tbl-formal th, table.tbl-formal td { border: 1px solid #475569; padding: 4px 6px; }
                     .sig-grid { margin-top: 24px; }
                     .page-break { page-break-before: always; }
+                    .page-footer-sig {
+                        bottom: -18mm;
+                        padding: 0;
+                        height: 14mm;
+                        box-shadow: none;
+                        border-top: 1px solid #475569;
+                        background: transparent;
+                    }
                 }
             ");
             sb.Append("</style></head><body>");
@@ -498,6 +536,21 @@ namespace DatabaseFinder
             sb.Append("</div>");
 
             sb.Append("</div>"); // gov-card
+
+            // نوار امضای تکرارشونده در انتهای تمامی صفحات
+            sb.Append("<div class=\"page-footer-sig\">");
+            sb.Append("<div style=\"font-size:8.5px; color:#64748b; line-height:1.3;\">");
+            sb.Append("<div style=\"font-weight:bold; color:#0f172a;\">سازمان امور مالیاتی کشور</div>");
+            sb.Append("<div>صورت‌جلسه ماده ۱۸۱ ق.م.م</div>");
+            sb.Append("</div>");
+            sb.Append("<div class=\"box-officer\">");
+            sb.Append("امضاء مأمور بازرسی: ........................................");
+            sb.Append("</div>");
+            sb.Append("<div class=\"box-taxpayer\">");
+            sb.Append("مهر، امضاء و اثر انگشت مؤدی (تأیید مندرجات این صفحه): ....................................................");
+            sb.Append("</div>");
+            sb.Append("</div>"); // page-footer-sig
+
             sb.Append("</body></html>");
 
             var baseDir = Path.GetDirectoryName(manifestJsonPath) ?? ".";
@@ -625,8 +678,8 @@ namespace DatabaseFinder
             sb.Append("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\">");
             sb.Append("<title>گزارش اسکن شبکه ـ ماده ۱۸۱ ق.م.م</title><style>");
             sb.Append(@"
-                @page { size: A4 portrait; margin: 12mm 12mm 14mm 12mm; }
-                body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; margin: 24px; color: #1e293b; font-size: 11.5px; line-height: 1.6; }
+                @page { size: A4 portrait; margin: 12mm 12mm 24mm 12mm; }
+                body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; margin: 24px; padding-bottom: 75px; color: #1e293b; font-size: 11.5px; line-height: 1.6; }
                 .gov-card { border: 2px solid #0f172a; padding: 16px 20px; }
                 .gov-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px; }
                 .header-side { width: 30%; font-size: 10.5px; }
@@ -641,7 +694,47 @@ namespace DatabaseFinder
                 .ltr { direction: ltr; text-align: left; font-family: Consolas, monospace; }
                 .sig-grid { display: flex; gap: 16px; margin-top: 36px; }
                 .sig-box { flex: 1; border: 1px solid #94a3b8; padding: 8px; text-align: center; min-height: 100px; }
-                @media print { body { margin: 0; padding: 0; } .gov-card { border: 1.5px solid #000; } }
+                .page-footer-sig {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 9.5px;
+                    background: #ffffff;
+                    border-top: 1.5px solid #0f172a;
+                    padding: 6px 24px;
+                    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+                    z-index: 9999;
+                }
+                .box-taxpayer {
+                    border: 1.5px solid #0f172a;
+                    background: #f8fafc;
+                    padding: 4px 12px;
+                    font-weight: bold;
+                    color: #0f172a;
+                    border-radius: 4px;
+                }
+                .box-officer {
+                    border: 1px dashed #64748b;
+                    padding: 4px 10px;
+                    color: #334155;
+                    border-radius: 4px;
+                }
+                @media print {
+                    body { margin: 0; padding: 0; padding-bottom: 0; }
+                    .gov-card { border: 1.5px solid #000; }
+                    .page-footer-sig {
+                        bottom: -18mm;
+                        padding: 0;
+                        height: 14mm;
+                        box-shadow: none;
+                        border-top: 1px solid #475569;
+                        background: transparent;
+                    }
+                }
             ");
             sb.Append("</style></head><body>");
 
@@ -704,6 +797,21 @@ namespace DatabaseFinder
             sb.Append("</div>");
 
             sb.Append("</div>"); // gov-card
+
+            // نوار امضای تکرارشونده در انتهای تمامی صفحات
+            sb.Append("<div class=\"page-footer-sig\">");
+            sb.Append("<div style=\"font-size:8.5px; color:#64748b; line-height:1.3;\">");
+            sb.Append("<div style=\"font-weight:bold; color:#0f172a;\">سازمان امور مالیاتی کشور</div>");
+            sb.Append("<div>صورت‌جلسه ماده ۱۸۱ ق.م.م</div>");
+            sb.Append("</div>");
+            sb.Append("<div class=\"box-officer\">");
+            sb.Append("امضاء مأمور بازرسی: ........................................");
+            sb.Append("</div>");
+            sb.Append("<div class=\"box-taxpayer\">");
+            sb.Append("مهر، امضاء و اثر انگشت مؤدی (تأیید مندرجات این صفحه): ....................................................");
+            sb.Append("</div>");
+            sb.Append("</div>"); // page-footer-sig
+
             sb.Append("</body></html>");
 
             var htmlPath = outputBase + ".html";
