@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -38,33 +38,43 @@ namespace DatabaseFinder
             sb.Append("<title>صورت‌جلسه بازرسی و برداشت اطلاعات سامانه‌های رایانه‌ای (ماده ۱۸۱ ق.م.م)</title>");
             sb.Append("<style>");
             sb.Append(@"
-                @page { size: A4 portrait; margin: 12mm 12mm 24mm 12mm; }
+                @page { size: A4 portrait; margin: 10mm 10mm 10mm 10mm; }
                 * { box-sizing: border-box; }
                 body {
                     font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
                     margin: 0;
-                    padding: 24px;
-                    padding-bottom: 75px;
+                    padding: 16px;
                     color: #1e293b;
                     background-color: #ffffff;
                     font-size: 11.5px;
                     line-height: 1.6;
                     direction: rtl;
                 }
+                .report-layout-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 0;
+                    padding: 0;
+                    border: none;
+                }
+                .report-layout-table > tbody > tr > td {
+                    padding: 0;
+                    border: none;
+                }
+                .report-layout-table > tfoot > tr > td {
+                    padding: 0;
+                    padding-top: 6mm;
+                    border: none;
+                }
                 .page-footer-sig {
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    font-size: 9.5px;
-                    background: #ffffff;
-                    border-top: 1.5px solid #0f172a;
-                    padding: 6px 24px;
-                    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
-                    z-index: 9999;
+                    font-size: 9px;
+                    background: #f8fafc;
+                    border: 1px solid #0f172a;
+                    padding: 6px 14px;
+                    border-radius: 4px;
                 }
                 .box-taxpayer {
                     border: 1.5px solid #0f172a;
@@ -217,17 +227,14 @@ namespace DatabaseFinder
                     .sig-grid { margin-top: 24px; }
                     .page-break { page-break-before: always; }
                     .page-footer-sig {
-                        bottom: -18mm;
-                        padding: 0;
-                        height: 14mm;
+                        border: 1px solid #0f172a;
+                        background: #f8fafc;
                         box-shadow: none;
-                        border-top: 1px solid #475569;
-                        background: transparent;
                     }
                 }
             ");
             sb.Append("</style></head><body>");
-
+            sb.Append("<table class=\"report-layout-table\"><tbody><tr><td>");
             sb.Append("<div class=\"gov-card\">");
 
             // ---------- سربرگ رسمی دولتی ----------
@@ -536,6 +543,8 @@ namespace DatabaseFinder
             sb.Append("</div>");
 
             sb.Append("</div>"); // gov-card
+            sb.Append("</td></tr></tbody>");
+            sb.Append("<tfoot><tr><td>");
 
             // نوار امضای تکرارشونده در انتهای تمامی صفحات
             sb.Append("<div class=\"page-footer-sig\">");
@@ -550,6 +559,7 @@ namespace DatabaseFinder
             sb.Append("مهر، امضاء و اثر انگشت مؤدی (تأیید مندرجات این صفحه): ....................................................");
             sb.Append("</div>");
             sb.Append("</div>"); // page-footer-sig
+            sb.Append("</td></tr></tfoot></table>");
 
             sb.Append("</body></html>");
 
@@ -678,8 +688,11 @@ namespace DatabaseFinder
             sb.Append("<!DOCTYPE html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\">");
             sb.Append("<title>گزارش اسکن شبکه ـ ماده ۱۸۱ ق.م.م</title><style>");
             sb.Append(@"
-                @page { size: A4 portrait; margin: 12mm 12mm 24mm 12mm; }
-                body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; margin: 24px; padding-bottom: 75px; color: #1e293b; font-size: 11.5px; line-height: 1.6; }
+                @page { size: A4 portrait; margin: 10mm 10mm 10mm 10mm; }
+                body { font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; margin: 0; padding: 16px; color: #1e293b; font-size: 11.5px; line-height: 1.6; }
+                .report-layout-table { width: 100%; border-collapse: collapse; margin: 0; padding: 0; border: none; }
+                .report-layout-table > tbody > tr > td { padding: 0; border: none; }
+                .report-layout-table > tfoot > tr > td { padding: 0; padding-top: 6mm; border: none; }
                 .gov-card { border: 2px solid #0f172a; padding: 16px 20px; }
                 .gov-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px; }
                 .header-side { width: 30%; font-size: 10.5px; }
@@ -695,19 +708,14 @@ namespace DatabaseFinder
                 .sig-grid { display: flex; gap: 16px; margin-top: 36px; }
                 .sig-box { flex: 1; border: 1px solid #94a3b8; padding: 8px; text-align: center; min-height: 100px; }
                 .page-footer-sig {
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    font-size: 9.5px;
-                    background: #ffffff;
-                    border-top: 1.5px solid #0f172a;
-                    padding: 6px 24px;
-                    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
-                    z-index: 9999;
+                    font-size: 9px;
+                    background: #f8fafc;
+                    border: 1px solid #0f172a;
+                    padding: 6px 14px;
+                    border-radius: 4px;
                 }
                 .box-taxpayer {
                     border: 1.5px solid #0f172a;
@@ -727,17 +735,14 @@ namespace DatabaseFinder
                     body { margin: 0; padding: 0; padding-bottom: 0; }
                     .gov-card { border: 1.5px solid #000; }
                     .page-footer-sig {
-                        bottom: -18mm;
-                        padding: 0;
-                        height: 14mm;
+                        border: 1px solid #0f172a;
+                        background: #f8fafc;
                         box-shadow: none;
-                        border-top: 1px solid #475569;
-                        background: transparent;
                     }
                 }
             ");
             sb.Append("</style></head><body>");
-
+            sb.Append("<table class=\"report-layout-table\"><tbody><tr><td>");
             sb.Append("<div class=\"gov-card\">");
             sb.Append("<div class=\"gov-header\">");
             sb.Append("<div class=\"header-side\">");
@@ -797,6 +802,8 @@ namespace DatabaseFinder
             sb.Append("</div>");
 
             sb.Append("</div>"); // gov-card
+            sb.Append("</td></tr></tbody>");
+            sb.Append("<tfoot><tr><td>");
 
             // نوار امضای تکرارشونده در انتهای تمامی صفحات
             sb.Append("<div class=\"page-footer-sig\">");
@@ -811,6 +818,7 @@ namespace DatabaseFinder
             sb.Append("مهر، امضاء و اثر انگشت مؤدی (تأیید مندرجات این صفحه): ....................................................");
             sb.Append("</div>");
             sb.Append("</div>"); // page-footer-sig
+            sb.Append("</td></tr></tfoot></table>");
 
             sb.Append("</body></html>");
 

@@ -336,6 +336,7 @@ internal static class Program
             Check(new FileInfo(ReportGenerator.LastGeneratedPdfPath!).Length > 1000, "Generated PDF minute has non-trivial file size");
             Check(genResult.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase), "ReportGenerator returns PDF path when PDF engine is available");
         }
+        Check(htmlContent.Contains("report-layout-table"), "HTML minute uses outer table layout for collision-free repeated footer");
         Console.WriteLine($"PASS: {checks} checks. Renders: {output}");
     }
     static IEnumerable<Control> Descendants(Control control){foreach(Control child in control.Controls){yield return child;foreach(var descendant in Descendants(child))yield return descendant;}}
