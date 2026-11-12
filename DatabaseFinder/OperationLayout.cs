@@ -162,11 +162,6 @@ internal static class OperationLayout
             Padding = new Padding(12),
             CornerRadius = 8
         };
-        if (treeToolbar != null)
-        {
-            treeToolbar.Dock = DockStyle.Top;
-            treeCard.Controls.Add(treeToolbar);
-        }
         tree.Dock = DockStyle.Fill;
         tree.BorderStyle = BorderStyle.None;
         tree.RightToLeft = RightToLeft.No;
@@ -174,7 +169,8 @@ internal static class OperationLayout
         treeCard.Controls.Add(tree);
         if (treeToolbar != null)
         {
-            treeToolbar.BringToFront();
+            treeToolbar.Dock = DockStyle.Top;
+            treeCard.Controls.Add(treeToolbar);
         }
         middleSplitter.Panel1.Controls.Add(treeCard);
 
