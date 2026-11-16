@@ -416,8 +416,8 @@ dotnet publish "d:\181 Project\Database Finder\DatabaseFinder\DatabaseFinder.csp
   - `DatabaseFinder/DatabaseFinder.csproj` (نسخه 1.12.2)
   - `tools/UiChecks/Program.cs`
 - **انتشار در گیت‌هاب:** برچسب و ریلیز `v1.12.2` در گیت‌هاب منتشر شد:
-  - `DatabaseFinder.exe`: `c898c7f04f33116091b4109bb03ff934ea48754949ab74f54989ebe305c575f1`
-  - `DatabaseFinder-Light.exe`: `5e85c20ce39b3dcbaacdfb06c69e061a8bc3fcb4c6cc4bbaf7ba2995283ac530`
+  - `DatabaseFinder.exe` (نسخه مستقل کامل / Self-Contained - بدون نیاز به نصب دات‌نت - حجم ۱۷۲ مگابایت): `fa846738e5009f05370a61cb73f172436e19ed2eff00f370fa3e6c9741554ddd`
+  - `DatabaseFinder-Light.exe` (نسخه سبک / Framework-Dependent - نیازمند دات‌نت ۸ - حجم ۱۹ مگابایت): `26d0533d51c1bcbdfd68f234235d1e3d61784d28a43089eb00bd98a7f653def1`
 
 ---
 
