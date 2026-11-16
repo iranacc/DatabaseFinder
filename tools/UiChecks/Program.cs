@@ -92,6 +92,23 @@ internal static class Program
             // Empty server lists ensure dialog loading cannot connect to real databases.
             using var settings=new SettingsForm(new AppSettings());settings.Show();Application.DoEvents();Render(settings,Path.Combine(output,"settings-"+language+".png"));
             using var copy=new DatabaseCopyForm(new List<DatabaseInfo>());copy.Show();Application.DoEvents();Render(copy,Path.Combine(output,"copy-"+language+".png"));
+            var copyItem = new DatabaseCopyItem
+            {
+                Server = new DatabaseInfo { Type = DatabaseType.SQLServer, Host = "localhost", Port = 1433, IsOnline = true },
+                DatabaseName = "TestDB",
+                FolderName = "SQLServer_TestDB"
+            };
+            copyItem.Files.Add(new FileCopyItem { DisplayName = "TestDB.mdf", Size = 1024, RelativePath = "TestDB.mdf" });
+            copyItem.Files.Add(new FileCopyItem { DisplayName = "TestDB_log.ldf", Size = 1024, RelativePath = "TestDB_log.ldf" });
+            typeof(DatabaseCopyForm).GetField("_items", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(copy, new List<DatabaseCopyItem> { copyItem });
+            var checkedSet = (HashSet<DatabaseCopyItem>)typeof(DatabaseCopyForm).GetField("_checkedItems", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(copy)!;
+            checkedSet.Add(copyItem);
+            typeof(DatabaseCopyForm).GetMethod("FillTree", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(copy, null);
+            var copyTree = Descendants(copy).OfType<TreeView>().First();
+            var dbTreeNode = copyTree.Nodes[0].Nodes[0];
+            Check(dbTreeNode.Checked, language + " db node checked");
+            Check(dbTreeNode.Nodes.Count == 2, language + " db has 2 file nodes");
+            Check(dbTreeNode.Nodes[0].Checked && dbTreeNode.Nodes[1].Checked, language + " file nodes initially checked");
             using var backup=new DatabaseBackupForm(new List<DatabaseInfo>());backup.Show();Application.DoEvents();Render(backup,Path.Combine(output,"backup-"+language+".png"));
             var backupOpts=Descendants(backup).OfType<CheckBox>().ToList();
             Check(backupOpts.Any(c=>c.Text==L.Text("S333")),language+" compress option shown");

@@ -42,6 +42,7 @@ namespace DatabaseFinder
         private long _lastFileTotalBytes;
         private int _currentTotalWork = 0;
         private readonly HashSet<DatabaseCopyItem> _checkedItems = new();
+        private readonly HashSet<FileCopyItem> _deselectedFiles = new();
         private bool _updatingTreeChecks;
         private TextBox _txtSearch = null!;
         private Button _btnClearSearch = null!;
@@ -579,8 +580,15 @@ namespace DatabaseFinder
                 _updatingTreeChecks = true;
                 if (e.Node.Tag is DatabaseCopyItem item)
                 {
-                    if (e.Node.Checked) _checkedItems.Add(item);
-                    else _checkedItems.Remove(item);
+                    if (e.Node.Checked)
+                    {
+                        _checkedItems.Add(item);
+                        foreach (var f in item.Files) _deselectedFiles.Remove(f);
+                    }
+                    else
+                    {
+                        _checkedItems.Remove(item);
+                    }
 
                     foreach (TreeNode fn in e.Node.Nodes)
                         fn.Checked = e.Node.Checked;
@@ -595,8 +603,11 @@ namespace DatabaseFinder
                         e.Node.Parent.Checked = all;
                     }
                 }
-                else if (e.Node.Tag is FileCopyItem && e.Node.Parent?.Tag is DatabaseCopyItem parentItem)
+                else if (e.Node.Tag is FileCopyItem fileItem && e.Node.Parent?.Tag is DatabaseCopyItem parentItem)
                 {
+                    if (e.Node.Checked) _deselectedFiles.Remove(fileItem);
+                    else _deselectedFiles.Add(fileItem);
+
                     bool anyChecked = false;
                     foreach (TreeNode fn in e.Node.Parent.Nodes)
                     {
@@ -622,12 +633,19 @@ namespace DatabaseFinder
                     foreach (TreeNode child in e.Node.Nodes)
                     {
                         child.Checked = e.Node.Checked;
-                        foreach (TreeNode fn in child.Nodes) fn.Checked = e.Node.Checked;
                         if (child.Tag is DatabaseCopyItem childItem)
                         {
-                            if (e.Node.Checked) _checkedItems.Add(childItem);
-                            else _checkedItems.Remove(childItem);
+                            if (e.Node.Checked)
+                            {
+                                _checkedItems.Add(childItem);
+                                foreach (var f in childItem.Files) _deselectedFiles.Remove(f);
+                            }
+                            else
+                            {
+                                _checkedItems.Remove(childItem);
+                            }
                         }
+                        foreach (TreeNode fn in child.Nodes) fn.Checked = e.Node.Checked;
                     }
                 }
             }
@@ -649,6 +667,7 @@ namespace DatabaseFinder
 
             _items = result;
             _checkedItems.Clear();
+            _deselectedFiles.Clear();
             foreach (var it in _items) _checkedItems.Add(it);
 
             FillTree();
@@ -734,9 +753,14 @@ namespace DatabaseFinder
                     bool allChecked = group.Any();
                     foreach (var item in group)
                     {
-                        var node = CreateDatabaseNode(item);
                         var isChecked = _checkedItems.Contains(item);
+                        var node = CreateDatabaseNode(item);
                         node.Checked = isChecked;
+                        foreach (TreeNode fn in node.Nodes)
+                        {
+                            if (fn.Tag is FileCopyItem fi)
+                                fn.Checked = isChecked && !_deselectedFiles.Contains(fi);
+                        }
                         if (!isChecked) allChecked = false;
                         groupNode.Nodes.Add(node);
                     }
@@ -822,7 +846,8 @@ namespace DatabaseFinder
                     var fileNode = new TreeNode(fileNodeText)
                     {
                         Tag = file,
-                        ToolTipText = file.SourcePath ?? file.DisplayName
+                        ToolTipText = file.SourcePath ?? file.DisplayName,
+                        Checked = !_deselectedFiles.Contains(file)
                     };
                     node.Nodes.Add(fileNode);
                 }
@@ -1172,6 +1197,7 @@ namespace DatabaseFinder
             _updatingTreeChecks = true;
             try
             {
+                if (check) _deselectedFiles.Clear();
                 foreach (TreeNode node in _tree.Nodes)
                 {
                     node.Checked = check;
@@ -1223,14 +1249,14 @@ namespace DatabaseFinder
                             };
                             list.Add(clone);
                         }
-                        else
+                        else if (checkedFiles.Count > 0 || item.Files.Count == 0)
                         {
                             list.Add(item);
                         }
                     }
                 }
             }
-            return list.Count > 0 ? list : _items.Where(i => _checkedItems.Contains(i)).ToList();
+            return list;
         }
 
         private void BtnBrowse_Click(object? sender, EventArgs e)
