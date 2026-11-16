@@ -126,6 +126,7 @@ namespace DatabaseFinder
                 Font = UiFont.Make(9.5f)
             };
             _tree.AfterCheck += Tree_AfterCheck;
+            _tree.BeforeExpand += Tree_BeforeExpand;
             Controls.Add(_tree);
 
             var btnSelectAll = new Button
@@ -653,6 +654,50 @@ namespace DatabaseFinder
             {
                 _updatingTreeChecks = false;
                 UpdateFilterSummary();
+            }
+        }
+
+        private void Tree_BeforeExpand(object? sender, TreeViewCancelEventArgs e)
+        {
+            if (e.Node == null) return;
+
+            _updatingTreeChecks = true;
+            try
+            {
+                if (e.Node.Tag is DatabaseCopyItem item)
+                {
+                    bool isDbChecked = _checkedItems.Contains(item);
+                    foreach (TreeNode fn in e.Node.Nodes)
+                    {
+                        if (fn.Tag is FileCopyItem fi)
+                        {
+                            fn.Checked = isDbChecked && !_deselectedFiles.Contains(fi);
+                        }
+                    }
+                }
+                else if (e.Node.Tag == null)
+                {
+                    // Group node
+                    foreach (TreeNode dbNode in e.Node.Nodes)
+                    {
+                        if (dbNode.Tag is DatabaseCopyItem dbItem)
+                        {
+                            bool isDbChecked = _checkedItems.Contains(dbItem);
+                            dbNode.Checked = isDbChecked;
+                            foreach (TreeNode fn in dbNode.Nodes)
+                            {
+                                if (fn.Tag is FileCopyItem fi)
+                                {
+                                    fn.Checked = isDbChecked && !_deselectedFiles.Contains(fi);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _updatingTreeChecks = false;
             }
         }
 

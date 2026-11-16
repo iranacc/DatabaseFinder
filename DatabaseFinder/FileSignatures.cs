@@ -24,6 +24,8 @@ namespace DatabaseFinder
         /// </summary>
         public static bool IsSqlServerBak(string path)
         {
+            // SQL Server Compressed Backup 'MSSQLBAK'
+            if (StartsWithBytes(path, Encoding.ASCII.GetBytes("MSSQLBAK"))) return true;
             // MTF DBLK 'TAPE' (0x54, 0x41, 0x50, 0x45)
             if (StartsWithBytes(path, new byte[] { 0x54, 0x41, 0x50, 0x45 })) return true;
             if (ContainsAscii(path, "TAPE", 1024)) return true;

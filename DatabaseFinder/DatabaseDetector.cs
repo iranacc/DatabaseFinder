@@ -46,6 +46,28 @@ namespace DatabaseFinder
         public DateTime FileModified { get; set; }
         public bool IsBackup { get; set; }
         public string FormatName { get; set; } = "";
+        public string? RealDatabaseName { get; set; }
+        public string? OriginServerName { get; set; }
+        public string? BackupTypeDisplay { get; set; }
+        public SqlBackupHeaderInfo? BackupHeader { get; set; }
+        public bool IsDisguised { get; set; }
+        public string? DisguisedReason { get; set; }
+        public string? DetectedTrueExtension { get; set; }
+        public bool IsInsideArchive { get; set; }
+        public string? ArchiveContainerPath { get; set; }
+        public string? ArchiveEntryPath { get; set; }
+        public long ArchiveCompressedSize { get; set; }
+        public bool IsDuplicate { get; set; }
+        public int DuplicateGroupId { get; set; }
+        public bool IsPrimaryDuplicate { get; set; }
+        public int DuplicateGroupCount { get; set; }
+        public List<string>? DuplicateSiblingPaths { get; set; }
+        public bool IsFromShadowCopy { get; set; }
+        public DateTime? ShadowCopyDate { get; set; }
+        public string? ShadowCopyId { get; set; }
+        public string? ShadowCopyDevice { get; set; }
+        public string? LiveDiskEquivalentPath { get; set; }
+        public bool IsDeletedFromCurrentDisk { get; set; }
 
         public string TypeDisplayName
         {

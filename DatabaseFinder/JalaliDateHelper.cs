@@ -35,6 +35,7 @@ namespace DatabaseFinder
         /// </summary>
         public static (int Year, int Month, int Day) ToJalali(DateTime dt)
         {
+            if (dt < new DateTime(622, 3, 22)) return (0, 0, 0);
             return (_pc.GetYear(dt), _pc.GetMonth(dt), _pc.GetDayOfMonth(dt));
         }
 
@@ -43,6 +44,7 @@ namespace DatabaseFinder
         /// </summary>
         public static string FormatShort(DateTime dt)
         {
+            if (dt < new DateTime(622, 3, 22)) return "-";
             var (y, m, d) = ToJalali(dt);
             return $"{y:D4}/{m:D2}/{d:D2}";
         }
@@ -55,6 +57,8 @@ namespace DatabaseFinder
             var (y, m, d) = ToJalali(dt);
             return $"{y:D4}/{m:D2}/{d:D2} {dt.Hour:D2}:{dt.Minute:D2}:{dt.Second:D2}";
         }
+
+        public static string Format(DateTime dt) => FormatFull(dt);
 
         /// <summary>
         /// فرمت اداری و حقوقی کامل با نام روز و ماه، به عنوان مثال:

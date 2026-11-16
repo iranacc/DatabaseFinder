@@ -1,4 +1,4 @@
-using DatabaseFinder;
+﻿using DatabaseFinder;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -76,6 +76,28 @@ internal static class Program
             Check(((DatabaseInfo)diskGrid.Rows[0].Tag!).Name=="Big",language+" disk sort size desc 1st is Big");
             Check(((DatabaseInfo)diskGrid.Rows[1].Tag!).Name=="Medium",language+" disk sort size desc 2nd is Medium");
             Check(((DatabaseInfo)diskGrid.Rows[2].Tag!).Name=="Small",language+" disk sort size desc 3rd is Small");
+            // Smart Selection & Normalization Tests
+            Check(DiskScanForm.GetDatabaseFamilyKey(new DatabaseInfo{LocalPath=@"C:\Backups\Sepidar_AutoBackup_1402_12_29_23_00.bak"})=="sepidar", "FamilyKey Sepidar 1402");
+            Check(DiskScanForm.GetDatabaseFamilyKey(new DatabaseInfo{LocalPath=@"C:\Backups\Sepidar_AutoBackup_1403_01_01_23_00.bak"})=="sepidar", "FamilyKey Sepidar 1403");
+            Check(DiskScanForm.GetDatabaseFamilyKey(new DatabaseInfo{LocalPath=@"D:\Data\Tadbir_Data_2023-10-15_12-30-00.bak"})=="tadbir_data", "FamilyKey Tadbir 2023");
+            Check(DiskScanForm.GetDatabaseFamilyKey(new DatabaseInfo{LocalPath=@"D:\Data\Tadbir_Data_2024-05-01_10-00-00.bak"})=="tadbir_data", "FamilyKey Tadbir 2024");
+            Check(DiskScanForm.GetDatabaseFamilyKey(new DatabaseInfo{LocalPath=@"C:\Holoo\Holoo_Backup_99.bak"})=="holoo", "FamilyKey Holoo 99");
+
+            var smartTestItems = new List<DatabaseInfo>
+            {
+                new() { Name="Sepidar_Old", LocalPath=@"C:\Backups\Sepidar_AutoBackup_1402_12_29_23_00.bak", IsBackup=true, FileModified=new DateTime(2024, 3, 19), FileSize=1000 },
+                new() { Name="Sepidar_New", LocalPath=@"C:\Backups\Sepidar_AutoBackup_1403_06_31_23_00.bak", IsBackup=true, FileModified=new DateTime(2024, 9, 21), FileSize=1200 },
+                new() { Name="Tadbir_Old", LocalPath=@"C:\Backups\Tadbir_Data_2023-10-15_12-30-00.bak", IsBackup=true, FileModified=new DateTime(2023, 10, 15), FileSize=2000 },
+                new() { Name="Tadbir_New", LocalPath=@"C:\Backups\Tadbir_Data_2024-05-01_10-00-00.bak", IsBackup=true, FileModified=new DateTime(2024, 5, 1), FileSize=2200 }
+            };
+            typeof(DiskScanForm).GetMethod("FillGrid", BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk, new object[]{smartTestItems});
+            typeof(DiskScanForm).GetMethod("SelectLatestPerDatabase", BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk, null);
+
+            var smartSelected = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(disk, null)!;
+            Check(smartSelected.Count == 2, language + " smart select reduced 4 backups to 2 latest");
+            Check(smartSelected.Any(x => x.Name == "Sepidar_New") && smartSelected.Any(x => x.Name == "Tadbir_New"), language + " smart select chose the newest files");
+            Check(!smartSelected.Any(x => x.Name == "Sepidar_Old") && !smartSelected.Any(x => x.Name == "Tadbir_Old"), language + " smart select unpicked the older files");
+
             Render(disk,Path.Combine(output,"disk-"+language+".png"));
             using var picker=new FormatPickerForm(DiskFormatRegistry.All);picker.Show();Application.DoEvents();
             Check(picker.SelectedFormats.Count==14,language+" all 14 format groups available");
@@ -154,6 +176,248 @@ internal static class Program
         var fakeBak = Path.Combine(fixture, "acrobat.dll.bak");
         File.WriteAllBytes(fakeBak, new byte[] { 0x4D, 0x5A, 0x90, 0x00 });
         Check(!FileSignatures.IsSqlServerFile(fakeBak), "Fake .bak (dll header) rejected");
+
+        // ---- تست‌های Signature Carving و کشف فایل‌های تغییرنام‌یافته یا پنهان‌شده ----
+        var carveFixture = Path.Combine(output, "carve_fixtures");
+        if (Directory.Exists(carveFixture)) Directory.Delete(carveFixture, true);
+        Directory.CreateDirectory(carveFixture);
+
+        var disguisedSqlite = Path.Combine(carveFixture, "report_cache.tmp");
+        File.WriteAllBytes(disguisedSqlite, System.Text.Encoding.ASCII.GetBytes("SQLite format 3\0SampleTableData"));
+        Check(DatabaseCarver.TryCarve(disguisedSqlite, new FileInfo(disguisedSqlite).Length, out var carvedSqlite) && carvedSqlite.IsDisguised && carvedSqlite.TrueExtension == ".sqlite", "DatabaseCarver detects disguised SQLite .tmp file");
+
+        var disguisedMdf = Path.Combine(carveFixture, "archive_data.dat");
+        var mdfBytes = new byte[8192];
+        mdfBytes[0] = 0x01; mdfBytes[1] = 0x0F; mdfBytes[4] = 0x08; mdfBytes[5] = 0x02;
+        File.WriteAllBytes(disguisedMdf, mdfBytes);
+        Check(DatabaseCarver.TryCarve(disguisedMdf, 8192, out var carvedMdf) && carvedMdf.IsDisguised && carvedMdf.TrueExtension == ".mdf", "DatabaseCarver detects disguised SQL Server MDF .dat file");
+
+        var disguisedBak = Path.Combine(carveFixture, "backup_1402.old");
+        File.WriteAllBytes(disguisedBak, System.Text.Encoding.ASCII.GetBytes("MSSQLBAK_TEST_DATA_PADDING"));
+        Check(DatabaseCarver.TryCarve(disguisedBak, 26, out var carvedBak) && carvedBak.IsDisguised && carvedBak.TrueExtension == ".bak", "DatabaseCarver detects disguised SQL Server compressed backup .old file");
+
+        var scanDisguised = new DiskScanner().Scan(new[] { carveFixture }, DiskFormatRegistry.All, 10, enableSignatureCarving: true, null, CancellationToken.None);
+        Check(scanDisguised.Any(x => x.IsDisguised && x.LocalPath == disguisedMdf), "DiskScanner uncovers disguised MDF file via signature carving");
+        Check(scanDisguised.Any(x => x.IsDisguised && x.LocalPath == disguisedSqlite), "DiskScanner uncovers disguised SQLite file via signature carving");
+        Check(scanDisguised.Any(x => x.IsDisguised && x.LocalPath == disguisedBak), "DiskScanner uncovers disguised BAK file via signature carving");
+
+        // ---- تست‌های SmartPathLocator و پویش مسیرهای هوشمند و اکسترنال ----
+        var smartRoots = SmartPathLocator.GetDiscoveredRoots(ScanMode.Smart);
+        Check(smartRoots.Count > 0, "SmartPathLocator finds smart roots");
+        Check(smartRoots.Any(r => r.Category == RootCategory.FixedDrive || r.Category == RootCategory.UserDocuments || r.Category == RootCategory.DatabaseData || r.Category == RootCategory.AccountingSoftware), "SmartPathLocator categorizes smart roots");
+
+        var fullRoots = SmartPathLocator.GetDiscoveredRoots(ScanMode.Full);
+        Check(fullRoots.Count > 0, "SmartPathLocator finds full drive roots");
+        Check(fullRoots.All(r => r.Category == RootCategory.FixedDrive || r.Category == RootCategory.ExternalDrive || r.Category == RootCategory.NetworkDrive), "Full mode contains drive roots");
+
+        var extRoots = SmartPathLocator.GetDiscoveredRoots(ScanMode.ExternalOnly);
+        Check(extRoots.All(r => r.Category == RootCategory.ExternalDrive), "ExternalOnly mode contains only external drives");
+
+        var defaultSmart = DiskScanner.GetDefaultRoots(quickOnly: true);
+        Check(defaultSmart.Count > 0, "DiskScanner.GetDefaultRoots smart mode returns roots");
+        var defaultFull = DiskScanner.GetDefaultRoots(quickOnly: false);
+        Check(defaultFull.Count > 0, "DiskScanner.GetDefaultRoots full mode returns roots");
+
+        // ---- تست‌های Archive Peeking و پویش درون فایل‌های فشرده بدون Extract ----
+        var arcFixture = Path.Combine(output, "archive_fixtures");
+        if (Directory.Exists(arcFixture)) Directory.Delete(arcFixture, true);
+        Directory.CreateDirectory(arcFixture);
+
+        var testZip = Path.Combine(arcFixture, "Financial_Backups_1403.zip");
+        using (var zipFs = new FileStream(testZip, FileMode.Create))
+        using (var za = new System.IO.Compression.ZipArchive(zipFs, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var bakEntry = za.CreateEntry("Sepidar_1403_01_01.bak");
+            using (var es = bakEntry.Open())
+            {
+                byte[] mssqlBytes = System.Text.Encoding.ASCII.GetBytes("MSSQLBAK_SEPIDAR_SAMPLE_DATA_BYTES_PADDING_HEADER_DATA_1403");
+                es.Write(mssqlBytes, 0, mssqlBytes.Length);
+            }
+
+            var sqliteEntry = za.CreateEntry("company_cache.sqlite");
+            using (var es = sqliteEntry.Open())
+            {
+                byte[] sqBytes = System.Text.Encoding.ASCII.GetBytes("SQLite format 3\0SampleDbData");
+                es.Write(sqBytes, 0, sqBytes.Length);
+            }
+
+            var txtEntry = za.CreateEntry("readme.txt");
+            using (var es = txtEntry.Open())
+            {
+                byte[] txtBytes = System.Text.Encoding.ASCII.GetBytes("Non database notes");
+                es.Write(txtBytes, 0, txtBytes.Length);
+            }
+        }
+
+        Check(ArchivePeeker.IsSupportedArchive(testZip), "ArchivePeeker recognizes .zip archive");
+        var peeked = ArchivePeeker.PeekArchive(testZip, minSizeBytes: 10);
+        Check(peeked.Count == 2, "ArchivePeeker discovers 2 databases inside ZIP, ignoring text file");
+        Check(peeked.Any(x => x.FileName == "Sepidar_1403_01_01.bak" && x.Type == DatabaseType.SQLServer && x.IsBackup), "ArchivePeeker identifies inner SQL Server .bak");
+        Check(peeked.Any(x => x.FileName == "company_cache.sqlite" && x.Type == DatabaseType.SQLite), "ArchivePeeker identifies inner SQLite .sqlite");
+
+        var extractDest = Path.Combine(arcFixture, "extracted_sepidar.bak");
+        bool extractedOk = ArchivePeeker.ExtractEntryWithProgress(testZip, "Sepidar_1403_01_01.bak", extractDest);
+        Check(extractedOk && File.Exists(extractDest) && new FileInfo(extractDest).Length > 0, "ArchivePeeker extracts single entry on demand without full extraction");
+
+        var scanArchives = new DiskScanner().Scan(new[] { arcFixture }, DiskFormatRegistry.All, 10, enableSignatureCarving: false, enableArchivePeeking: true, null, CancellationToken.None);
+        Check(scanArchives.Any(x => x.IsInsideArchive && x.ArchiveContainerPath == testZip && x.ArchiveEntryPath == "Sepidar_1403_01_01.bak"), "DiskScanner discovers inner .bak from ZIP archive with IsInsideArchive");
+        Check(scanArchives.Any(x => x.IsInsideArchive && x.ArchiveContainerPath == testZip && x.ArchiveEntryPath == "company_cache.sqlite"), "DiskScanner discovers inner SQLite from ZIP archive with IsInsideArchive");
+
+        // ---- تست‌های Duplicate Detection و شناسایی هوشمند فایل‌های تکراری ----
+        var dupFixture = Path.Combine(output, "dup_fixtures");
+        if (Directory.Exists(dupFixture)) Directory.Delete(dupFixture, true);
+        Directory.CreateDirectory(dupFixture);
+
+        var dupPrimaryPath = Path.Combine(dupFixture, "Sepidar_1402_Master.bak");
+        var dupCopy1Path = Path.Combine(dupFixture, "Sepidar_1402_Copy_Desktop.bak");
+        var dupCopy2Path = Path.Combine(dupFixture, "Sepidar_1402_Copy_Temp.bak");
+        var diffContentSameSize = Path.Combine(dupFixture, "Other_DB_SameSize.bak");
+        var diffSizePath = Path.Combine(dupFixture, "Small_DB.bak");
+
+        var dupBytes = new byte[65536];
+        for (int i = 0; i < dupBytes.Length; i++) dupBytes[i] = (byte)(i % 251);
+        File.WriteAllBytes(dupPrimaryPath, dupBytes);
+        File.WriteAllBytes(dupCopy1Path, dupBytes);
+        File.WriteAllBytes(dupCopy2Path, dupBytes);
+
+        var diffBytes = new byte[65536];
+        for (int i = 0; i < diffBytes.Length; i++) diffBytes[i] = (byte)((i + 42) % 251);
+        File.WriteAllBytes(diffContentSameSize, diffBytes);
+
+        File.WriteAllBytes(diffSizePath, new byte[1024]);
+
+        var dupDbInfos = new List<DatabaseInfo>
+        {
+            new() { Name = "Sepidar_1402_Master", LocalPath = dupPrimaryPath, FileSize = dupBytes.Length, FileModified = DateTime.Now },
+            new() { Name = "Sepidar_1402_Copy_Desktop", LocalPath = dupCopy1Path, FileSize = dupBytes.Length, FileModified = DateTime.Now.AddMinutes(-5) },
+            new() { Name = "Sepidar_1402_Copy_Temp", LocalPath = dupCopy2Path, FileSize = dupBytes.Length, FileModified = DateTime.Now.AddMinutes(-10) },
+            new() { Name = "Other_DB_SameSize", LocalPath = diffContentSameSize, FileSize = diffBytes.Length, FileModified = DateTime.Now },
+            new() { Name = "Small_DB", LocalPath = diffSizePath, FileSize = 1024, FileModified = DateTime.Now }
+        };
+
+        var dupResult = DuplicateDetector.Analyze(dupDbInfos);
+        Check(dupResult.TotalDuplicates == 2, "DuplicateDetector flags exactly 2 redundant copies");
+        Check(dupResult.DuplicateGroupsCount == 1, "DuplicateDetector creates exactly 1 duplicate group");
+        Check(dupResult.WastedBytes == (dupBytes.Length * 2), "DuplicateDetector calculates wasted duplicate bytes correctly");
+
+        var master = dupDbInfos.Single(x => x.LocalPath == dupPrimaryPath);
+        var copy1 = dupDbInfos.Single(x => x.LocalPath == dupCopy1Path);
+        var copy2 = dupDbInfos.Single(x => x.LocalPath == dupCopy2Path);
+        var nonDup1 = dupDbInfos.Single(x => x.LocalPath == diffContentSameSize);
+        var nonDup2 = dupDbInfos.Single(x => x.LocalPath == diffSizePath);
+
+        Check(master.IsPrimaryDuplicate && !master.IsDuplicate, "Master copy is marked as primary keeper and not marked redundant duplicate");
+        Check(copy1.IsDuplicate && !copy1.IsPrimaryDuplicate, "Copy 1 is marked as redundant duplicate");
+        Check(copy2.IsDuplicate && !copy2.IsPrimaryDuplicate, "Copy 2 is marked as redundant duplicate");
+        Check(!nonDup1.IsDuplicate && !nonDup1.IsPrimaryDuplicate, "File with same size but different content is not marked duplicate");
+        Check(!nonDup2.IsDuplicate && !nonDup2.IsPrimaryDuplicate, "File with different size is not marked duplicate");
+        Check(master.DuplicateGroupId > 0 && master.DuplicateGroupId == copy1.DuplicateGroupId && master.DuplicateGroupId == copy2.DuplicateGroupId, "All copies share the same DuplicateGroupId");
+        Check(copy1.DuplicateSiblingPaths != null && copy1.DuplicateSiblingPaths.Contains(dupPrimaryPath), "Duplicate siblings list contains other copies");
+
+        using (var testDiskForm = new DiskScanForm())
+        {
+            testDiskForm.Show();
+            Application.DoEvents();
+            typeof(DiskScanForm).GetMethod("FillGrid", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, new object[] { dupDbInfos });
+            var selCol = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null)!;
+            Check(!selCol.Any(x => x.IsDuplicate), "FillGrid automatically deselects redundant duplicate copies by default");
+            Check(selCol.Any(x => x.LocalPath == dupPrimaryPath), "FillGrid keeps primary master copy selected by default");
+
+            typeof(DiskScanForm).GetMethod("SelectDuplicatesOnly", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null);
+            var dupOnlySel = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null)!;
+            Check(dupOnlySel.All(x => x.IsDuplicate || x.IsPrimaryDuplicate) && dupOnlySel.Count == 3, "SelectDuplicatesOnly selects all 3 members of the duplicate group");
+
+            typeof(DiskScanForm).GetMethod("DeselectDuplicates", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null);
+            var dedupSel = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null)!;
+            Check(!dedupSel.Any(x => x.IsDuplicate), "DeselectDuplicates unchecks all redundant duplicate copies");
+
+            typeof(DiskScanForm).GetMethod("SelectUniqueOnly", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null);
+            var uniqueSel = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(testDiskForm, null)!;
+            Check(!uniqueSel.Any(x => x.IsDuplicate), "SelectUniqueOnly excludes all redundant duplicate files");
+            testDiskForm.Close();
+        }
+
+        // ---- تست‌های Shadow Copies و پویش در نسخه‌های قبلی ویندوز ----
+        var sampleVssOutput = """
+        vssadmin 1.1 - Volume Shadow Copy Service administrative command-line tool
+        (C) Copyright 2001-2013 Microsoft Corp.
+
+        Contents of shadow copy set ID: {b5757989-138d-4f18-a621-3e4b78fa81ec}
+           Contained 1 shadow copies at creation time: 11/10/2026 2:30:15 PM
+              Shadow Copy ID: {447bf5a2-3b09-40ee-bdf8-9b8fb7bceb16}
+                 Original Volume: (C:)\\?\Volume{d30e5860-0000-0000-0000-100000000000}\
+                 Shadow Copy Volume: \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1
+                 Originating Machine: AUDIT-SRV01
+                 Service Machine: AUDIT-SRV01
+                 Provider: 'Microsoft Software Shadow Copy provider 1.0'
+                 Type: ClientAccessibleWriters
+                 Attributes: Persistent, Client-accessible, No auto release, Differential, Auto recovered
+
+        Contents of shadow copy set ID: {c6868090-249e-4f29-b732-4f5c89fb92fd}
+           Contained 1 shadow copies at creation time: 11/15/2026 9:15:00 AM
+              Shadow Copy ID: {558ca6b3-4c10-51ff-cef9-ac9fc8cdf027}
+                 Original Volume: (D:)\\?\Volume{e41f6971-0000-0000-0000-200000000000}\
+                 Shadow Copy Device Name: \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy2
+                 Originating Machine: AUDIT-SRV01
+        """;
+
+        var parsedSnapshots = ShadowCopyFinder.ParseVssadminOutput(sampleVssOutput);
+        Check(parsedSnapshots.Count == 2, "ShadowCopyFinder.ParseVssadminOutput extracts 2 snapshots");
+        Check(parsedSnapshots[0].Id == "{447bf5a2-3b09-40ee-bdf8-9b8fb7bceb16}", "First snapshot ID parsed");
+        Check(parsedSnapshots[0].DriveLetter == "C:", "First snapshot DriveLetter parsed (C:)");
+        Check(parsedSnapshots[0].DeviceObject == @"\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1", "First snapshot DeviceObject parsed");
+        Check(parsedSnapshots[0].OriginatingMachine == "AUDIT-SRV01", "First snapshot OriginatingMachine parsed");
+        Check(parsedSnapshots[1].DriveLetter == "D:", "Second snapshot DriveLetter parsed (D:)");
+        Check(parsedSnapshots[1].DeviceObject == @"\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy2", "Second snapshot DeviceObject parsed");
+
+        var testShadowMountDir = Path.Combine(output, "vss_mock_mount");
+        if (Directory.Exists(testShadowMountDir)) Directory.Delete(testShadowMountDir, true);
+        Directory.CreateDirectory(testShadowMountDir);
+
+        var snapItem1 = new DatabaseInfo
+        {
+            Name = "Sepidar_Historical.bak",
+            LocalPath = Path.Combine(testShadowMountDir, "Sepidar", "Sepidar_Historical.bak"),
+            FileSize = 1048576,
+            FileModified = new DateTime(2026, 11, 10, 14, 30, 0)
+        };
+        ShadowCopyFinder.AnnotateShadowCopyResult(snapItem1, testShadowMountDir, parsedSnapshots[0]);
+        Check(snapItem1.IsFromShadowCopy, "AnnotateShadowCopyResult marks item as IsFromShadowCopy");
+        Check(snapItem1.ShadowCopyId == parsedSnapshots[0].Id, "AnnotateShadowCopyResult sets ShadowCopyId");
+        Check(snapItem1.LiveDiskEquivalentPath != null && snapItem1.LiveDiskEquivalentPath.StartsWith("C:\\Sepidar"), "AnnotateShadowCopyResult computes LiveDiskEquivalentPath");
+        Check(snapItem1.IsDeletedFromCurrentDisk, "AnnotateShadowCopyResult detects file is missing/deleted from current live disk");
+
+        var snapItemLiveExists = new DatabaseInfo
+        {
+            Name = "Existing_File.bak",
+            LocalPath = Path.Combine(testShadowMountDir, "Existing_File.bak"),
+            FileSize = 1024,
+            FileModified = DateTime.Now
+        };
+        snapItemLiveExists.LocalPath = Path.Combine(testShadowMountDir, Path.GetFileName(dupPrimaryPath));
+        var dummySnap = new ShadowCopySnapshot { Id = "{1111}", DriveLetter = Path.GetPathRoot(dupPrimaryPath)!.TrimEnd('\\'), DeviceObject = @"\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy9" };
+        var mountDirForLive = Path.GetDirectoryName(dupPrimaryPath)!;
+        ShadowCopyFinder.AnnotateShadowCopyResult(snapItemLiveExists, mountDirForLive, dummySnap);
+        Check(!snapItemLiveExists.IsDeletedFromCurrentDisk, "AnnotateShadowCopyResult detects file currently exists on live disk");
+
+        using (var vssDiskForm = new DiskScanForm())
+        {
+            vssDiskForm.Show();
+            Application.DoEvents();
+
+            var vssTestItems = new List<DatabaseInfo> { snapItem1, snapItemLiveExists, master };
+            typeof(DiskScanForm).GetMethod("FillGrid", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vssDiskForm, new object[] { vssTestItems });
+
+            typeof(DiskScanForm).GetMethod("SelectShadowCopiesOnly", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vssDiskForm, null);
+            var vssOnlySel = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vssDiskForm, null)!;
+            Check(vssOnlySel.All(x => x.IsFromShadowCopy) && vssOnlySel.Count == 2, "SelectShadowCopiesOnly selects all items from shadow copies");
+
+            typeof(DiskScanForm).GetMethod("SelectDeletedFromDiskOnly", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vssDiskForm, null);
+            var deletedOnlySel = (List<DatabaseInfo>)typeof(DiskScanForm).GetMethod("GetSelectedResults", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vssDiskForm, null)!;
+            Check(deletedOnlySel.Count == 1 && deletedOnlySel[0].Name == "Sepidar_Historical.bak" && deletedOnlySel[0].IsDeletedFromCurrentDisk, "SelectDeletedFromDiskOnly selects only the file missing from live disk");
+
+            vssDiskForm.Close();
+        }
         Check(ManifestGenerator.ToolVersion == UpdateChecker.VersionString(UpdateChecker.CurrentVersion), "Manifest ToolVersion matches executing version");
         Check(JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings{Language="en"}))!.Language=="en","Language settings round trip");
         var copySrc = Path.Combine(fixture, "test_large.dat");

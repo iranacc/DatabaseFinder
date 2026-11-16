@@ -195,6 +195,29 @@ Name = L.Text("S210"),
             Action<ScanProgress>? progress,
             CancellationToken cancel)
         {
+            return Scan(roots, formats, minSizeBytes, enableSignatureCarving: false, enableArchivePeeking: true, progress, cancel);
+        }
+
+        public List<DatabaseInfo> Scan(
+            IReadOnlyList<string> roots,
+            IReadOnlyList<DiskFormat> formats,
+            long minSizeBytes,
+            bool enableSignatureCarving,
+            Action<ScanProgress>? progress,
+            CancellationToken cancel)
+        {
+            return Scan(roots, formats, minSizeBytes, enableSignatureCarving, enableArchivePeeking: true, progress, cancel);
+        }
+
+        public List<DatabaseInfo> Scan(
+            IReadOnlyList<string> roots,
+            IReadOnlyList<DiskFormat> formats,
+            long minSizeBytes,
+            bool enableSignatureCarving,
+            bool enableArchivePeeking,
+            Action<ScanProgress>? progress,
+            CancellationToken cancel)
+        {
             var found = new List<DatabaseInfo>();
             var extMap = new Dictionary<string, DiskFormat>(StringComparer.OrdinalIgnoreCase);
             var nameRules = new List<(Regex Regex, DiskFormat Format)>();
@@ -222,7 +245,7 @@ Name = L.Text("S210"),
             {
                 if (cancel.IsCancellationRequested) break;
                 if (!Directory.Exists(root)) continue;
-                WalkDir(root, extMap, nameRules, dirMap, null, minSizeBytes, found, p, progress, cancel);
+                WalkDir(root, formats, extMap, nameRules, dirMap, null, minSizeBytes, enableSignatureCarving, enableArchivePeeking, found, p, progress, cancel);
             }
             p.IsFinished = true;
             progress?.Invoke(p);
@@ -231,11 +254,14 @@ Name = L.Text("S210"),
 
         private void WalkDir(
             string dir,
+            IReadOnlyList<DiskFormat> formats,
             Dictionary<string, DiskFormat> extMap,
             List<(Regex Regex, DiskFormat Format)> nameRules,
             Dictionary<string, DiskFormat> dirMap,
             DiskFormat? folderFormat,
             long minSizeBytes,
+            bool enableSignatureCarving,
+            bool enableArchivePeeking,
             List<DatabaseInfo> found,
             ScanProgress p,
             Action<ScanProgress>? progress,
@@ -261,6 +287,56 @@ Name = L.Text("S210"),
                     }
 
                     p.FilesScanned++;
+
+                    // 1. پویش درون فایل‌های فشرده (Archive Peeking) بدون نیاز به Extract
+                    if (enableArchivePeeking && ArchivePeeker.IsSupportedArchive(file))
+                    {
+                        try
+                        {
+                            var innerFiles = ArchivePeeker.PeekArchive(file, minSizeBytes);
+                            if (innerFiles.Count > 0)
+                            {
+                                foreach (var inner in innerFiles)
+                                {
+                                    bool isAllowed = formats.Count == 0 || formats.Any(f =>
+                                        f.Type == inner.Type ||
+                                        (inner.IsBackup && f.IsBackup) ||
+                                        (f.Type == DatabaseType.Unknown && (f.Extensions.Contains(inner.Extension) || f.Name.Contains(inner.FormatName, StringComparison.OrdinalIgnoreCase))));
+
+                                    if (isAllowed)
+                                    {
+                                        var dbName = !string.IsNullOrWhiteSpace(inner.RealDatabaseName)
+                                            ? inner.RealDatabaseName
+                                            : Path.GetFileNameWithoutExtension(inner.EntryPath);
+
+                                        found.Add(new DatabaseInfo
+                                        {
+                                            Type = inner.Type,
+                                            Name = dbName,
+                                            RealDatabaseName = inner.RealDatabaseName,
+                                            OriginServerName = inner.OriginServerName,
+                                            BackupTypeDisplay = inner.BackupTypeDisplay,
+                                            IsOnline = false,
+                                            LocalPath = $"{file}#{inner.EntryPath}",
+                                            FileSize = inner.UncompressedSize,
+                                            FileModified = inner.Modified,
+                                            IsBackup = inner.IsBackup,
+                                            FormatName = $"📦 {inner.FormatName} ({inner.ContainerType})",
+                                            IsInsideArchive = true,
+                                            ArchiveContainerPath = file,
+                                            ArchiveEntryPath = inner.EntryPath,
+                                            ArchiveCompressedSize = inner.CompressedSize,
+                                            Host = Path.GetFileName(file)
+                                        });
+                                        p.FilesFound++;
+                                    }
+                                }
+                                continue; // عبور از ثبت فایل کانتینر به صورت تک‌فایل نامشخص
+                            }
+                        }
+                        catch { }
+                    }
+
                     var format = MatchFormat(file, Path.GetFileName(file), ext, extMap, nameRules, folderFormat);
                     if (format != null)
                     {
@@ -272,23 +348,98 @@ Name = L.Text("S210"),
                             if (format.ContentValidator != null && !format.ContentValidator(file)) continue;
 
                             var candidate = GuessDatabaseName(file, fi.Name);
+                            string? realDbName = null;
+                            string? originServer = null;
+                            string? backupTypeDisplay = null;
+                            SqlBackupHeaderInfo? backupHeader = null;
+
+                            if (format.IsBackup && (format.Type == DatabaseType.SQLServer || file.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                try
+                                {
+                                    var header = SqlBackupInspector.Inspect(file);
+                                    if (header != null && header.IsValid)
+                                    {
+                                        backupHeader = header;
+                                        if (!string.IsNullOrWhiteSpace(header.DatabaseName))
+                                        {
+                                            candidate = header.DatabaseName;
+                                            realDbName = header.DatabaseName;
+                                        }
+                                        originServer = header.ServerName;
+                                        backupTypeDisplay = header.BackupType;
+                                    }
+                                }
+                                catch { }
+                            }
+
                             found.Add(new DatabaseInfo
                             {
                                 Type = format.Type,
                                 Name = candidate,
+                                RealDatabaseName = realDbName,
+                                OriginServerName = originServer,
+                                BackupTypeDisplay = backupTypeDisplay,
+                                BackupHeader = backupHeader,
                                 IsOnline = false,
                                 LocalPath = file,
                                 FileSize = fi.Length,
                                 FileModified = fi.LastWriteTime,
                                 IsBackup = format.IsBackup,
                                 FormatName = format.Name,
-                                Host = ""
+                                Host = originServer ?? ""
                             });
                             p.FilesFound++;
                         }
                         catch
                         {
                             // فایل قفل یا حذف شده
+                        }
+                    }
+                    else if (enableSignatureCarving)
+                    {
+                        if (DatabaseCarver.IsSuspiciousOrUnknownExtension(ext))
+                        {
+                            try
+                            {
+                                var fi = new FileInfo(file);
+                                if (fi.Length >= minSizeBytes && DatabaseCarver.TryCarve(file, fi.Length, out var carved))
+                                {
+                                    bool isAllowedFormat = formats.Count == 0 || formats.Any(f =>
+                                        f.Type == carved.Type ||
+                                        (carved.IsBackup && f.IsBackup) ||
+                                        (f.Type == DatabaseType.Unknown && (f.Extensions.Contains(carved.TrueExtension) || f.Name.Contains(carved.FormatName, StringComparison.OrdinalIgnoreCase))));
+
+                                    if (isAllowedFormat)
+                                    {
+                                        var candidate = !string.IsNullOrWhiteSpace(carved.RealDatabaseName)
+                                            ? carved.RealDatabaseName
+                                            : GuessDatabaseName(file, fi.Name);
+
+                                        found.Add(new DatabaseInfo
+                                        {
+                                            Type = carved.Type,
+                                            Name = candidate,
+                                            RealDatabaseName = carved.RealDatabaseName,
+                                            OriginServerName = carved.OriginServerName,
+                                            BackupTypeDisplay = carved.BackupTypeDisplay,
+                                            BackupHeader = carved.BackupHeader,
+                                            IsOnline = false,
+                                            LocalPath = file,
+                                            FileSize = fi.Length,
+                                            FileModified = fi.LastWriteTime,
+                                            IsBackup = carved.IsBackup,
+                                            FormatName = (carved.IsDisguised ? "⚠️ " : "") + carved.FormatName,
+                                            IsDisguised = carved.IsDisguised,
+                                            DisguisedReason = carved.DisguisedReason,
+                                            DetectedTrueExtension = carved.TrueExtension,
+                                            Host = carved.OriginServerName ?? ""
+                                        });
+                                        p.FilesFound++;
+                                    }
+                                }
+                            }
+                            catch { }
                         }
                     }
 
@@ -317,7 +468,7 @@ Name = L.Text("S210"),
                     if (p.DirectoriesScanned % 50 == 0) progress?.Invoke(p);
                     if (ShouldSkip(sub)) continue;
                     dirMap.TryGetValue(Path.GetFileName(sub), out var marked);
-                    WalkDir(sub, extMap, nameRules, dirMap, marked ?? folderFormat, minSizeBytes, found, p, progress, cancel, depth + 1);
+                    WalkDir(sub, formats, extMap, nameRules, dirMap, marked ?? folderFormat, minSizeBytes, enableSignatureCarving, enableArchivePeeking, found, p, progress, cancel, depth + 1);
                 }
             }
             catch (UnauthorizedAccessException)
@@ -408,45 +559,13 @@ Name = L.Text("S210"),
 
         public static List<string> GetDefaultRoots(bool quickOnly)
         {
-            var roots = new List<string>();
-
-            if (quickOnly)
-            {
-                foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed))
-                {
-                    var baseDir = drive.RootDirectory.FullName;
-                    AddIfExists(roots, Path.Combine(baseDir, "Program Files"));
-                    AddIfExists(roots, Path.Combine(baseDir, "Program Files (x86)"));
-                    AddIfExists(roots, Path.Combine(baseDir, "ProgramData"));
-
-                    // پوشه‌های کاربران
-                    var users = Path.Combine(baseDir, "Users");
-                    if (Directory.Exists(users))
-                    {
-                        foreach (var profile in Directory.EnumerateDirectories(users))
-                        {
-                            AddIfExists(roots, Path.Combine(profile, "Documents"));
-                            AddIfExists(roots, Path.Combine(profile, "Desktop"));
-                            AddIfExists(roots, Path.Combine(profile, "AppData"));
-                        }
-                    }
-
-                    // پوشه‌های ریشه با نام‌های مرتبط با حسابداری/دیتابیس/بکاپ
-                    foreach (var sub in new[] { "data", "database", "databases", "backup", "backups", "accounting", "financial", "حسابداری", "مالی", "بکاپ", "پشتیبان", "parsian.back", "holoo.bak" })
-                    {
-                        AddIfExists(roots, Path.Combine(baseDir, sub));
-                    }
-                }
-            }
-            else
-            {
-                foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed))
-                {
-                    roots.Add(drive.RootDirectory.FullName);
-                }
-            }
-
-            return roots.Distinct().OrderBy(r => r).ToList();
+            var mode = quickOnly ? ScanMode.Smart : ScanMode.Full;
+            return SmartPathLocator.GetDiscoveredRoots(mode)
+                .Where(r => !string.IsNullOrWhiteSpace(r.Path))
+                .Select(r => r.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(r => r)
+                .ToList();
         }
 
         private static void AddIfExists(List<string> roots, string path)

@@ -35,6 +35,9 @@ namespace DatabaseFinder
         public string? DestHash { get; set; }
         public string? CopiedPath { get; set; }
         public bool Verified { get; set; }
+        public bool IsInsideArchive { get; set; }
+        public string? ArchiveContainerPath { get; set; }
+        public string? ArchiveEntryPath { get; set; }
     }
 
     public class DatabaseCopyItem
@@ -151,6 +154,30 @@ namespace DatabaseFinder
 
         private static DatabaseCopyItem BuildOfflineItem(DatabaseInfo server, Action<string>? log = null)
         {
+            if (server.IsInsideArchive && !string.IsNullOrEmpty(server.ArchiveContainerPath))
+            {
+                var entryName = Path.GetFileName(server.ArchiveEntryPath ?? server.Name);
+                var format = string.IsNullOrEmpty(server.FormatName) ? server.TypeDisplayName : server.FormatName;
+                var item = new DatabaseCopyItem
+                {
+                    Server = server,
+                    DatabaseName = server.Name,
+                    FolderName = SafeFolder($"{format}_{server.Name}")
+                };
+                item.Files.Add(new FileCopyItem
+                {
+                    DisplayName = entryName,
+                    SourcePath = server.LocalPath ?? (server.ArchiveContainerPath + "#" + server.ArchiveEntryPath),
+                    RelativePath = entryName,
+                    Size = server.FileSize,
+                    Modified = server.FileModified,
+                    IsInsideArchive = true,
+                    ArchiveContainerPath = server.ArchiveContainerPath,
+                    ArchiveEntryPath = server.ArchiveEntryPath
+                });
+                return item;
+            }
+
             if (!string.IsNullOrEmpty(server.LocalPath) && File.Exists(server.LocalPath))
             {
                 var fi = new FileInfo(server.LocalPath);
@@ -897,6 +924,34 @@ namespace DatabaseFinder
                             try
                             {
                                 Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? destDir);
+
+                                if (file.IsInsideArchive && !string.IsNullOrEmpty(file.ArchiveContainerPath) && !string.IsNullOrEmpty(file.ArchiveEntryPath))
+                                {
+                                    if (!File.Exists(file.ArchiveContainerPath))
+                                    {
+                                        file.Error = L.Text("S135");
+                                        errorLines.Add(L.Format("S136", item.FolderName, file.DisplayName));
+                                        failed++;
+                                        continue;
+                                    }
+
+                                    if (!ArchivePeeker.ExtractEntryWithProgress(file.ArchiveContainerPath, file.ArchiveEntryPath, dest, (cBytes, tBytes) => fileProgress?.Invoke(relToRoot, cBytes, tBytes)))
+                                    {
+                                        file.Error = L.Pick("خطا در استخراج از آرشیو", "Failed to extract from archive");
+                                        errorLines.Add($"{item.FolderName}\\{file.DisplayName}: {file.Error}");
+                                        failed++;
+                                        continue;
+                                    }
+
+                                    var extractedInfo = new FileInfo(dest);
+                                    RecordCopy(file, relToRoot, dest, dest, extractedInfo.Length,
+                                        ref filesCopied, ref bytesCopied, ref failed, ref mismatched,
+                                        acquisitions, errorLines, verifyHash, log,
+                                        L.Pick($"[📦 استخراج از آرشیو] {item.FolderName}\\{file.DisplayName} ({FormatSize(extractedInfo.Length)})",
+                                               $"[📦 Extracted from Archive] {item.FolderName}\\{file.DisplayName} ({FormatSize(extractedInfo.Length)})"), fileProgress);
+                                    continue;
+                                }
+
                                 var src = file.SourcePath;
                                 var info = new FileInfo(src);
                                 if (!info.Exists)
